@@ -9,6 +9,7 @@ docs/
 .idea
 .editorconfig
 .npmrc
+*.tgz
 package-lock.json
 
 pnpm-lock.yaml
