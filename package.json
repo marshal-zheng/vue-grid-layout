@@ -1,0 +1,100 @@
+{
+  "name": "@marsio/vue-grid-layout",
+  "version": "1.0.1",
+  "description": "A draggable and resizable grid layout with responsive breakpoints, for vue3.",
+  "main": "build/cjs/cjs.js",
+  "unpkg": "build/web/vue-grid-layout.min.js",
+  "sideEffects": false,
+  "scripts": {
+    "dev": "node script.js --action=dev",
+    "build": "node script.js --action=build",
+    "build-docs": "node script.js --action=docs",
+    "lint": "eslint 'lib/**/*.{js.vue,ts,tsx}'",
+    "clean": "node script.js --action=clean",
+    "publish": "node script.js --action=publish",
+    "release": "node script.js --action=release",
+    "analyze": "ANALYZE=true webpack --config webpack.config.js",
+    "prepare": "husky"
+  },
+  "files": [
+    "/build",
+    "/typings",
+    "/vue-grid-layout.min.js"
+  ],
+  "typings": "./typings/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marshal-zheng/vue-grid-layout.git"
+  },
+  "keywords": [
+    "vue3",
+    "resizable"
+  ],
+  "author": "Marshall",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/cli": "^7.23.0",
+    "@babel/core": "^7.23.0",
+    "@babel/eslint-parser": "^7.22.15",
+    "@babel/plugin-transform-class-properties": "^7.18.6",
+    "@babel/preset-env": "^7.22.20",
+    "@babel/preset-typescript": "^7.23.3",
+    "@commitlint/cli": "^19.3.0",
+    "@commitlint/config-conventional": "^19.2.2",
+    "@types/lodash": "^4.14.202",
+    "@types/node": "^20.7.0",
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
+    "@typescript-eslint/parser": "^6.16.0",
+    "@vue/babel-plugin-jsx": "^1.1.5",
+    "@vue/eslint-config-typescript": "^12.0.0",
+    "babel-loader": "^9.1.3",
+    "babel-plugin-lodash": "^3.3.4",
+    "babel-plugin-transform-inline-environment-variables": "^0.4.4",
+    "chalk": "^3.0.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-vue": "^9.19.2",
+    "eslint-webpack-plugin": "^4.0.1",
+    "fork-ts-checker-webpack-plugin": "^9.0.2",
+    "fs-extra": "^11.2.0",
+    "git-cliff": "^2.4.0",
+    "husky": "^9.0.11",
+    "inquirer": "~8.2.6",
+    "jasmine-core": "^5.1.1",
+    "lint-staged": "^15.2.7",
+    "lodash-webpack-plugin": "^0.11.6",
+    "minimist": "^1.2.5",
+    "pre-commit": "^1.2.2",
+    "process": "^0.11.10",
+    "progress-bar-webpack-plugin": "^2.1.0",
+    "puppeteer": "^21.3.5",
+    "semver": "^7.6.2",
+    "static-server": "^3.0.0",
+    "terser-webpack-plugin": "^5.3.10",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.2.2",
+    "vue-loader": "next",
+    "webpack": "^5.88.2",
+    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1"
+  },
+  "resolutions": {
+    "minimist": "^1.2.5"
+  },
+  "husky": {
+    "hooks": {}
+  },
+  "lint-staged": {
+    "lib/**/*.{js,vue,ts,tsx}": "eslint --fix"
+  },
+  "dependencies": {
+    "@emotion/css": "^11.11.2",
+    "@marsio/vue-draggable": "^1.0.7",
+    "@marsio/vue-resizable": "^1.0.0",
+    "clsx": "^2.1.1",
+    "fast-equals": "^5.0.1",
+    "lodash": "^4.17.21",
+    "resize-observer-polyfill": "^1.5.1",
+    "vue": "^3.2.23"
+  }
+}
