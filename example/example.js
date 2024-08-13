@@ -4,11 +4,11 @@ const { createApp, ref, h, reactive, onMounted } = VueInstance
 const { WidthProvider, Responsive } = VGL
 const ResponsiveVueGridLayout = WidthProvider(Responsive);
 
-const len = 10
+const len = 20
 
 const App = {
   setup(props, { attrs }) {
-    const generateLayout = () => {
+    const generateLayout = (resizeHandles) => {
       return Array.from({ length: len }, (item, i) => {
         const y = Math.ceil(Math.random() * 4) + 1;
         return {
@@ -16,8 +16,9 @@ const App = {
           y: Math.floor(i / 6) * y,
           w: 2,
           h: y,
-          i: (i+1).toString(),
+          i: (i + 1).toString(),
           static: Math.random() < 0.05,
+          resizeHandles
         };
       });
     }
@@ -25,6 +26,7 @@ const App = {
     const state = reactive({
       currentBreakpoint: "lg",
       compactType: "vertical",
+      resizeHandles: ['se'],
       mounted: false,
       layout: [],
       layouts: { lg: generateLayout(['se']) },
@@ -34,8 +36,27 @@ const App = {
       state.mounted = true
     })
 
+    const availableHandles = ["s", "w", "e", "n", "sw", "nw", "se", "ne"];
+
+    const compactTypeChange = () => {
+      const { compactType: oldCompactType } = state;
+      const compactType =
+        oldCompactType === "horizontal"
+          ? "vertical"
+          : oldCompactType === "vertical"
+          ? null
+          : "horizontal";
+      state.compactType = compactType;
+    };
+
     const newLayout = () => {
       state.layouts = { lg: generateLayout(state.resizeHandles) }
+    };
+
+    const resizeTypeChange = () => {
+      const resizeHandles = state.resizeHandles === availableHandles ? ['se'] : availableHandles;
+      state.resizeHandles = resizeHandles;
+      state.layouts = { lg: generateLayout(resizeHandles) }
     };
 
     const onBreakpointChange = ({ breakpoint }) => {
@@ -47,28 +68,20 @@ const App = {
     }
   
 
-    const onDrop  = (layout, _event, layoutItem) => {
-      const newItems = layout.concat({
-        ...layoutItem,
-        i:  (state.layouts.lg.length+1).toString(),
-      });
-      state.layouts = { lg: newItems };
+    const onDrop  = (elemParams) => {
+      alert(`Element parameters: ${JSON.stringify(elemParams)}`);
     };
-  
-    const onDropDragOver  = (e) => {
-      return { w: 2, h: 2 };
-    };
-    const onDragStop  = (layout, oldLay, newLay) => {
-      // console.log('onDragStop')
-    };
+
 
     return {
       state,
+      compactTypeChange,
+      resizeTypeChange,
       newLayout,
       onBreakpointChange,
       onLayoutChange,
-      onDrop,
-      onDropDragOver
+      availableHandles,
+      onDrop
     }
   },
   components: {
@@ -78,43 +91,49 @@ const App = {
   template: `
     <div>
       <h1>Vue Grid Layout</h1>
-      <div className="layoutJSON">
+      <a href="https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/example.js">View Code</a>
+      <div>
+        Current Breakpoint: {{state.currentBreakpoint}}
+      </div>
+      <div>
+        Compaction type:
+        {{state.compactType && state.compactType.charAt(0).toUpperCase() + state.compactType.slice(1).toLowerCase() || "No Compaction"}}
+      </div>
+      <button @click="newLayout" style="margin-right: 6px;">Generate New Layout</button>
+      <button @click="compactTypeChange" style="margin-right: 6px;">
+        Change Compaction Type
+      </button>
+      <button @click="resizeTypeChange">
+        Resize {{state.resizeHandles === availableHandles ? "One Corner" : "All Corners"}}
+      </button>
+      <div class="layoutJSON">
         Displayed as <code>[x, y, w, h]</code>:
-        <div className="columns">
+        <div class="columns">
           <div v-for="l in state.layout" :key="l.i" class="layoutItem">
             <b>{{ l.i === '__dropping-elem__' ? 'drop' : l.i }}</b>
-            {{ ': ['  + l.x + ',' + l.y + ',' + l.w + ',' + l.h + ']' }}
+            {{ ":"+l.x+","+l.y+","+l.w+","+l.h }}
           </div>
         </div>
-      </div>
-      <div
-        class="droppable-element"
-        :draggable="true"
-        unselectable="on"
-        onDragStart="(e) => e.dataTransfer.setData('text/plain', '')"
-      >
-        Droppable Element (Drag me!)
       </div>
       <ResponsiveVueGridLayout
         class="layout"
         :rowHeight="30"
-        :cols="{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }"
+        :cols="state.cols"
         :layouts="state.layouts"
         @breakpointChange={onBreakpointChange}
         @layoutChange="onLayoutChange"
-        @dropDragOver="onDropDragOver"
         @drop="onDrop"
-        @dragStop="onDragStop"
         :measureBeforeMount="false"
         :useCSSTransforms="state.mounted"
+        :compactType="state.compactType"
+        :preventCollision="!state.compactType"
         :containerPadding="[16, 16]"
-        :isDroppable="true"
       >
-        <div v-for="(l, i) in state.layouts.lg" :key="l.i" :class="{ static: l.static }">
+        <div v-for="(l, i) in state.layouts.lg" :key="i+1" :class="{ static: l.static }">
           <span v-if="l.static" class="text" title="This item is static and cannot be removed or resized.">
-            Static - {{ l.i }}
+            Static - {{ i }}
           </span>
-          <span v-else class="text">{{ l.i }}</span>
+          <span v-else class="text">{{ i }}</span>
         </div>
       </ResponsiveVueGridLayout>
     </div>
