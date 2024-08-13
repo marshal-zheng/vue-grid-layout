@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - (August 13, 2024)
+
+### Documentation
+
+- Update exampdoc
+
 ## [1.0.0] - (August 05, 2024)
 
 ### Chores
@@ -17,5 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History
 
+[1.0.1]: https://github.com///compare/v1.0.0..v1.0.1
 [1.0.0]: https://github.com///releases/tag/v1.0.0
 
