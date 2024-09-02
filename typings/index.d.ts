@@ -70,7 +70,29 @@ declare module '@marsio/vue-grid-layout' {
     innerRef?: Ref<"div">
   };
 
-  const VueGridLayout: DefineComponent<VueGridLayoutProps>;
-  export { VueGridLayout as default }
+  type WidthProviderProps = {
+    measureBeforeMount?: boolean;
+    class?: string;
+    style?: CSSProperties;
+  };
+
+  function WidthProvider(ComposedComponent: DefineComponent): DefineComponent<WidthProviderProps>;
+
+  type ResponsiveProps = {
+    breakpoint?: string | null;
+    breakpoints: Record<string, number>;
+    cols: Record<string, number>;
+    layouts: Record<string, Layout>;
+    width: number;
+    margin: Record<string, [number, number]> | [number, number];
+    containerPadding: Record<string, [number, number] | null> | [number, number] | null;
+    allowOverlap?: boolean;
+    verticalCompact?: boolean;
+    compactType?: "vertical" | "horizontal";
+  };
+
+  const Responsive: DefineComponent<Partial<ResponsiveProps>>;
+  const VueGridLayout: DefineComponent<Partial<VueGridLayoutProps>>;
+  export { VueGridLayout as default, WidthProvider, Responsive }
   export type { VueGridLayoutProps, LayoutItem, ResizeHandle, CompactType, ResizeHandleAxis }
 }
