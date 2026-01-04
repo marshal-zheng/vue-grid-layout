@@ -5,7 +5,7 @@ import type {
   LayoutItem,
   ResizeHandleAxis
 } from "./utils";
-import { validateLayout } from './utils'
+import type { GridHistoryStore } from './history'
 
 interface DroppingItem {
   i: string;
@@ -46,6 +46,7 @@ export type Props = {
   style: CSSProperties
   width: number
   autoSize: boolean
+  autoScroll?: boolean | { margin?: number; speed?: number }
   cols: number
   draggableCancel: string
   draggableHandle: string
@@ -60,6 +61,7 @@ export type Props = {
   isDraggable: boolean
   isResizable: boolean
   isDroppable: boolean
+  dropStrategy: 'cursor' | 'auto'
   preventCollision: boolean
   useCSSTransforms: boolean
   transformScale: number
@@ -67,6 +69,7 @@ export type Props = {
   resizeHandles: ResizeHandleAxis[]
   resizeHandle?: ResizeHandle
   allowOverlap: boolean
+  historyStore?: GridHistoryStore
   innerRef?: Ref<"div">
 };
 
@@ -129,15 +132,29 @@ export const basicProps = {
   modelValue: {
     type: Array as PropType<Layout>, // Specify the correct type instead of any if possible
     default: () => [],
-    validator: (layout) => {
-      // Assuming validateLayout throws an error if validation fails
-      try {
-        validateLayout(layout, "layout");
-        return true;
-      } catch (error) {
-        console.error(error);
-        return false;
+    validator: (layout: unknown) => {
+      if (!Array.isArray(layout)) return false;
+
+      for (let i = 0; i < layout.length; i++) {
+        const item = layout[i] as {
+          x?: unknown;
+          y?: unknown;
+          w?: unknown;
+          h?: unknown;
+          i?: unknown;
+        } | null;
+
+        if (!item) return false;
+        if (typeof item.x !== "number" || Number.isNaN(item.x)) return false;
+        if (typeof item.y !== "number" || Number.isNaN(item.y)) return false;
+        if (typeof item.w !== "number" || Number.isNaN(item.w)) return false;
+        if (typeof item.h !== "number" || Number.isNaN(item.h)) return false;
+        if (typeof item.i !== "undefined" && typeof item.i !== "string") {
+          return false;
+        }
       }
+
+      return true;
     }
   },
 
@@ -213,10 +230,24 @@ export const basicProps = {
     type: Number as PropType<number>,
     default: 1
   },
+  // Auto-scroll the nearest scroll container when dragging/resizing near an edge.
+  // If true, uses defaults. Or pass { margin?: number; speed?: number }.
+  autoScroll: {
+    type: [Boolean, Object] as PropType<boolean | { margin?: number; speed?: number }>,
+    default: false
+  },
   // If true, an external element can trigger onDrop callback with a specific grid position as a parameter
   isDroppable: {
     type: Boolean as PropType<boolean>,
     default: false
+  },
+  // Determines how an external element is positioned while dragging over the grid.
+  // - 'cursor': place based on the mouse position (default)
+  // - 'auto': snap to the nearest existing block adjacent position
+  dropStrategy: {
+    type: String as PropType<'cursor' | 'auto'>,
+    default: 'cursor',
+    validator: (value: string) => ['cursor', 'auto'].includes(value),
   },
 
   // Resize handle options
@@ -225,6 +256,12 @@ export const basicProps = {
     default: () => ['se']
   },
   resizeHandle: resizeHandleType,
+
+  // Optional pinia history store for undo/redo orchestration
+  historyStore: {
+    type: Object as PropType<GridHistoryStore>,
+    default: null
+  },
 
   //
   // Callbacks

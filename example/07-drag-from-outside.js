@@ -109,6 +109,7 @@ const App = {
         :useCSSTransforms="state.mounted"
         :containerPadding="[16, 16]"
         :isDroppable="true"
+        dropStrategy="auto"
       >
         <div v-for="(l, i) in state.layouts.lg" :key="l.i" :class="{ static: l.static }">
           <span v-if="l.static" class="text" title="This item is static and cannot be removed or resized.">

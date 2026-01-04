@@ -6,4 +6,9 @@ module.exports.Responsive =
 module.exports.Responsive.utils = require("./responsiveUtils");
 module.exports.WidthProvider =
   require("./WidthProvider").default;
+const gridHistory = require("./history");
+module.exports.history = gridHistory;
+module.exports.createGridHistoryStore = gridHistory.createGridHistoryStore;
+module.exports.useGridHistoryStore = gridHistory.useGridHistoryStore;
+module.exports.bindKeyboardShortcuts = gridHistory.bindKeyboardShortcuts;
 

@@ -1,4 +1,14 @@
-import { defineComponent, ref, onMounted, onBeforeUnmount, reactive, PropType, Ref, DefineComponent } from 'vue';
+import {
+  defineComponent,
+  ref,
+  onMounted,
+  onBeforeUnmount,
+  reactive,
+  PropType,
+  DefineComponent,
+  ComponentPublicInstance,
+  watch
+} from 'vue';
 import ResizeObserver from 'resize-observer-polyfill';
 import clsx from 'clsx';
 
@@ -28,35 +38,68 @@ export default function WidthProvideRG(ComposedComponent:  DefineComponent) {
       }
     },
     setup(props, { attrs, slots }) {
-      const elementRef: Ref<InstanceType<typeof ComposedComponent> | null> = ref(null);
+      const elementRef = ref<HTMLElement | ComponentPublicInstance | null>(null);
       const state = reactive<WPState>({
         width: 1280
       });
       const mounted = ref(false);
-      let resizeObserver: ResizeObserver;
+      let resizeObserver: ResizeObserver | null = null;
+      let observedNode: HTMLElement | null = null;
+
+      const resolveNode = (): HTMLElement | null => {
+        const value = elementRef.value;
+        if (!value) return null;
+        if (value instanceof HTMLElement) return value;
+        const maybeEl = (value as { $el?: unknown }).$el;
+        return maybeEl instanceof HTMLElement ? maybeEl : null;
+      };
+
+      const updateWidth = (rawWidth: number | undefined) => {
+        if (typeof rawWidth !== "number" || !Number.isFinite(rawWidth)) return;
+        const nextWidth = Math.round(rawWidth);
+        if (nextWidth > 0 && nextWidth !== state.width) state.width = nextWidth;
+      };
+
+      const updateObserverTarget = () => {
+        if (!resizeObserver) return;
+        const node = resolveNode();
+
+        if (observedNode && observedNode !== node) {
+          resizeObserver.unobserve(observedNode);
+        }
+        observedNode = node;
+
+        if (node) {
+          resizeObserver.observe(node);
+          updateWidth(node.getBoundingClientRect().width);
+        }
+      };
 
       onMounted(() => {
-        mounted.value = true;
         resizeObserver = new ResizeObserver(entries => {
-          const node = elementRef?.value?.$el;
-          if (node instanceof HTMLElement) {
-            const width = entries[0].contentRect.width;
-            state.width = width;
-          }
+          const entry = entries[0];
+          if (!entry) return;
+          updateWidth(entry.contentRect.width);
         });
-        const node = elementRef.value?.$el;
-        if (node instanceof HTMLElement) {
-          resizeObserver.observe(elementRef?.value?.$el);
-        }
+
+        // For `measureBeforeMount`, the first render is a placeholder <div>. Measure/observe it
+        // before mounting children to avoid an initial layout jump.
+        updateObserverTarget();
+        mounted.value = true;
       });
 
       onBeforeUnmount(() => {
         mounted.value = false;
-        const node = elementRef.value?.$el;
-        if (node instanceof HTMLElement) {
-          resizeObserver.unobserve(node);
+        if (resizeObserver) {
+          if (observedNode) resizeObserver.unobserve(observedNode);
+          resizeObserver.disconnect();
         }
-        resizeObserver.disconnect();
+        observedNode = null;
+        resizeObserver = null;
+      });
+
+      watch(elementRef, () => {
+        updateObserverTarget();
       });
 
       return () => {

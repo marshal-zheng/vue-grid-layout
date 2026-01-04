@@ -40,7 +40,17 @@ module.exports = (env, argv) => {
       },
       static: {
         directory: '.',
+      },
+      watchFiles: {
+        options: {
+          ignored: ['**/node_modules/**', '**/.git/**', '**/build/**', '**/perf/**']
+        }
       }
+    },
+    watchOptions: {
+      ignored: ['**/node_modules/**', '**/.git/**', '**/build/**', '**/perf/**'],
+      aggregateTimeout: 300,
+      poll: false
     },
     externals: {
       vue: {
@@ -48,6 +58,12 @@ module.exports = (env, argv) => {
         commonjs2: 'vue',
         amd: 'vue',
         root: 'Vue'
+      },
+      pinia: {
+        commonjs: 'pinia',
+        commonjs2: 'pinia',
+        amd: 'pinia',
+        root: 'Pinia'
       }
     },
     module: {

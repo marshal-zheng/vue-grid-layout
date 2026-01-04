@@ -36,6 +36,7 @@ VGL is Vue3-only and does not require jQuery.
 1. [Bounded Layout](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/13-bounded.js)
 1. [Responsive Bootstrap-style Layout](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/14-responsive-bootstrap-style.js)
 1. [Allow Overlap](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/15-allow-overlap.js)
+1. [History / Undo-Redo](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/16-history.js)
 
 ## Features
 
@@ -59,6 +60,20 @@ Install the Vue-Grid-Layout [package](https://www.npmjs.com/package/@marsio/vue-
 ```bash
 npm install @marsio/vue-grid-layout
 ```
+
+### Styles
+
+VGL ships with a minimal stylesheet for placeholder/resize handles:
+
+```js
+import "@marsio/vue-grid-layout/css/styles.css";
+```
+
+CSS variables you can override:
+
+- `--vgl-placeholder-bg`, `--vgl-placeholder-border`
+- `--vgl-resize-handle-size`, `--vgl-resize-handle-indicator-inset`, `--vgl-resize-handle-indicator-size`, `--vgl-resize-handle-indicator-color`
+- `--vgl-blocked-outline`
 
 ## Usage
 
@@ -106,6 +121,53 @@ export default defineComponent({
     };
   }
 });
+</script>
+```
+
+## History (Pinia-powered undo/redo)
+
+- Install peer: `npm i pinia` (already a peer dependency).
+- Create a store once and pass it to the grid via `historyStore`.
+- Use the store’s `undo` / `redo` / `canUndo` / `canRedo` to drive shortcuts or toolbar buttons.
+
+```vue
+<template>
+  <div class="toolbar">
+    <button :disabled="!history.canUndo" @click="undo">Undo</button>
+    <button :disabled="!history.canRedo" @click="redo">Redo</button>
+  </div>
+  <VGL v-model="layout" :cols="12" :width="1200" :historyStore="history">
+    <div v-for="item in layout" :key="item.i">{{ item.i }}</div>
+  </VGL>
+</template>
+
+<script setup>
+import { reactive, watch } from 'vue'
+import VGL, { useGridHistoryStore } from '@marsio/vue-grid-layout'
+
+const history = useGridHistoryStore({ maxSize: 200 })
+
+const layout = reactive([
+  { i: 'a', x: 0, y: 0, w: 2, h: 2 },
+  { i: 'b', x: 2, y: 0, w: 2, h: 2 }
+])
+
+const undo = () => {
+  const snap = history.undo()
+  if (snap) layout.splice(0, layout.length, ...snap)
+}
+
+const redo = () => {
+  const snap = history.redo()
+  if (snap) layout.splice(0, layout.length, ...snap)
+}
+
+// Keep store in sync if layout is updated externally
+watch(
+  () => layout,
+  next => history.replacePresent(next),
+  { deep: true }
+)
 </script>
 ```
 
@@ -337,6 +399,10 @@ useCSSTransforms?: boolean = true,
 // we should set scale coefficient to avoid render artefacts while dragging.
 transformScale?: number = 1,
 
+// Auto-scroll the nearest scroll container when dragging/resizing near an edge.
+// If true, uses defaults. Or pass { margin?: number; speed?: number }.
+autoScroll?: boolean | { margin?: number; speed?: number } = false,
+
 // If true, grid can be placed one over the other.
 // If set, implies `preventCollision`.
 allowOverlap?: boolean = false,
@@ -352,6 +418,11 @@ preventCollision?: boolean = false,
 // It can be useful for dropping an element in a specific position
 
 isDroppable?: boolean = false,
+
+// Determines how an external element is positioned while dragging over the grid.
+// - 'cursor': place based on the mouse position (default)
+// - 'auto': snap to the nearest existing block adjacent position
+dropStrategy?: 'cursor' | 'auto' = 'cursor',
 // Defines which resize handles should be rendered.
 // Allows for any combination of:
 // 's' - South handle (bottom-center)

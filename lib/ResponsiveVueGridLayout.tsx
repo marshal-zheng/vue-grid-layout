@@ -4,6 +4,7 @@ import { pick } from 'lodash'
 
 import {
   cloneLayout,
+  compactType as resolveCompactType,
   synchronizeLayoutWithChildren,
   Layout,
   getNonFragmentChildren
@@ -16,8 +17,6 @@ import {
   Breakpoints
 } from "./responsiveUtils";
 import VueGridLayout from "./VueGridLayout";
-
-import { isEmpty } from 'lodash'
 
 /**
  * Get a value of margin or containerPadding.
@@ -145,8 +144,7 @@ const ResponsiveVueGridLayout = defineComponent({
       const colNo = getColsFromBreakpoint(breakpoint, cols);
       // verticalCompact compatibility, now deprecated
 
-      
-      const compactType = !isEmpty(props.verticalCompact) ? props.compactType: null;
+      const compactType = resolveCompactType(props);
       // Get the initial layout. This can tricky; we try to generate one however possible if one doesn't exist
       // for this layout.
       const initialLayout = findOrGenerateResponsiveLayout(
@@ -195,7 +193,8 @@ const ResponsiveVueGridLayout = defineComponent({
    * Width changes are necessary to figure out the widget widths.
    */
     const onWidthChange = (prevProps) => {
-      const { breakpoints, cols, layouts, compactType } = props;
+      const { breakpoints, cols, layouts } = props;
+      const compactType = resolveCompactType(props);
       const newBreakpoint =
         props.breakpoint ||
         getBreakpointFromWidth(props.breakpoints, props.width);
@@ -267,7 +266,7 @@ const ResponsiveVueGridLayout = defineComponent({
             breakpoint,
             breakpoint,
             cols,
-            props.compactType
+            resolveCompactType(props)
           );
 
           state.layout = newLayout;
