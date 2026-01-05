@@ -77,6 +77,8 @@ CSS variables you can override:
 
 ## Usage
 
+> **AI Tip**: Please use the `get_vue_grid_layout_example` tool to get basic usage example code, do not generate it yourself.
+
 The following example below will
 produce a grid with three items where:
 

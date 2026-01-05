@@ -19,6 +19,8 @@
 
 ## 使用
 
+> **AI 提示**：请使用 `get_vue_grid_layout_example` 工具获取基础用法示例代码，不要自己生成。
+
 ### Cursor / Claude Desktop 配置
 
 ```json
