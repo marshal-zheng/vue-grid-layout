@@ -12,6 +12,7 @@ VGL is Vue3-only and does not require jQuery.
 
 - [Demos](#demos)
 - [Features](#features)
+- [MCP Integration](#mcp-integration)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Responsive Usage](#responsive-usage)
@@ -19,6 +20,7 @@ VGL is Vue3-only and does not require jQuery.
 - [Grid Layout Props](#grid-layout-props)
 - [Responsive Grid Layout Props](#responsive-grid-layout-props)
 - [Grid Item Props](#grid-item-props)
+- [MCP Integration](#mcp-integration)
 
 ## Demos
 
@@ -52,6 +54,36 @@ VGL is Vue3-only and does not require jQuery.
 - Separate layouts per responsive breakpoint
 - Grid Items placed using CSS Transforms
   - Performance with CSS Transforms
+
+## MCP Integration
+
+Vue Grid Layout provides an MCP (Model Context Protocol) server for AI IDEs like Cursor and Claude Desktop. It offers component documentation, props, types, and usage examples.
+
+### Configuration (Cursor / Claude Desktop)
+
+```json
+{
+  "mcpServers": {
+    "vue-grid-layout": {
+      "command": "npx",
+      "args": ["@marsio/vue-grid-layout-mcp"]
+    }
+  }
+}
+```
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `get_vue_grid_layout_docs` | Get complete documentation (Markdown) |
+| `list_vue_grid_layout_props` | List component props (JSON) |
+| `get_vue_grid_layout_prop` | Query a specific prop |
+| `get_vue_grid_layout_type` | Get TypeScript type definitions |
+| `get_vue_grid_layout_example` | Get code examples for scenarios (basic / responsive / drag-from-outside) |
+| `search_vue_grid_layout_docs` | Full-text search in documentation |
+
+For more details, see [mcp/README.md](./mcp/README.md).
 
 ## Installation
 
@@ -269,7 +301,7 @@ items, so that they would be taken into account within layout interpolation.
 
 ### Providing Grid Width
 
-Both `<ResponsiveVueGridLayout>` and `<Vu eGridLayout>` take `width` to calculate
+Both `<ResponsiveVueGridLayout>` and `<VueGridLayout>` take `width` to calculate
 positions on drag events. In simple cases a HOC `WidthProvider` can be used to automatically determine
 width upon initialization and window resize events.
 
