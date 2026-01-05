@@ -1,0 +1,54 @@
+{
+    "name": "@marsio/vue-grid-layout-mcp",
+    "description": "MCP server for @marsio/vue-grid-layout - provides grid layout docs and structured props for AI IDEs",
+    "version": "1.0.0",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "sideEffects": false,
+    "publishConfig": {
+        "access": "public"
+    },
+    "homepage": "https://github.com/marshal-zheng/vue-grid-layout",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/marshal-zheng/vue-grid-layout",
+        "directory": "mcp"
+    },
+    "scripts": {
+        "build": "yarn generate:props && tsup",
+        "dev": "yarn generate:props && tsup --watch",
+        "clean": "rimraf dist",
+        "generate:props": "node ./scripts/generate-props.js",
+        "check:data": "node ./scripts/check-data.js",
+        "test:mcp": "echo '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}' | node dist/index.js",
+        "prepublishOnly": "yarn build && yarn check:data"
+    },
+    "bin": {
+        "vue-grid-layout-mcp": "./dist/index.js"
+    },
+    "keywords": [
+        "vue-grid-layout",
+        "mcp-server",
+        "mcp",
+        "vue3",
+        "grid",
+        "layout",
+        "ai"
+    ],
+    "type": "module",
+    "license": "MIT",
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.22.0",
+        "zod": "^4.3.4"
+    },
+    "devDependencies": {
+        "@types/node": "^22.9.0",
+        "rimraf": "^4.4.1",
+        "tsup": "^8.5.1",
+        "typescript": "~5.5.4"
+    }
+}

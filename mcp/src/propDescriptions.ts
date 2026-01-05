@@ -1,0 +1,51 @@
+export const VUE_GRID_LAYOUT_PROP_DESCRIPTIONS: Record<string, string> = {
+  class: 'Additional CSS class for the container',
+  style: 'Inline style object for the container',
+  width: 'Container width (px); auto-measured via WidthProvider if not provided',
+  autoSize: 'Automatically adjust container height based on content',
+  autoScroll: 'Auto-scroll when dragging near edges; accepts boolean or { margin, speed } object',
+  cols: 'Number of columns, default 12',
+  draggableCancel: 'CSS selector for elements that should not trigger drag (requires . prefix)',
+  draggableHandle: 'CSS selector for drag handle elements (requires . prefix)',
+  verticalCompact: 'Vertical compact layout (deprecated, use compactType)',
+  compactType: 'Compaction direction: vertical / horizontal / null (no compaction)',
+  modelValue: 'Layout array, supports v-model two-way binding',
+  margin: 'Grid spacing [x, y] in px, default [10, 10]',
+  containerPadding: 'Container padding [x, y] in px, defaults to margin value',
+  rowHeight: 'Row height (px), default 150',
+  maxRows: 'Maximum number of rows, default Infinity (no limit)',
+  isBounded: 'Restrict dragging within container boundaries',
+  isDraggable: 'Globally enable dragging, default true',
+  isResizable: 'Globally enable resizing, default true',
+  isDroppable: 'Allow dropping elements from outside, requires @drop and @dropDragOver handlers',
+  dropStrategy: 'Drop positioning strategy: cursor (mouse position) / auto (auto-snap)',
+  preventCollision: 'Prevent collision mode, items won\'t push others when dragging',
+  allowOverlap: 'Allow grid items to overlap, automatically enables preventCollision',
+  useCSSTransforms: 'Use CSS transform for positioning (better performance), default true',
+  transformScale: 'Set scale ratio when parent has CSS scale transform',
+  droppingItem: 'Placeholder config for external drop { i, w, h }',
+  resizeHandles: 'Array of enabled resize handle directions, e.g. ["se", "n", "e"]',
+  resizeHandle: 'Custom resize handle render function or VNode',
+  historyStore: 'Pinia history store instance for undo/redo functionality',
+  innerRef: 'Ref reference to container DOM element',
+}
+
+export const RESPONSIVE_GRID_LAYOUT_PROP_DESCRIPTIONS: Record<string, string> = {
+  breakpoint: 'Force current breakpoint key (optional, usually auto-calculated)',
+  breakpoints: 'Breakpoint to pixel width mapping, e.g. { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }',
+  cols: 'Breakpoint to column count mapping, e.g. { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }',
+  layouts: 'Layout collection for each breakpoint, e.g. { lg: Layout[], md: Layout[] }',
+  width: 'Component width (required, usually auto-provided by WidthProvider)',
+  margin: 'Breakpoint to spacing mapping or universal [x, y], e.g. { lg: [10, 10] } or [10, 10]',
+  containerPadding: 'Breakpoint to container padding mapping or universal value',
+  allowOverlap: 'Allow grid items to overlap',
+  verticalCompact: 'Vertical compact layout (deprecated)',
+  compactType: 'Compaction direction: vertical / horizontal / null',
+}
+
+export const WIDTH_PROVIDER_PROP_DESCRIPTIONS: Record<string, string> = {
+  measureBeforeMount: 'Measure width before first render to avoid layout shift (recommended for SSR)',
+  class: 'Additional CSS class for the container',
+  style: 'Container style object',
+}
+
