@@ -20,18 +20,21 @@ type WPState = {
 
 const layoutClassName = "vue-grid-layout";
 
-export default function WidthProvideRG(ComposedComponent:  DefineComponent) {
+export default function WidthProvideRG(ComposedComponent: DefineComponent) {
   return defineComponent({
     name: 'WidthProvider',
     props: {
+      /** Measure width before first render to avoid layout shift (recommended for SSR) */
       measureBeforeMount: {
         type: Boolean as PropType<boolean>,
         default: false
       },
+      /** Additional CSS class for the container */
       class: {
         type: String as PropType<string>,
         default: ''
       },
+      /** Container style object */
       style: {
         type: Object as PropType<Kv>,
         default: () => ({})
@@ -60,6 +63,20 @@ export default function WidthProvideRG(ComposedComponent:  DefineComponent) {
         if (nextWidth > 0 && nextWidth !== state.width) state.width = nextWidth;
       };
 
+      let timerId: ReturnType<typeof setTimeout> | undefined;
+      const clearWidthTimer = () => {
+        if (!timerId) return;
+        clearTimeout(timerId);
+        timerId = undefined;
+      };
+      const debouncedUpdateWidth = (rawWidth: number | undefined) => {
+        clearWidthTimer();
+        timerId = setTimeout(() => {
+          timerId = undefined;
+          if (mounted.value) updateWidth(rawWidth);
+        }, 20);
+      }
+
       const updateObserverTarget = () => {
         if (!resizeObserver) return;
         const node = resolveNode();
@@ -79,7 +96,7 @@ export default function WidthProvideRG(ComposedComponent:  DefineComponent) {
         resizeObserver = new ResizeObserver(entries => {
           const entry = entries[0];
           if (!entry) return;
-          updateWidth(entry.contentRect.width);
+          debouncedUpdateWidth(entry.contentRect.width);
         });
 
         // For `measureBeforeMount`, the first render is a placeholder <div>. Measure/observe it
@@ -90,6 +107,7 @@ export default function WidthProvideRG(ComposedComponent:  DefineComponent) {
 
       onBeforeUnmount(() => {
         mounted.value = false;
+        clearWidthTimer();
         if (resizeObserver) {
           if (observedNode) resizeObserver.unobserve(observedNode);
           resizeObserver.disconnect();

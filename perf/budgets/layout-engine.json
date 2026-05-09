@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "relativeRegression": 2,
+  "scenarios": {
+    "drag-across-rows": { "absoluteMaxMs": 80 },
+    "north-west-resize": { "absoluteMaxMs": 80 },
+    "external-drop-fit": { "absoluteMaxMs": 80 },
+    "compact-commit": { "absoluteMaxMs": 160 }
+  }
+}

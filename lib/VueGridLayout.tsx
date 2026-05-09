@@ -1,4 +1,4 @@
-import { defineComponent, VNode, reactive, ref, onMounted, onBeforeUnmount, h, Fragment, watch, markRaw } from 'vue'
+import { defineComponent, VNode, reactive, ref, onMounted, onBeforeUnmount, h, Fragment, watch, markRaw, computed, toRef, nextTick, type Ref } from 'vue'
 import { deepEqual } from "fast-equals";
 import { pick } from 'lodash'
 import clsx from "clsx";
@@ -23,6 +23,17 @@ import {
 import { calcXY } from "./calculateUtils";
 import GridItem from "./GridItem";
 import { basicProps as gridLayoutProps } from "./VueGridLayoutPropTypes";
+import {
+  useGridLayoutPersistence,
+  type LayoutPersistenceEvent
+} from "./persistence";
+import {
+  compareWithLegacyLayout,
+  createInteractionController,
+  createInteractionScheduler,
+  createLayoutExecutor,
+  executeLayoutOperation
+} from "./layout-engine";
 import type {
   CompactType,
   GridResizeEvent,
@@ -30,8 +41,15 @@ import type {
   Layout,
   DroppingPosition,
   LayoutItem,
-  EventCallback
+  EventCallback,
+  ResizeHandleAxis
 } from "./utils";
+import type {
+  GridLayoutEngineOptions,
+  LayoutOperation,
+  LayoutOperationRequest,
+  LayoutOperationResult
+} from "./layout-engine";
 import { PositionParams } from "./calculateUtils";
 import { Kv } from './type'
 
@@ -84,7 +102,8 @@ const VueGridLayout = defineComponent({
     const resizeBlocked = ref(false);
     const activeDragId = ref<string | null>(null);
     const activeResizeId = ref<string | null>(null);
-  
+    let restoringPersistence = false;
+
 
     // Reactive state object
     const state: State = reactive({
@@ -125,6 +144,197 @@ const VueGridLayout = defineComponent({
 
     syncHistory(state.layout, 'replace');
 
+    const persistenceConfig = props.persistence && typeof props.persistence === 'object'
+      ? props.persistence
+      : null;
+
+    const applyPersistedLayout = (layout: Layout) => {
+      restoringPersistence = true;
+      const restoredLayout = cloneLayout(layout);
+      state.layout = markRaw(restoredLayout);
+      syncHistory(restoredLayout, 'replace');
+      emit('update:modelValue', restoredLayout);
+      emit('layoutChange', restoredLayout);
+      void nextTick().then(() => {
+        restoringPersistence = false;
+      });
+    };
+
+    const onPersistenceEvent = (event: LayoutPersistenceEvent<Layout>) => {
+      if (event.type === 'external-apply') {
+        applyPersistedLayout(event.value);
+      }
+      persistenceConfig?.onEvent?.(event);
+    };
+
+    const persistenceController = persistenceConfig
+      ? useGridLayoutPersistence<Layout>({
+          ...persistenceConfig,
+          onEvent: onPersistenceEvent,
+          kind: 'layout',
+          target: toRef(state, 'layout') as Ref<Layout>,
+          watchTarget: false
+        })
+      : null;
+
+    const getLayoutEngineProp = () =>
+      props.layoutEngine && typeof props.layoutEngine === "object"
+        ? props.layoutEngine
+        : null;
+
+    const isLegacyLayoutEngine = () => {
+      const config = getLayoutEngineProp();
+      return props.layoutEngine === false || config?.mode === "legacy";
+    };
+
+    let executorConfigRef: unknown = undefined;
+    let layoutExecutor = createLayoutExecutor();
+
+    const getLayoutExecutor = () => {
+      const config = getLayoutEngineProp();
+      const nextExecutorConfig = config?.executor;
+      if (nextExecutorConfig !== executorConfigRef) {
+        layoutExecutor.dispose?.();
+        layoutExecutor = createLayoutExecutor(nextExecutorConfig);
+        executorConfigRef = nextExecutorConfig;
+      }
+      return layoutExecutor;
+    };
+
+    let schedulerConfigRef: unknown = undefined;
+    let interactionScheduler = createInteractionScheduler();
+
+    const getInteractionScheduler = () => {
+      const config = getLayoutEngineProp();
+      const nextSchedulerConfig = config?.scheduler;
+      if (nextSchedulerConfig !== schedulerConfigRef) {
+        interactionScheduler.cancel("scheduler reconfigured");
+        interactionScheduler = createInteractionScheduler(nextSchedulerConfig);
+        schedulerConfigRef = nextSchedulerConfig;
+      }
+      return interactionScheduler;
+    };
+
+    const getLayoutEngineOptions = (): GridLayoutEngineOptions => {
+      const config = getLayoutEngineProp();
+      return {
+        cols: props.cols,
+        maxRows: props.maxRows,
+        compactType: compactType(props),
+        allowOverlap: props.allowOverlap,
+        preventCollision: props.preventCollision,
+        scheduler: config?.scheduler,
+        executor: getLayoutExecutor(),
+        compareLegacy: config?.compareLegacy,
+        legacyFallback: config?.legacyFallback !== false,
+        diagnostics: config?.diagnostics,
+        onEvent: config?.onEvent
+      };
+    };
+
+    let interactionRequestSeq = 0;
+    let interactionController = createInteractionController(state.layout, getLayoutEngineOptions());
+
+    const resetInteractionController = (layout: Layout = state.layout) => {
+      interactionController.dispose();
+      interactionController = createInteractionController(layout, getLayoutEngineOptions());
+    };
+
+    const nextInteractionRequestId = (kind: string, itemId: string) =>
+      `${kind}:${itemId}:${++interactionRequestSeq}`;
+
+    const maybeReportLegacyMismatch = (
+      request: LayoutOperationRequest,
+      result: LayoutOperationResult
+    ) => {
+      if (!getLayoutEngineOptions().compareLegacy) return;
+      const comparison = compareWithLegacyLayout(request, result);
+      if (!comparison.matches) {
+        getLayoutEngineOptions().onEvent?.({
+          type: "legacy-mismatch",
+          id: request.id,
+          message: "VueGridLayout layout engine result differs from legacy path",
+          diagnostics: result.diagnostics,
+          details: comparison.differences
+        });
+      }
+    };
+
+    const shouldUseExecutor = (request: LayoutOperationRequest): boolean => {
+      const executor = getLayoutExecutor();
+      if (executor.kind === "main-thread") return false;
+      if (
+        request.phase === "preview" &&
+        (request.operation.type === "move" || request.operation.type === "resize")
+      ) {
+        return false;
+      }
+      return (
+        request.phase === "commit" ||
+        Boolean(request.heavy) ||
+        request.operation.type === "dropFit" ||
+        request.operation.type === "generateResponsiveLayout"
+      );
+    };
+
+    const executeScheduledRequest = (
+      request: LayoutOperationRequest
+    ): LayoutOperationResult | Promise<LayoutOperationResult> => {
+      if (shouldUseExecutor(request)) {
+        return getLayoutExecutor().execute(request);
+      }
+      return executeLayoutOperation(request);
+    };
+
+    const scheduleEngineRequest = (
+      request: LayoutOperationRequest,
+      apply: (result: LayoutOperationResult) => void
+    ): LayoutOperationResult | null => {
+      let immediateResult: LayoutOperationResult | null = null;
+      getInteractionScheduler().schedule(
+        request,
+        executeScheduledRequest,
+        result => {
+          const applied = interactionController.applyAsyncResult(result);
+          getInteractionScheduler().recordDuration(applied.diagnostics?.durationMs || 0);
+          maybeReportLegacyMismatch(request, applied);
+          apply(applied);
+          immediateResult = applied;
+        }
+      );
+      return immediateResult;
+    };
+
+    const runEnginePreview = (
+      id: string,
+      operation: LayoutOperation,
+      apply: (result: LayoutOperationResult) => void,
+      heavy = false
+    ): LayoutOperationResult | null => {
+      const request = {
+        id,
+        operation,
+        baseRevision: interactionController.getState().interaction?.startRevision,
+        heavy
+      };
+      return scheduleEngineRequest(interactionController.preparePreview(request), apply);
+    };
+
+    const runEngineCommit = (
+      id: string,
+      operation: LayoutOperation,
+      apply: (result: LayoutOperationResult) => void,
+      heavy = false
+    ): LayoutOperationResult | null => {
+      const request = {
+        id,
+        operation,
+        baseRevision: interactionController.getState().interaction?.startRevision,
+        heavy
+      };
+      return scheduleEngineRequest(interactionController.prepareCommit(request), apply);
+    };
+
     watch(
       () => props.historyStore,
       next => {
@@ -140,11 +350,15 @@ const VueGridLayout = defineComponent({
       oldLayout?: Layout | null,
       historyMode: 'push' | 'replace' = 'push'
     ) => {
+      if (restoringPersistence) return;
       if (!oldLayout) oldLayout = state.layout;
       if (!deepEqual(oldLayout, newLayout)) {
         syncHistory(newLayout, historyMode);
         emit('layoutChange', newLayout);
         emit('update:modelValue', newLayout)
+        persistenceController?.commit(cloneLayout(newLayout), {
+          source: historyMode === 'push' ? 'component' : 'programmatic'
+        });
       }
     };
 
@@ -171,22 +385,50 @@ const VueGridLayout = defineComponent({
       }
     );
 
-    watch(
-      () => {
-        const defaultSlot = slots.default ? slots.default() : [];
-        const nonFragmentChildren = getNonFragmentChildren({ type: Fragment, children: defaultSlot } as VNode);
+    // Optimized watcher: Only re-run when relevant props or children structure changes
+    const layoutDependencies = computed(() => {
+      const defaultSlot = slots.default ? slots.default() : [];
+      const nonFragmentChildren = getNonFragmentChildren({ type: Fragment, children: defaultSlot } as VNode);
+
+      // Create a stable signature for children (keys and data-grid props)
+      // This avoids deep watching VNodes which change every render
+      const childrenSignature = nonFragmentChildren.map(c => {
+        const gridProps = c.props?.["data-grid"];
         return {
-          children: markRaw(nonFragmentChildren),
-          props: pick(props, ['compactType', 'modelValue', 'verticalCompact', 'cols', 'allowOverlap'])
+          key: c.key,
+          // We only care about specific grid props that affect layout
+          grid: gridProps ? {
+            w: gridProps.w, h: gridProps.h, x: gridProps.x, y: gridProps.y
+          } : null
         };
-      },
+      });
+
+      return {
+        children: markRaw(nonFragmentChildren),
+        props: pick(props, ['compactType', 'modelValue', 'verticalCompact', 'cols', 'allowOverlap']),
+        signature: childrenSignature
+      };
+    });
+
+    watch(
+      layoutDependencies,
       ({ children: newChildren, props: nextProps }, { children: oldChildren, props: prevProps }) => {
-        if (childrenEqual(newChildren, oldChildren) &&
-            deepEqual(nextProps.modelValue, state.layout) &&
-            nextProps.compactType === prevProps.compactType) {
-          return false;
+        // Deep equal check on the signature is much cheaper than on VNodes
+        const modelValueMatches = deepEqual(nextProps.modelValue, state.layout);
+        const compactTypeMatches = nextProps.compactType === prevProps.compactType;
+
+        // If modelValue matches layout AND compactType is same, check children
+        // But wait, the signature check is implicit because if signature didn't change,
+        // computed wouldn't update? No, computed returns new object structure.
+        // But we can check signature equality here.
+
+        // Actually, if we use the signature in the watcher source, we can skip manual check if signature allows?
+        // But we need the actual VNodes (newChildren) for synchronization.
+
+        if (childrenEqual(newChildren, oldChildren) && modelValueMatches && compactTypeMatches) {
+          return;
         }
-    
+
         const layout = synchronizeLayoutWithChildren(
           nextProps.modelValue,
           newChildren,
@@ -195,11 +437,26 @@ const VueGridLayout = defineComponent({
           nextProps.allowOverlap
         );
 
+        if (!isLegacyLayoutEngine() && (activeDragId.value || activeResizeId.value)) {
+          const rebased = interactionController.rebase(layout);
+          if (!rebased) {
+            state.activeDrag = null;
+            activeDragId.value = null;
+            activeResizeId.value = null;
+            dragBlocked.value = false;
+            resizeBlocked.value = false;
+          } else if (rebased.placeholder) {
+            state.activeDrag = markRaw(rebased.placeholder);
+          }
+        } else if (!isLegacyLayoutEngine()) {
+          resetInteractionController(layout);
+        }
+
         onLayoutMaybeChanged(layout, state.layout, 'replace');
         state.layout = markRaw(layout);
         state.compactType = nextProps.compactType;
       },
-      { deep: true }
+      { deep: true } // We still need deep: true to catch changes inside the return object, but the object is lighter
     );
 
     const supportsRAF =
@@ -250,12 +507,12 @@ const VueGridLayout = defineComponent({
       state.activeDrag = markRaw(
         activeItem
           ? {
-              ...pending.placeholder,
-              w: activeItem.w,
-              h: activeItem.h,
-              x: activeItem.x,
-              y: activeItem.y
-            }
+            ...pending.placeholder,
+            w: activeItem.w,
+            h: activeItem.h,
+            x: activeItem.x,
+            y: activeItem.y
+          }
           : pending.placeholder
       );
     };
@@ -475,6 +732,10 @@ const VueGridLayout = defineComponent({
     onBeforeUnmount(() => {
       cancelFrameUpdate();
       resetAutoScroll();
+      interactionScheduler.cancel("component unmounted");
+      layoutExecutor.dispose?.();
+      interactionController.dispose();
+      persistenceController?.stop();
     });
 
     // Handle the start of resizing an item
@@ -490,6 +751,14 @@ const VueGridLayout = defineComponent({
       state.oldResizeItem = cloneLayoutItem(l);
       state.oldLayout = cloneLayout(layout);
       state.resizing = true;
+      if (!isLegacyLayoutEngine()) {
+        resetInteractionController(layout);
+        interactionController.start({
+          id: nextInteractionRequestId("resize-start", i),
+          type: "resize",
+          itemId: i
+        });
+      }
       // emit('resizeStart', { layout, item: l, event: e });
       // vAttrs.onResizeStart?.(layout, l, e, node);
       vAttrs.onResizeStart?.(layout, l, l, undefined, e, node);
@@ -499,6 +768,39 @@ const VueGridLayout = defineComponent({
     const onResize = (i: string, w: number, h: number, { e, node, handle }: GridResizeEvent) => {
       const { oldResizeItem } = state;
       const { cols, preventCollision, allowOverlap } = props;
+      if (!isLegacyLayoutEngine()) {
+        const layout = state.layout;
+        const l = getLayoutItem(layout, i);
+        if (!l) return;
+        maybeAutoScroll(e, node);
+        runEnginePreview(
+          nextInteractionRequestId("resize", i),
+          { type: "resize", id: i, w, h, handle: handle as ResizeHandleAxis },
+          result => {
+            if (result.status === "stale") return;
+            const nextLayout = result.status === "changed" || result.status === "fallback"
+              ? result.layout
+              : interactionController.getCommitted();
+            const nextItem = getLayoutItem(nextLayout, i) || l;
+            const placeholder = result.placeholder || {
+              w: nextItem.w,
+              h: nextItem.h,
+              x: nextItem.x,
+              y: nextItem.y,
+              static: true,
+              i
+            };
+            if (activeResizeId.value === i) resizeBlocked.value = result.status === "blocked";
+            vAttrs.onResize?.(nextLayout, oldResizeItem, nextItem, placeholder, e, node);
+            if (result.status === "changed" || result.status === "fallback") {
+              state.layout = markRaw(nextLayout);
+            }
+            state.activeDrag = markRaw(placeholder);
+          },
+          state.layout.length >= (getLayoutEngineProp()?.scheduler?.auto?.workerMinItems || 1000)
+        );
+        return;
+      }
       const isLargeLayout = state.layout.length >= LARGE_LAYOUT_THRESHOLD;
       maybeAutoScroll(e, node);
 
@@ -695,12 +997,41 @@ const VueGridLayout = defineComponent({
     };
 
     // Handle the end of resizing an item
-    const onResizeStop = (i: string, w: number, h: number, { e, node }: GridResizeEvent) => {
+    const onResizeStop = (i: string, w: number, h: number, { e, node, handle }: GridResizeEvent) => {
       cancelFrameUpdate();
       const { layout, oldResizeItem, oldLayout } = state;
       const { cols, allowOverlap } = props;
       const l = getLayoutItem(layout, i);
       if (!l) return;
+
+      if (!isLegacyLayoutEngine()) {
+        runEngineCommit(
+          nextInteractionRequestId("resize-stop", i),
+          { type: "resize", id: i, w, h, handle: handle as ResizeHandleAxis },
+          result => {
+            if (result.status === "stale") return;
+            const newLayout = result.status === "changed" || result.status === "fallback"
+              ? result.layout
+              : interactionController.getCommitted();
+            const nextItem = getLayoutItem(newLayout, i) || l;
+            vAttrs.onResizeStop?.(newLayout, oldResizeItem, nextItem, undefined, e, node);
+
+            state.activeDrag = null;
+            state.layout = markRaw(newLayout);
+            state.oldResizeItem = null;
+            state.resizing = false;
+            activeResizeId.value = null;
+            resizeBlocked.value = false;
+            resetAutoScroll();
+            if (newLayout === layout) {
+              state.oldLayout = null;
+              onLayoutMaybeChanged(newLayout, oldLayout || layout, 'push');
+            }
+          },
+          state.layout.length >= (getLayoutEngineProp()?.scheduler?.auto?.workerMinItems || 1000)
+        );
+        return;
+      }
 
       const newLayout = allowOverlap ? layout : compact(layout, compactType(props), cols);
       vAttrs.onResizeStop?.(newLayout, oldResizeItem, l, undefined, e, node);
@@ -723,6 +1054,21 @@ const VueGridLayout = defineComponent({
     // Set the component to mounted state
     onMounted(() => {
       state.mounted = true;
+      if (!persistenceController) return;
+      restoringPersistence = true;
+      void persistenceController.load().then(async result => {
+        const restoredLayout = result.value && (result.ok || result.fallbackApplied)
+          ? cloneLayout(result.value)
+          : null;
+        if (restoredLayout) {
+          applyPersistedLayout(restoredLayout);
+        }
+        await nextTick();
+        restoringPersistence = false;
+      }).catch(async () => {
+        await nextTick();
+        restoringPersistence = false;
+      });
     });
 
     // Create a placeholder element
@@ -764,6 +1110,36 @@ const VueGridLayout = defineComponent({
       const l = getLayoutItem(layout, i);
       if (!l) return;
       maybeAutoScroll(e, node);
+
+      if (!isLegacyLayoutEngine()) {
+        runEnginePreview(
+          nextInteractionRequestId("drag", i),
+          { type: "move", id: i, x, y, userAction: true },
+          result => {
+            if (result.status === "stale") return;
+            const nextLayout = result.status === "changed" || result.status === "fallback"
+              ? result.layout
+              : interactionController.getCommitted();
+            const nextItem = getLayoutItem(nextLayout, i) || l;
+            const placeholder = result.placeholder || {
+              w: nextItem.w,
+              h: nextItem.h,
+              x: nextItem.x,
+              y: nextItem.y,
+              placeholder: true,
+              i
+            };
+            if (activeDragId.value === i) dragBlocked.value = result.status === "blocked";
+            vAttrs.onDrag?.(nextLayout, oldDragItem, nextItem, placeholder, e, node);
+            if (result.status === "changed" || result.status === "fallback") {
+              state.layout = markRaw(nextLayout);
+            }
+            state.activeDrag = markRaw(placeholder);
+          },
+          state.layout.length >= (getLayoutEngineProp()?.scheduler?.auto?.workerMinItems || 1000)
+        );
+        return;
+      }
 
       const isLargeLayout = state.layout.length >= LARGE_LAYOUT_THRESHOLD;
       const prevX = l.x;
@@ -837,10 +1213,65 @@ const VueGridLayout = defineComponent({
       const { droppingItem, cols, maxRows, dropStrategy } = props;
       const { layout } = state;
       let item = layout.find(l => l.i === droppingItem.i);
+
+      if (!isLegacyLayoutEngine()) {
+        const droppingId = String(droppingItem.i);
+        const baseLayout = layout.filter(l => l.i !== droppingId);
+        const targetItem = item || state.activeDrag || null;
+        const target = targetItem
+          ? { x: targetItem.x, y: targetItem.y }
+          : undefined;
+
+        resetInteractionController(baseLayout);
+        interactionController.start({
+          id: nextInteractionRequestId("drop-commit-start", droppingId),
+          type: "drop",
+          itemId: droppingId
+        });
+
+        runEngineCommit(
+          nextInteractionRequestId("drop-commit", droppingId),
+          {
+            type: "dropFit",
+            item: {
+              i: droppingId,
+              w: droppingItem.w,
+              h: droppingItem.h
+            },
+            strategy: dropStrategy === "auto" ? "auto" : "cursor",
+            target
+          },
+          result => {
+            const committedItem = result.placeholder || targetItem || undefined;
+            let cleanItem: LayoutItem | undefined;
+            if (committedItem) {
+              cleanItem = { ...committedItem };
+              delete cleanItem.isDraggable;
+              delete cleanItem.isResizable;
+            }
+            dragEnterCounter.value = 0;
+            vAttrs.onDrop?.(
+              (result.status === "changed" || result.status === "fallback"
+                ? result.layout
+                : baseLayout
+              ).filter(l => l.i !== droppingId),
+              e,
+              cleanItem
+            );
+            removeDroppingPlaceholder();
+          },
+          baseLayout.length >= (getLayoutEngineProp()?.scheduler?.auto?.workerMinItems || 1000)
+        );
+        return;
+      }
+
       if (!item && dropStrategy === 'auto') {
-        const fit =
-          findFirstFit(layout, { w: droppingItem.w, h: droppingItem.h }, cols, maxRows) ||
-          findFirstFit(layout, { w: droppingItem.w, h: droppingItem.h }, cols, Infinity);
+        const fit = findFirstFit(
+          layout.filter(l => l.i !== droppingItem.i),
+          { w: droppingItem.w, h: droppingItem.h },
+          cols,
+          maxRows
+        );
         if (fit) {
           item = {
             ...droppingItem,
@@ -863,7 +1294,7 @@ const VueGridLayout = defineComponent({
       dragEnterCounter.value = 0;
       vAttrs.onDrop?.(layout.filter(l => l.i !== droppingItem.i), e, cleanItem);
       removeDroppingPlaceholder();
-      
+
     };
 
     // Remove the dropping placeholder
@@ -908,6 +1339,14 @@ const VueGridLayout = defineComponent({
       state.oldDragItem = cloneLayoutItem(l);
       state.oldLayout = cloneLayout(layout);
       state.activeDrag = markRaw(placeholder);
+      if (!isLegacyLayoutEngine()) {
+        resetInteractionController(layout);
+        interactionController.start({
+          id: nextInteractionRequestId("drag-start", i),
+          type: "drag",
+          itemId: i
+        });
+      }
 
       return vAttrs.onDragStart?.(layout, l, l, undefined, e, node);
     };
@@ -923,6 +1362,34 @@ const VueGridLayout = defineComponent({
       const { cols, preventCollision, allowOverlap } = props;
       const l = getLayoutItem(layout, i);
       if (!l) return;
+
+      if (!isLegacyLayoutEngine()) {
+        runEngineCommit(
+          nextInteractionRequestId("drag-stop", i),
+          { type: "move", id: i, x, y, userAction: true },
+          result => {
+            if (result.status === "stale") return;
+            const newLayout = result.status === "changed" || result.status === "fallback"
+              ? result.layout
+              : interactionController.getCommitted();
+            const nextItem = getLayoutItem(newLayout, i) || l;
+            vAttrs.onDragStop?.(newLayout, oldDragItem, nextItem, undefined, e, node);
+
+            state.activeDrag = null;
+            state.layout = markRaw(newLayout);
+            state.oldDragItem = null;
+            activeDragId.value = null;
+            dragBlocked.value = false;
+            resetAutoScroll();
+            if (newLayout === prevLayout) {
+              state.oldLayout = null;
+              onLayoutMaybeChanged(newLayout, oldLayout || prevLayout, 'push');
+            }
+          },
+          state.layout.length >= (getLayoutEngineProp()?.scheduler?.auto?.workerMinItems || 1000)
+        );
+        return;
+      }
 
       // Move the element to the new position
       const isUserAction = true;
@@ -1012,11 +1479,52 @@ const VueGridLayout = defineComponent({
         const cursorGridPos = calcXY(positionParams, layerY, layerX, finalDroppingItem.w, finalDroppingItem.h);
 
         const baseLayout = layout.filter(l => l.i !== finalDroppingItem.i);
-        let fit = findNearestFit(baseLayout, { w: finalDroppingItem.w, h: finalDroppingItem.h }, cols, cursorGridPos.x, cursorGridPos.y, maxRows);
-        if (!fit && Number.isFinite(maxRows)) {
-          fit = findNearestFit(baseLayout, { w: finalDroppingItem.w, h: finalDroppingItem.h }, cols, cursorGridPos.x, cursorGridPos.y, Infinity);
+        if (!isLegacyLayoutEngine()) {
+          resetInteractionController(baseLayout);
+          interactionController.start({
+            id: nextInteractionRequestId("drop-start", String(finalDroppingItem.i)),
+            type: "drop",
+            itemId: String(finalDroppingItem.i)
+          });
+          runEnginePreview(
+            nextInteractionRequestId("drop-fit", String(finalDroppingItem.i)),
+            {
+              type: "dropFit",
+              item: {
+                i: String(finalDroppingItem.i),
+                w: finalDroppingItem.w,
+                h: finalDroppingItem.h
+              },
+              strategy: "cursor",
+              target: cursorGridPos
+            },
+            result => {
+              if (result.status === "stale") return;
+              if (!result.drop?.position) {
+                if (state.droppingDOMNode) {
+                  removeDroppingPlaceholder();
+                }
+                return;
+              }
+              if (!state.droppingDOMNode) {
+                state.droppingDOMNode = markRaw(h('div', { key: finalDroppingItem.i }));
+              }
+              state.droppingPosition = undefined;
+              state.layout = markRaw(result.layout);
+              state.activeDrag = result.placeholder ? markRaw(result.placeholder) : null;
+            },
+            baseLayout.length >= (getLayoutEngineProp()?.scheduler?.auto?.workerMinItems || 1000)
+          );
+          return;
         }
-        if (!fit) return;
+
+        const fit = findNearestFit(baseLayout, { w: finalDroppingItem.w, h: finalDroppingItem.h }, cols, cursorGridPos.x, cursorGridPos.y, maxRows);
+        if (!fit) {
+          if (state.droppingDOMNode) {
+            removeDroppingPlaceholder();
+          }
+          return;
+        }
 
         if (!state.droppingDOMNode) {
           state.droppingDOMNode = markRaw(h('div', { key: finalDroppingItem.i }));
@@ -1177,7 +1685,7 @@ const VueGridLayout = defineComponent({
         height: containerHeight(),
         ...style
       };
-      
+
       const children: VNode[] = slots.default ? getNonFragmentChildren(h(Fragment, null, slots.default())) : [];
       layoutItemById.clear();
       for (let i = 0; i < state.layout.length; i++) {

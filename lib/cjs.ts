@@ -1,8 +1,23 @@
 module.exports = require('./VueGridLayout').default;
+module.exports.VueGridLayout = module.exports;
+module.exports.default = module.exports;
 module.exports.utils = require("./utils");
 module.exports.calculateUtils = require("./calculateUtils");
+const layoutEngine = require("./layout-engine");
+module.exports.layoutEngine = layoutEngine;
+module.exports.createLayoutEngine = layoutEngine.createLayoutEngine;
+module.exports.executeLayoutOperation = layoutEngine.executeLayoutOperation;
+module.exports.rowColumnOccupancyStrategy = layoutEngine.rowColumnOccupancyStrategy;
+module.exports.createLayoutExecutor = layoutEngine.createLayoutExecutor;
+module.exports.mainThreadLayoutExecutor = layoutEngine.mainThreadLayoutExecutor;
+module.exports.workerLayoutExecutor = layoutEngine.workerLayoutExecutor;
+module.exports.createInteractionScheduler = layoutEngine.createInteractionScheduler;
+module.exports.createInteractionController = layoutEngine.createInteractionController;
+module.exports.findFirstFit = module.exports.utils.findFirstFit;
+module.exports.findNearestFit = module.exports.utils.findNearestFit;
 module.exports.Responsive =
   require("./ResponsiveVueGridLayout").default;
+module.exports.ResponsiveVueGridLayout = module.exports.Responsive;
 module.exports.Responsive.utils = require("./responsiveUtils");
 module.exports.WidthProvider =
   require("./WidthProvider").default;
@@ -11,4 +26,16 @@ module.exports.history = gridHistory;
 module.exports.createGridHistoryStore = gridHistory.createGridHistoryStore;
 module.exports.useGridHistoryStore = gridHistory.useGridHistoryStore;
 module.exports.bindKeyboardShortcuts = gridHistory.bindKeyboardShortcuts;
-
+const persistence = require("./persistence");
+module.exports.persistence = persistence;
+module.exports.LAYOUT_SCHEMA_VERSION = persistence.LAYOUT_SCHEMA_VERSION;
+module.exports.serializeLayoutDocument = persistence.serializeLayoutDocument;
+module.exports.deserializeLayoutDocument = persistence.deserializeLayoutDocument;
+module.exports.validateLayoutDocument = persistence.validateLayoutDocument;
+module.exports.migrateLayoutDocument = persistence.migrateLayoutDocument;
+module.exports.localStorageAdapter = persistence.localStorageAdapter;
+module.exports.sessionStorageAdapter = persistence.sessionStorageAdapter;
+module.exports.indexedDBAdapter = persistence.indexedDBAdapter;
+module.exports.remoteHttpAdapter = persistence.remoteHttpAdapter;
+module.exports.memoryPersistenceAdapter = persistence.memoryPersistenceAdapter;
+module.exports.useGridLayoutPersistence = persistence.useGridLayoutPersistence;

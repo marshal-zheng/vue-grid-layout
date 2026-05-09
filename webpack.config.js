@@ -17,6 +17,7 @@ module.exports = (env, argv) => {
     mode: isProduction ? 'production' : 'development',
     entry: {
       'vue-grid-layout.min': './lib/cjs.ts',
+      'vue-grid-layout.worker': './lib/layout-engine/workerRuntime.ts',
     },
     output: {
       filename: '[name].js',

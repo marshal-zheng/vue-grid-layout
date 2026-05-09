@@ -1,4 +1,4 @@
-import { defineComponent, PropType, reactive, watch, Fragment, VNode } from 'vue'
+import { defineComponent, PropType, reactive, watch, Fragment, VNode, onMounted, onBeforeUnmount, toRef, markRaw, nextTick, type Ref } from 'vue'
 import { deepEqual } from "fast-equals";
 import { pick } from 'lodash'
 
@@ -6,6 +6,7 @@ import {
   cloneLayout,
   compactType as resolveCompactType,
   synchronizeLayoutWithChildren,
+  CompactType,
   Layout,
   getNonFragmentChildren
 } from "./utils";
@@ -17,6 +18,20 @@ import {
   Breakpoints
 } from "./responsiveUtils";
 import VueGridLayout from "./VueGridLayout";
+import {
+  cloneLayoutsMap,
+  useGridLayoutPersistence,
+  type LayoutPersistenceEvent,
+  type ResponsiveGridLayoutPersistenceProp
+} from "./persistence";
+import {
+  createLayoutExecutor,
+  executeLayoutOperation
+} from "./layout-engine";
+import type {
+  GridLayoutEngineOptions,
+  GridLayoutEngineProp
+} from "./layout-engine";
 
 /**
  * Get a value of margin or containerPadding.
@@ -37,7 +52,7 @@ type State = {
   layout: Layout,
   breakpoint: string,
   cols: number,
-  layouts?: ResponsiveLayout<string>
+  layouts: LayoutsMap
 };
 
 export interface Props<Breakpoint extends string = string> {
@@ -55,6 +70,8 @@ export interface Props<Breakpoint extends string = string> {
     default: [10, 10]
   };
   containerPadding: Record<Breakpoint, [number, number] | null> | [number, number] | null;
+  persistence?: ResponsiveGridLayoutPersistenceProp;
+  layoutEngine?: false | GridLayoutEngineProp;
 }
 
 interface BreakpointMap {
@@ -71,76 +88,64 @@ interface LayoutsMap {
 
 const ResponsiveVueGridLayout = defineComponent({
   props: {
-    // Optional, but if you are managing width yourself you may want to set the breakpoint
-    // yourself as well.
+    /** Force current breakpoint key (optional, usually auto-calculated) */
     breakpoint: { type: String, default: '' },
-
-    // {name: pxVal}, e.g. {lg: 1200, md: 996, sm: 768, xs: 480}
+    /** Breakpoint to pixel width mapping, e.g. { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 } */
     breakpoints: {
       type: Object as () => BreakpointMap,
       default: () => ({ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }),
     },
-
+    /** Allow grid items to overlap */
     allowOverlap: { type: Boolean, default: false },
-
+    /** Vertical compact layout (deprecated) */
     verticalCompact: { type: Boolean, default: true },
-
-    // # of cols. This is a breakpoint -> cols map
+    /** Breakpoint to column count mapping, e.g. { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 } */
     cols: {
       type: Object as () => BreakpointMap,
       default: () => ({ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }),
     },
-
-    // # of margin. This is a breakpoint -> margin map
-    // e.g. { lg: [5, 5], md: [10, 10], sm: [15, 15] }
-    // Margin between items [x, y] in px
-    // e.g. [10, 10]
+    /** Breakpoint to spacing mapping or universal [x, y], e.g. { lg: [10, 10] } or [10, 10] */
     margin: {
       type: [Array, Object] as  PropType<MarginPaddingMap | [number, number]>,
       default: () => ([10, 10])
     },
-
-    // # of containerPadding. This is a breakpoint -> containerPadding map
-    // e.g. { lg: [5, 5], md: [10, 10], sm: [15, 15] }
-    // Padding inside the container [x, y] in px
-    // e.g. [10, 10]
+    /** Breakpoint to container padding mapping or universal value */
     containerPadding: {
       type: [Array, Object] as PropType<MarginPaddingMap | [number, number]>,
       default: () => ({ lg: null, md: null, sm: null, xs: null, xxs: null })
     },
-
-    // layouts is an object mapping breakpoints to layouts.
-    // e.g. {lg: Layout, md: Layout, ...}
+    /** Layout collection for each breakpoint, e.g. { lg: Layout[], md: Layout[] } */
     layouts: {
       type: Object as PropType<LayoutsMap>,
       default: () => ({}),
     },
-
-    // The width of this component.
-    // Required in this propTypes stanza because generateInitialState() will fail without it.
+    /** Component width (required, usually auto-provided by WidthProvider) */
     width: {
       type: Number,
       required: true,
     },
-
-    // Choose vertical or hotizontal compaction
+    /** Compaction direction: vertical / horizontal / null */
     compactType: {
-      type: String as PropType<"vertical" | "horizontal">,
-      default: "vertical"
+      type: String as PropType<CompactType>,
+      default: "vertical",
+      validator: (value: CompactType) => value == null || ['vertical', 'horizontal'].includes(value),
     },
-    // layoutChange: {
-    //   type: Function as PropType<OnLayoutChangeCallback>,
-    //   default: noop
-    // },
-    // breakpointChange: {
-    //   type: Function as PropType<(breakpoint: string, cols: number) => void>,
-    //   default: noop
-    // },
+    /** Durable save/load persistence configuration for all breakpoint layouts */
+    persistence: {
+      type: [Boolean, Object] as PropType<ResponsiveGridLayoutPersistenceProp>,
+      default: false
+    },
+    /** Layout engine configuration for responsive heavy operations and the inner grid */
+    layoutEngine: {
+      type: [Boolean, Object] as PropType<false | GridLayoutEngineProp>,
+      default: undefined
+    },
   },
+  emits: ['update:layouts', 'layoutChange', 'breakpointChange', 'widthChange'],
   setup(props, { slots, emit }) {
     const generateInitialState = (): State => {
       const { width, breakpoints, layouts, cols } = props;
-      const breakpoint = getBreakpointFromWidth(breakpoints, width);
+      const breakpoint = props.breakpoint || getBreakpointFromWidth(breakpoints, width);
       const colNo = getColsFromBreakpoint(breakpoint, cols);
       // verticalCompact compatibility, now deprecated
 
@@ -159,18 +164,116 @@ const ResponsiveVueGridLayout = defineComponent({
       return {
         layout: initialLayout,
         breakpoint: breakpoint,
-        cols: colNo
+        cols: colNo,
+        layouts: {
+          ...layouts,
+          [breakpoint]: initialLayout
+        }
       };
     }
 
     const state = reactive(generateInitialState());
+    let restoringPersistence = false;
+
+    const applyRestoredLayouts = (layouts: LayoutsMap) => {
+      restoringPersistence = true;
+      const restoredLayouts = cloneLayoutsMap(layouts);
+      const layout = findOrGenerateResponsiveLayout(
+        restoredLayouts,
+        props.breakpoints,
+        state.breakpoint,
+        state.breakpoint,
+        state.cols,
+        resolveCompactType(props)
+      );
+      const nextLayouts = {
+        ...restoredLayouts,
+        [state.breakpoint]: layout
+      };
+      state.layout = markRaw(layout);
+      state.layouts = nextLayouts;
+      emit('update:layouts', nextLayouts)
+      emit('layoutChange', layout, nextLayouts)
+      void nextTick().then(() => {
+        restoringPersistence = false;
+      });
+    };
+
+    const persistenceConfig = props.persistence && typeof props.persistence === 'object'
+      ? props.persistence
+      : null;
+
+    const onPersistenceEvent = (event: LayoutPersistenceEvent<LayoutsMap>) => {
+      if (event.type === 'external-apply') {
+        applyRestoredLayouts(event.value);
+      }
+      persistenceConfig?.onEvent?.(event);
+    };
+
+    const persistenceController = persistenceConfig
+      ? useGridLayoutPersistence<LayoutsMap>({
+          ...persistenceConfig,
+          onEvent: onPersistenceEvent,
+          kind: 'responsive',
+          target: toRef(state, 'layouts') as Ref<LayoutsMap>,
+          watchTarget: false
+        })
+      : null;
 
     const onLayoutChange = (layout: Layout) => {
+      if (restoringPersistence) return;
+      const nextLayout = cloneLayout(layout);
       const newLayouts = {
-        ...props.layouts,
-        [state.breakpoint]: layout
+        ...state.layouts,
+        [state.breakpoint]: nextLayout
       }
-      emit('layoutChange', layout, newLayouts || [])
+      state.layout = nextLayout;
+      state.layouts = newLayouts;
+      emit('update:layouts', newLayouts)
+      emit('layoutChange', nextLayout, newLayouts)
+      persistenceController?.commit(cloneLayoutsMap(newLayouts), { source: 'component' })
+    };
+
+    const getLayoutEngineProp = () =>
+      props.layoutEngine && typeof props.layoutEngine === "object"
+        ? props.layoutEngine
+        : null;
+
+    const isLegacyLayoutEngine = () => {
+      const config = getLayoutEngineProp();
+      return props.layoutEngine === false || config?.mode === "legacy";
+    };
+
+    let executorConfigRef: unknown = undefined;
+    let layoutExecutor = createLayoutExecutor();
+
+    const getLayoutExecutor = () => {
+      const config = getLayoutEngineProp();
+      const nextExecutorConfig = config?.executor;
+      if (nextExecutorConfig !== executorConfigRef) {
+        layoutExecutor.dispose?.();
+        layoutExecutor = createLayoutExecutor(nextExecutorConfig);
+        executorConfigRef = nextExecutorConfig;
+      }
+      return layoutExecutor;
+    };
+
+    const getLayoutEngineOptions = (
+      colNo: number,
+      compact: CompactType
+    ): GridLayoutEngineOptions => {
+      const config = getLayoutEngineProp();
+      return {
+        cols: colNo,
+        compactType: compact,
+        allowOverlap: props.allowOverlap,
+        scheduler: config?.scheduler,
+        executor: getLayoutExecutor(),
+        compareLegacy: config?.compareLegacy,
+        legacyFallback: config?.legacyFallback !== false,
+        diagnostics: config?.diagnostics,
+        onEvent: config?.onEvent
+      };
     };
 
     watch(
@@ -193,7 +296,7 @@ const ResponsiveVueGridLayout = defineComponent({
    * Width changes are necessary to figure out the widget widths.
    */
     const onWidthChange = (prevProps) => {
-      const { breakpoints, cols, layouts } = props;
+      const { breakpoints, cols } = props;
       const compactType = resolveCompactType(props);
       const newBreakpoint =
         props.breakpoint ||
@@ -201,7 +304,7 @@ const ResponsiveVueGridLayout = defineComponent({
 
       const lastBreakpoint = state.breakpoint;
       const newCols: number = getColsFromBreakpoint(newBreakpoint, cols);
-      const newLayouts = { ...layouts };
+      const newLayouts = { ...state.layouts };
 
       // Breakpoint change
       if (
@@ -209,11 +312,34 @@ const ResponsiveVueGridLayout = defineComponent({
         prevProps.breakpoints !== breakpoints ||
         prevProps.cols !== cols
       ) {
-        // Preserve the current layout if the current breakpoint is not present in the next layouts.
-        if (!(lastBreakpoint in newLayouts))
-          newLayouts[lastBreakpoint] = cloneLayout(state.layout);
+        // Preserve the current breakpoint before generating the next one.
+        newLayouts[lastBreakpoint] = cloneLayout(state.layout);
 
-        // Find or generate a new layout.
+        const commitGeneratedLayout = (candidateLayout: Layout) => {
+          const children: VNode[] = slots.default ? getNonFragmentChildren({ type: Fragment, children: slots.default() } as VNode) : [];
+          const layout = synchronizeLayoutWithChildren(
+            candidateLayout,
+            children,
+            newCols,
+            compactType,
+            props.allowOverlap
+          );
+
+          newLayouts[newBreakpoint] = layout;
+
+          emit('breakpointChange', newBreakpoint, newCols)
+          emit('update:layouts', newLayouts)
+          emit('layoutChange', layout, newLayouts)
+          persistenceController?.commit(cloneLayoutsMap(newLayouts), { source: 'component' })
+
+          state.breakpoint = newBreakpoint;
+          state.layout = layout
+          state.cols = newCols
+          state.layouts = newLayouts
+        };
+
+        // Find or generate a new layout. This remains the synchronous fallback for
+        // legacy mode and for environments where an async executor is unavailable.
         let layout = findOrGenerateResponsiveLayout(
           newLayouts,
           breakpoints,
@@ -223,26 +349,43 @@ const ResponsiveVueGridLayout = defineComponent({
           compactType
         );
 
-        const children: VNode[] = slots.default ? getNonFragmentChildren({ type: Fragment, children: slots.default() } as VNode) : [];
-
-        // This adds missing items.
-        layout = synchronizeLayoutWithChildren(
-          layout,
-          children,
-          newCols,
-          compactType,
-          props.allowOverlap
-        );
-
-        // Store the new layout.
-        newLayouts[newBreakpoint] = layout;
-
-        emit('breakpointChange', newBreakpoint, newCols)
-        emit('layoutChange', layout, newLayouts || [])
-
-        state.breakpoint = newBreakpoint;
-        state.layout = layout
-        state.cols = newCols
+        if (!isLegacyLayoutEngine()) {
+          const request = {
+            id: `responsive:${lastBreakpoint}->${newBreakpoint}`,
+            phase: 'commit',
+            layout: newLayouts[lastBreakpoint] || state.layout,
+            operation: {
+              type: 'generateResponsiveLayout',
+              breakpoint: newBreakpoint,
+              sourceBreakpoint: lastBreakpoint,
+              cols: newCols,
+              layouts: newLayouts,
+              breakpoints
+            },
+            options: getLayoutEngineOptions(newCols, compactType),
+            heavy: layout.length >= 500
+          } as const;
+          const executor = getLayoutExecutor();
+          if (request.heavy && executor.kind !== "main-thread") {
+            void executor.execute(request).then(result => {
+              if (result.status === 'changed' || result.status === 'noop' || result.status === 'fallback') {
+                commitGeneratedLayout(result.layout);
+              } else {
+                commitGeneratedLayout(layout);
+              }
+            }).catch(() => {
+              commitGeneratedLayout(layout);
+            });
+          } else {
+            const result = executeLayoutOperation(request);
+            if (result.status === 'changed' || result.status === 'noop' || result.status === 'fallback') {
+              layout = result.layout;
+            }
+            commitGeneratedLayout(layout);
+          }
+        } else {
+          commitGeneratedLayout(layout);
+        }
       }
 
       const margin = getIndentationValue(props.margin, newBreakpoint);
@@ -270,11 +413,37 @@ const ResponsiveVueGridLayout = defineComponent({
           );
 
           state.layout = newLayout;
-          state.layouts = newLayouts;
+          state.layouts = {
+            ...newLayouts,
+            [breakpoint]: newLayout
+          };
+          if (!restoringPersistence) {
+            persistenceController?.commit(cloneLayoutsMap(state.layouts), { source: 'programmatic' })
+          }
         }
       },
       { immediate: true }
     );
+
+    onMounted(() => {
+      if (!persistenceController) return;
+      restoringPersistence = true;
+      void persistenceController.load().then(async result => {
+        if (result.value && (result.ok || result.fallbackApplied)) {
+          applyRestoredLayouts(result.value)
+        }
+        await nextTick();
+        restoringPersistence = false;
+      }).catch(async () => {
+        await nextTick();
+        restoringPersistence = false;
+      });
+    });
+
+    onBeforeUnmount(() => {
+      layoutExecutor.dispose?.();
+      persistenceController?.stop();
+    });
 
     return () => {
       /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -285,6 +454,8 @@ const ResponsiveVueGridLayout = defineComponent({
         layouts,
         margin,
         containerPadding,
+        persistence,
+        layoutEngine,
         ...other
       } = props;
       /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -301,6 +472,7 @@ const ResponsiveVueGridLayout = defineComponent({
           onLayoutChange={onLayoutChange}
           modelValue={state.layout}
           cols={state.cols}
+          layoutEngine={layoutEngine}
         >{child}</VueGridLayout>
       );
     }

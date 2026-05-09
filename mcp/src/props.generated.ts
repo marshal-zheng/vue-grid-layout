@@ -7,6 +7,7 @@ export type VueGridLayoutProp = {
   name: string
   component: 'VueGridLayout' | 'ResponsiveVueGridLayout' | 'WidthProvider'
   definedIn: string
+  description: string | null
   vueRuntimeTypes: string[]
   tsType: string | null
   sourceType: string | null
@@ -23,6 +24,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "class",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Additional CSS class for the container",
     "vueRuntimeTypes": [
       "String"
     ],
@@ -41,6 +43,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "style",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Inline style object for the container",
     "vueRuntimeTypes": [
       "Object"
     ],
@@ -59,6 +62,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "width",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Container width (px); auto-measured via WidthProvider if not provided",
     "vueRuntimeTypes": [
       "Number"
     ],
@@ -77,6 +81,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "autoSize",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Automatically adjust container height based on content",
     "vueRuntimeTypes": [
       "Boolean"
     ],
@@ -95,6 +100,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "cols",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Number of columns, default 12",
     "vueRuntimeTypes": [
       "Number"
     ],
@@ -113,6 +119,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "draggableCancel",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "CSS selector for elements that should not trigger drag (requires . prefix)",
     "vueRuntimeTypes": [
       "String"
     ],
@@ -131,6 +138,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "draggableHandle",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "CSS selector for drag handle elements (requires . prefix)",
     "vueRuntimeTypes": [
       "String"
     ],
@@ -149,6 +157,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "verticalCompact",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Vertical compact layout (deprecated, use compactType)",
     "vueRuntimeTypes": [
       "Boolean"
     ],
@@ -167,16 +176,17 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "compactType",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Compaction direction: vertical / horizontal / null (no compaction)",
     "vueRuntimeTypes": [
       "String"
     ],
-    "tsType": "\"vertical\" | \"horizontal\"",
+    "tsType": "CompactType",
     "default": "'vertical'",
     "hasDefault": true,
     "defaultIsFactory": false,
     "required": null,
-    "validator": "(value: string) => ['vertical', 'horizontal'].includes(value)",
-    "sourceType": "String as PropType<\"vertical\" | \"horizontal\">",
+    "validator": "(value: CompactType) => value == null || ['vertical', 'horizontal'].includes(value)",
+    "sourceType": "String as PropType<CompactType>",
     "source": {
       "file": "lib/VueGridLayoutPropTypes.ts"
     }
@@ -185,6 +195,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "modelValue",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Layout array, supports v-model two-way binding",
     "vueRuntimeTypes": [
       "Array"
     ],
@@ -203,6 +214,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "margin",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Grid spacing [x, y] in px, default [10, 10]",
     "vueRuntimeTypes": [
       "Array"
     ],
@@ -211,7 +223,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "hasDefault": true,
     "defaultIsFactory": true,
     "required": null,
-    "validator": "(value: number[]) => { // Check that every item in the array is a number return value.every(item => typeof item === 'number'); }",
+    "validator": "(value: number[]) => { return value.every(item => typeof item === 'number'); }",
     "sourceType": "Array as PropType<Array<number>>",
     "source": {
       "file": "lib/VueGridLayoutPropTypes.ts"
@@ -221,6 +233,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "containerPadding",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Container padding [x, y] in px, defaults to margin value",
     "vueRuntimeTypes": [
       "Array"
     ],
@@ -229,7 +242,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "hasDefault": false,
     "defaultIsFactory": false,
     "required": null,
-    "validator": "(value: number[]) => { // Check that every item in the array is a number return value.every(item => typeof item === 'number'); }",
+    "validator": "(value: number[]) => { return value.every(item => typeof item === 'number'); }",
     "sourceType": "Array as PropType<number[]>",
     "source": {
       "file": "lib/VueGridLayoutPropTypes.ts"
@@ -239,6 +252,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "rowHeight",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Row height (px), default 150",
     "vueRuntimeTypes": [
       "Number"
     ],
@@ -257,6 +271,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "maxRows",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Maximum number of rows, default Infinity (no limit)",
     "vueRuntimeTypes": [
       "Number"
     ],
@@ -275,6 +290,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "isBounded",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Restrict dragging within container boundaries",
     "vueRuntimeTypes": [
       "Boolean"
     ],
@@ -293,6 +309,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "isDraggable",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Globally enable dragging, default true",
     "vueRuntimeTypes": [
       "Boolean"
     ],
@@ -311,6 +328,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "isResizable",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Globally enable resizing, default true",
     "vueRuntimeTypes": [
       "Boolean"
     ],
@@ -329,6 +347,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "allowOverlap",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Allow grid items to overlap, automatically enables preventCollision",
     "vueRuntimeTypes": [
       "Boolean"
     ],
@@ -347,6 +366,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "preventCollision",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Prevent collision mode, items won't push others when dragging",
     "vueRuntimeTypes": [
       "Boolean"
     ],
@@ -365,6 +385,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "useCSSTransforms",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Use CSS transform for positioning (better performance), default true",
     "vueRuntimeTypes": [
       "Boolean"
     ],
@@ -383,6 +404,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "transformScale",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Set scale ratio when parent has CSS scale transform",
     "vueRuntimeTypes": [
       "Number"
     ],
@@ -401,6 +423,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "autoScroll",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Auto-scroll when dragging near edges; accepts boolean or { margin, speed } object",
     "vueRuntimeTypes": [
       "Boolean",
       "Object"
@@ -420,6 +443,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "isDroppable",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Allow dropping elements from outside, requires @drop and @dropDragOver handlers",
     "vueRuntimeTypes": [
       "Boolean"
     ],
@@ -438,6 +462,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "dropStrategy",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Drop positioning strategy: cursor (mouse position) / auto (auto-snap)",
     "vueRuntimeTypes": [
       "String"
     ],
@@ -456,6 +481,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "resizeHandles",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Array of enabled resize handle directions, e.g. [\"se\", \"n\", \"e\"]",
     "vueRuntimeTypes": [
       "Array"
     ],
@@ -474,6 +500,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "resizeHandle",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Custom resize handle render function or VNode",
     "vueRuntimeTypes": [
       "Object",
       "Function"
@@ -493,6 +520,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "historyStore",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Pinia history store instance for undo/redo functionality",
     "vueRuntimeTypes": [
       "Object"
     ],
@@ -511,6 +539,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "droppingItem",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Placeholder config for external drop { i, w, h }",
     "vueRuntimeTypes": [
       "Object"
     ],
@@ -519,7 +548,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "hasDefault": true,
     "defaultIsFactory": true,
     "required": null,
-    "validator": "(value: DroppingItem) => { // Perform additional validation if necessary return ( typeof value.i === 'string' && typeof value.w === 'number' && typeof value.h === 'number' ); }",
+    "validator": "(value: DroppingItem) => { return ( typeof value.i === 'string' && typeof value.w === 'number' && typeof value.h === 'number' ); }",
     "sourceType": "Object as PropType<DroppingItem>",
     "source": {
       "file": "lib/VueGridLayoutPropTypes.ts"
@@ -529,6 +558,7 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "innerRef",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
+    "description": "Ref reference to container DOM element",
     "vueRuntimeTypes": [
       "Object"
     ],
@@ -550,6 +580,7 @@ export const RESPONSIVE_VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "breakpoint",
     "component": "ResponsiveVueGridLayout",
     "definedIn": "defineComponent.props",
+    "description": "Force current breakpoint key (optional, usually auto-calculated)",
     "vueRuntimeTypes": [
       "String"
     ],
@@ -568,6 +599,7 @@ export const RESPONSIVE_VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "breakpoints",
     "component": "ResponsiveVueGridLayout",
     "definedIn": "defineComponent.props",
+    "description": "Breakpoint to pixel width mapping, e.g. { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }",
     "vueRuntimeTypes": [
       "Object"
     ],
@@ -586,6 +618,7 @@ export const RESPONSIVE_VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "allowOverlap",
     "component": "ResponsiveVueGridLayout",
     "definedIn": "defineComponent.props",
+    "description": "Allow grid items to overlap",
     "vueRuntimeTypes": [
       "Boolean"
     ],
@@ -604,6 +637,7 @@ export const RESPONSIVE_VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "verticalCompact",
     "component": "ResponsiveVueGridLayout",
     "definedIn": "defineComponent.props",
+    "description": "Vertical compact layout (deprecated)",
     "vueRuntimeTypes": [
       "Boolean"
     ],
@@ -622,6 +656,7 @@ export const RESPONSIVE_VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "cols",
     "component": "ResponsiveVueGridLayout",
     "definedIn": "defineComponent.props",
+    "description": "Breakpoint to column count mapping, e.g. { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }",
     "vueRuntimeTypes": [
       "Object"
     ],
@@ -640,6 +675,7 @@ export const RESPONSIVE_VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "margin",
     "component": "ResponsiveVueGridLayout",
     "definedIn": "defineComponent.props",
+    "description": "Breakpoint to spacing mapping or universal [x, y], e.g. { lg: [10, 10] } or [10, 10]",
     "vueRuntimeTypes": [
       "Array",
       "Object"
@@ -659,6 +695,7 @@ export const RESPONSIVE_VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "containerPadding",
     "component": "ResponsiveVueGridLayout",
     "definedIn": "defineComponent.props",
+    "description": "Breakpoint to container padding mapping or universal value",
     "vueRuntimeTypes": [
       "Array",
       "Object"
@@ -678,6 +715,7 @@ export const RESPONSIVE_VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "layouts",
     "component": "ResponsiveVueGridLayout",
     "definedIn": "defineComponent.props",
+    "description": "Layout collection for each breakpoint, e.g. { lg: Layout[], md: Layout[] }",
     "vueRuntimeTypes": [
       "Object"
     ],
@@ -696,6 +734,7 @@ export const RESPONSIVE_VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "width",
     "component": "ResponsiveVueGridLayout",
     "definedIn": "defineComponent.props",
+    "description": "Component width (required, usually auto-provided by WidthProvider)",
     "vueRuntimeTypes": [
       "Number"
     ],
@@ -714,16 +753,17 @@ export const RESPONSIVE_VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "name": "compactType",
     "component": "ResponsiveVueGridLayout",
     "definedIn": "defineComponent.props",
+    "description": "Compaction direction: vertical / horizontal / null",
     "vueRuntimeTypes": [
       "String"
     ],
-    "tsType": "\"vertical\" | \"horizontal\"",
+    "tsType": "CompactType",
     "default": "\"vertical\"",
     "hasDefault": true,
     "defaultIsFactory": false,
     "required": null,
-    "validator": null,
-    "sourceType": "String as PropType<\"vertical\" | \"horizontal\">",
+    "validator": "(value: CompactType) => value == null || ['vertical', 'horizontal'].includes(value)",
+    "sourceType": "String as PropType<CompactType>",
     "source": {
       "file": "lib/ResponsiveVueGridLayout.tsx"
     }
@@ -735,6 +775,7 @@ export const WIDTH_PROVIDER_PROPS: VueGridLayoutProp[] = [
     "name": "measureBeforeMount",
     "component": "WidthProvider",
     "definedIn": "defineComponent.props",
+    "description": "Measure width before first render to avoid layout shift (recommended for SSR)",
     "vueRuntimeTypes": [
       "Boolean"
     ],
@@ -753,6 +794,7 @@ export const WIDTH_PROVIDER_PROPS: VueGridLayoutProp[] = [
     "name": "class",
     "component": "WidthProvider",
     "definedIn": "defineComponent.props",
+    "description": "Additional CSS class for the container",
     "vueRuntimeTypes": [
       "String"
     ],
@@ -771,6 +813,7 @@ export const WIDTH_PROVIDER_PROPS: VueGridLayoutProp[] = [
     "name": "style",
     "component": "WidthProvider",
     "definedIn": "defineComponent.props",
+    "description": "Container style object",
     "vueRuntimeTypes": [
       "Object"
     ],

@@ -3,7 +3,7 @@
  *
  * ⚠️ 本文件与 README.md 保持同步，确保 AI IDE 能精准使用组件库
  *
- * Props 数据来源：
+ * Props 数据来源（单一事实来源 - 从源代码 JSDoc 自动提取）：
  * - lib/VueGridLayoutPropTypes.ts (VueGridLayout)
  * - lib/ResponsiveVueGridLayout.tsx (Responsive)
  * - lib/WidthProvider.tsx (WidthProvider)
@@ -16,11 +16,6 @@ import {
   RESPONSIVE_VUE_GRID_LAYOUT_PROPS,
   WIDTH_PROVIDER_PROPS,
 } from './props.generated.js'
-import {
-  VUE_GRID_LAYOUT_PROP_DESCRIPTIONS,
-  RESPONSIVE_GRID_LAYOUT_PROP_DESCRIPTIONS,
-  WIDTH_PROVIDER_PROP_DESCRIPTIONS,
-} from './propDescriptions.js'
 import { VUE_GRID_LAYOUT_TYPE_DEFS } from './types.generated.js'
 
 function escapeTableCell(text: string): string {
@@ -69,11 +64,10 @@ function sortByPreferredOrder<T extends { name: string }>(items: T[], preferredO
 
 function buildPropsTable(
   props: VueGridLayoutProp[],
-  descriptionMap: Record<string, string>,
   preferredOrder: string[]
 ): string {
   const rows = sortByPreferredOrder(props, preferredOrder).map((p) => {
-    const desc = descriptionMap[p.name] ?? ''
+    const desc = p.description ?? ''
     return `| \`${p.name}\` | ${formatType(p)} | ${formatDefault(p)} | ${escapeTableCell(desc)} |`
   })
 
@@ -129,19 +123,16 @@ const PREFERRED_WIDTH_PROVIDER_ORDER = ['measureBeforeMount', 'class', 'style']
 
 const vueGridLayoutPropsTable = buildPropsTable(
   VUE_GRID_LAYOUT_PROPS,
-  VUE_GRID_LAYOUT_PROP_DESCRIPTIONS,
   PREFERRED_VGL_ORDER
 )
 
 const responsivePropsTable = buildPropsTable(
   RESPONSIVE_VUE_GRID_LAYOUT_PROPS,
-  RESPONSIVE_GRID_LAYOUT_PROP_DESCRIPTIONS,
   PREFERRED_RESPONSIVE_ORDER
 )
 
 const widthProviderPropsTable = buildPropsTable(
   WIDTH_PROVIDER_PROPS,
-  WIDTH_PROVIDER_PROP_DESCRIPTIONS,
   PREFERRED_WIDTH_PROVIDER_ORDER
 )
 

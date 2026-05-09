@@ -571,6 +571,7 @@ export function findFirstFit(
   }
   if (maxY < 0) return null;
 
+  const collisionIndex = createCompactionCollisionIndex(layout, layout.length);
   for (let y = 0; y <= maxY; y++) {
     for (let x = 0; x <= columnCount - width; x++) {
       const candidate: LayoutItem = {
@@ -580,7 +581,7 @@ export function findFirstFit(
         w: width,
         h: height,
       };
-      if (!getFirstCollision(layout, candidate)) {
+      if (!getFirstCollisionWithIndex(layout, candidate, collisionIndex)) {
         return { x, y };
       }
     }
@@ -612,12 +613,13 @@ export function findNearestFit(
   if (width > columnCount) return null;
   if (Number.isFinite(maxRowCount) && height > maxRowCount) return null;
 
+  const collisionIndex = createCompactionCollisionIndex(layout, layout.length);
   const canPlace = (x: number, y: number): boolean => {
     if (x < 0 || x + width > columnCount) return false;
     if (y < 0) return false;
     if (Number.isFinite(maxRowCount) && y + height > maxRowCount) return false;
     const candidate: LayoutItem = { i: "__fit__", x, y, w: width, h: height };
-    return !getFirstCollision(layout, candidate);
+    return !getFirstCollisionWithIndex(layout, candidate, collisionIndex);
   };
 
   const distToTarget = (x: number, y: number): number => {

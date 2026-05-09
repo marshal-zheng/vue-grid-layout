@@ -115,7 +115,7 @@ const GridItem = defineComponent({
   name: componentName,
   inheritAttrs: false,
   props: {
-    cols: {type: Number, required: true },
+    cols: { type: Number, required: true },
     containerWidth: { type: Number, required: true },
     rowHeight: { type: Number, required: true },
     margin: { type: Array as PropType<number[]>, required: true },
@@ -192,7 +192,7 @@ const GridItem = defineComponent({
      * @param  {Object} callbackData  an object with node, delta and position information
      */
     const onDragStart = (e: Event, { node }: VueDraggableCallbackData) => {
-      const { onDragStart: dragStart} = vAttrs
+      const { onDragStart: dragStart } = vAttrs
       if (!dragStart) return;
 
       const pos = calcGridItemPosition(
@@ -345,7 +345,7 @@ const GridItem = defineComponent({
     const onResizeStop: GridItemResizeCallback = (e, callbackData, position) =>
       onResizeHandler(e, callbackData, position, "onResizeStop");
 
-    const   onResizeStart: GridItemResizeCallback = (e, callbackData, position) =>
+    const onResizeStart: GridItemResizeCallback = (e, callbackData, position) =>
       onResizeHandler(e, callbackData, position, "onResizeStart");
 
     const onResize: GridItemResizeCallback = (e, callbackData, position) =>
@@ -361,14 +361,14 @@ const GridItem = defineComponent({
       } else {
         // top,left (slow)
         style = setTopLeft(pos);
-  
+
         // This is used for server rendering.
         if (usePercentages) {
           style.left = perc(pos.left / containerWidth);
           style.width = perc(pos.width / containerWidth);
         }
       }
-  
+
       return style;
     }
 
@@ -414,14 +414,14 @@ const GridItem = defineComponent({
       // Can't find DOM node (are we unmounted?)
 
       if (!node) return;
-  
+
       const prevPosition = prevDroppingPosition || { left: 0, top: 0 };
       const { dragging } = state;
-  
+
       const shouldDrag =
         (dragging && droppingPosition.left !== prevPosition.left) ||
         droppingPosition.top !== prevPosition.top;
-  
+
       if (!dragging) {
         onDragStart(droppingPosition.e, {
           node,
@@ -431,7 +431,7 @@ const GridItem = defineComponent({
       } else if (shouldDrag) {
         const deltaX = droppingPosition.left - dragging.left;
         const deltaY = droppingPosition.top - dragging.top;
-  
+
         onDrag(droppingPosition.e, {
           node,
           deltaX,
@@ -444,7 +444,7 @@ const GridItem = defineComponent({
       child: VNode,
       position: Position,
       isResizable: boolean
-    ): VNode =>{
+    ): VNode => {
       const {
         transformScale,
         resizeHandles,
@@ -469,11 +469,11 @@ const GridItem = defineComponent({
           resizeHandles={resizeHandles}
           handle={resizeHandle}
         >
-          {h(child, { style: { height: '100%' }})}
+          {h(child, { style: { height: '100%' } })}
         </Resizable>
       );
     }
-  
+
 
     onMounted(() => {
       moveDroppingItem();
@@ -524,12 +524,12 @@ const GridItem = defineComponent({
           ...createStyle(pos)
         }
       }
-  
+
       // Resizable support. This is usually on but the user can toggle it off.
       let newChild = mixinResizable(child, pos, isResizable);
-  
+
       newChild = mixinDraggable(newChild, isDraggable, wrapperProps);
-  
+
       return newChild;
     }
 

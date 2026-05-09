@@ -7,6 +7,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const root = path.resolve(__dirname, '..')
+const projectRoot = path.resolve(root, '..')
 
 const read = (p) => fs.readFileSync(p, 'utf8')
 
@@ -14,6 +15,21 @@ const COMPONENT_CONSTS = {
   VueGridLayout: 'VUE_GRID_LAYOUT_PROPS',
   ResponsiveVueGridLayout: 'RESPONSIVE_VUE_GRID_LAYOUT_PROPS',
   WidthProvider: 'WIDTH_PROVIDER_PROPS',
+}
+
+const COMPONENT_SOURCES = {
+  VueGridLayout: {
+    file: path.join(projectRoot, 'lib/VueGridLayoutPropTypes.ts'),
+    marker: 'export const basicProps',
+  },
+  ResponsiveVueGridLayout: {
+    file: path.join(projectRoot, 'lib/ResponsiveVueGridLayout.tsx'),
+    marker: 'props:',
+  },
+  WidthProvider: {
+    file: path.join(projectRoot, 'lib/WidthProvider.tsx'),
+    marker: 'props:',
+  },
 }
 
 function extractKeysFromObjectLiteral(content, marker) {
@@ -109,13 +125,6 @@ function printSetDiff(label, expected, actual) {
 let ok = true
 
 try {
-  const descContent = read(path.join(root, 'src/propDescriptions.ts'))
-  const descMaps = {
-    VueGridLayout: new Set(extractKeysFromObjectLiteral(descContent, 'VUE_GRID_LAYOUT_PROP_DESCRIPTIONS')),
-    ResponsiveVueGridLayout: new Set(extractKeysFromObjectLiteral(descContent, 'RESPONSIVE_GRID_LAYOUT_PROP_DESCRIPTIONS')),
-    WidthProvider: new Set(extractKeysFromObjectLiteral(descContent, 'WIDTH_PROVIDER_PROP_DESCRIPTIONS')),
-  }
-
   const generatedPath = path.join(root, 'src/props.generated.ts')
   if (!fs.existsSync(generatedPath)) {
     console.error('❌ 未找到 src/props.generated.ts，请先运行 `yarn generate:props`')
@@ -124,15 +133,34 @@ try {
   const generated = read(generatedPath)
 
   for (const [component, constName] of Object.entries(COMPONENT_CONSTS)) {
-    const arr = extractGeneratedArray(generated, constName)
-    const keys = new Set(arr.map((p) => p.name))
-    const descKeys = descMaps[component]
-    if (!descKeys) {
-      console.error(`❌ 缺少描述映射: ${component}`)
+    const source = COMPONENT_SOURCES[component]
+    if (!source) {
+      console.error(`❌ 缺少源码映射: ${component}`)
       ok = false
       continue
     }
-    if (!printSetDiff(`${component} props 描述`, keys, descKeys)) ok = false
+    const sourceKeys = new Set(extractKeysFromObjectLiteral(read(source.file), source.marker))
+    const arr = extractGeneratedArray(generated, constName)
+    const generatedKeys = new Set(arr.map((p) => p.name))
+    if (!printSetDiff(`${component} props 生成数据`, sourceKeys, generatedKeys)) ok = false
+
+    const duplicateNames = arr
+      .map((p) => p.name)
+      .filter((name, index, names) => names.indexOf(name) !== index)
+      .sort()
+    if (duplicateNames.length) {
+      console.error(`❌ ${component} props 有重复项: ${[...new Set(duplicateNames)].join(', ')}`)
+      ok = false
+    }
+
+    const missingDescriptions = arr
+      .filter((p) => !p.description)
+      .map((p) => p.name)
+      .sort()
+    if (missingDescriptions.length) {
+      console.error(`❌ ${component} props 缺少 JSDoc 描述: ${missingDescriptions.join(', ')}`)
+      ok = false
+    }
   }
 } catch (error) {
   ok = false

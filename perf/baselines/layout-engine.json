@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "seed": 42,
+  "operations": 3,
+  "executorKind": "main-thread",
+  "results": {
+    "drag-across-rows:100": { "p95Ms": 2.47, "meanMs": 1.18, "maxMs": 2.47 },
+    "north-west-resize:100": { "p95Ms": 1.3, "meanMs": 0.73, "maxMs": 1.3 },
+    "external-drop-fit:100": { "p95Ms": 1.67, "meanMs": 1.19, "maxMs": 1.67 },
+    "compact-commit:100": { "p95Ms": 0.66, "meanMs": 0.44, "maxMs": 0.66 },
+    "drag-across-rows:500": { "p95Ms": 5.91, "meanMs": 3.5, "maxMs": 5.91 },
+    "north-west-resize:500": { "p95Ms": 2.34, "meanMs": 1.71, "maxMs": 2.34 },
+    "external-drop-fit:500": { "p95Ms": 3.19, "meanMs": 2.35, "maxMs": 3.19 },
+    "compact-commit:500": { "p95Ms": 4.11, "meanMs": 2.18, "maxMs": 4.11 },
+    "drag-across-rows:1000": { "p95Ms": 5.46, "meanMs": 4.46, "maxMs": 5.46 },
+    "north-west-resize:1000": { "p95Ms": 5.52, "meanMs": 4.37, "maxMs": 5.52 },
+    "external-drop-fit:1000": { "p95Ms": 5.9, "meanMs": 4.39, "maxMs": 5.9 },
+    "compact-commit:1000": { "p95Ms": 4.79, "meanMs": 3.06, "maxMs": 4.79 },
+    "drag-across-rows:2000": { "p95Ms": 30.19, "meanMs": 21.55, "maxMs": 30.19 },
+    "north-west-resize:2000": { "p95Ms": 17.09, "meanMs": 10.86, "maxMs": 17.09 },
+    "external-drop-fit:2000": { "p95Ms": 13.85, "meanMs": 12.31, "maxMs": 13.85 },
+    "compact-commit:2000": { "p95Ms": 17.98, "meanMs": 11.39, "maxMs": 17.98 }
+  }
+}

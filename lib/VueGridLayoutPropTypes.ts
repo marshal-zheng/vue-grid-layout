@@ -6,6 +6,8 @@ import type {
   ResizeHandleAxis
 } from "./utils";
 import type { GridHistoryStore } from './history'
+import type { GridLayoutPersistenceProp } from './persistence'
+import type { GridLayoutEngineProp } from './layout-engine'
 
 interface DroppingItem {
   i: string;
@@ -70,67 +72,62 @@ export type Props = {
   resizeHandle?: ResizeHandle
   allowOverlap: boolean
   historyStore?: GridHistoryStore
+  persistence?: GridLayoutPersistenceProp
+  layoutEngine?: false | GridLayoutEngineProp
   innerRef?: Ref<"div">
 };
 
 export type DefaultProps = Omit<Props, 'width'>;
 
 export const basicProps = {
-  //
-  // Basic props
-  //
+  /** Additional CSS class for the container */
   class: {
     type: String as PropType<string>,
     default: ''
   },
+  /** Inline style object for the container */
   style: {
     type: Object as PropType<CSSProperties>,
     default: () => ({})
   },
-
-  // This can be set explicitly. If it is not set, it will automatically
-  // be set to the container width. Note that resizes will *not* cause this to adjust.
-  // If you need that behavior, use WidthProvider.
+  /** Container width (px); auto-measured via WidthProvider if not provided */
   width: {
     type: Number
   },
-
-  // If true, the container height swells and contracts to fit contents
+  /** Automatically adjust container height based on content */
   autoSize: {
     type: Boolean as PropType<boolean>,
     default: true
   },
-  // # of cols.
+  /** Number of columns, default 12 */
   cols: {
     type: Number as PropType<number>,
     default: 12
   },
-
-  // A selector that will not be draggable.
+  /** CSS selector for elements that should not trigger drag (requires . prefix) */
   draggableCancel: {
     type: String as PropType<string>,
     default: ''
   },
-  // A selector for the draggable handler
+  /** CSS selector for drag handle elements (requires . prefix) */
   draggableHandle: {
     type: String as PropType<string>,
     default: ''
   },
+  /** Vertical compact layout (deprecated, use compactType) */
   verticalCompact: {
     type: Boolean,
     default: true
   },
-  // Choose vertical or hotizontal compaction
+  /** Compaction direction: vertical / horizontal / null (no compaction) */
   compactType: {
-    type: String as PropType<"vertical" | "horizontal">,
+    type: String as PropType<CompactType>,
     default: 'vertical',
-    validator: (value: string) => ['vertical', 'horizontal'].includes(value),
+    validator: (value: CompactType) => value == null || ['vertical', 'horizontal'].includes(value),
   },
-
-  // layout is an array of object with the format:
-  // {x: Number, y: Number, w: Number, h: Number, i: String}
+  /** Layout array, supports v-model two-way binding */
   modelValue: {
-    type: Array as PropType<Layout>, // Specify the correct type instead of any if possible
+    type: Array as PropType<Layout>,
     default: () => [],
     validator: (layout: unknown) => {
       if (!Array.isArray(layout)) return false;
@@ -157,167 +154,105 @@ export const basicProps = {
       return true;
     }
   },
-
-  //
-  // Grid Dimensions
-  //
-
-  // Margin between items [x, y] in px
+  /** Grid spacing [x, y] in px, default [10, 10] */
   margin: {
     type: Array as PropType<Array<number>>,
     default: () => [10, 10],
     validator: (value: number[]) => {
-      // Check that every item in the array is a number
       return value.every(item => typeof item === 'number');
     }
   },
-  // Padding inside the container [x, y] in px
+  /** Container padding [x, y] in px, defaults to margin value */
   containerPadding: {
     type: Array as PropType<number[]>,
-    // default: () => [],
     validator: (value: number[]) => {
-      // Check that every item in the array is a number
       return value.every(item => typeof item === 'number');
     }
   },
-  // Rows have a static height, but you can change this based on breakpoints if you like
+  /** Row height (px), default 150 */
   rowHeight: {
     type: Number as PropType<number>,
     default: 150
   },
-  // Default Infinity, but you can specify a max here if you like.
-  // Note that this isn't fully fleshed out and won't error if you specify a layout that
-  // extends beyond the row capacity. It will, however, not allow users to drag/resize
-  // an item past the barrier. They can push items beyond the barrier, though.
-  // Intentionally not documented for this reason.
+  /** Maximum number of rows, default Infinity (no limit) */
   maxRows: {
     type: Number as PropType<number>,
     default: Infinity
   },
-
-  //
-  // Flags
-  //
+  /** Restrict dragging within container boundaries */
   isBounded: {
     type: Boolean as PropType<boolean>,
     default: false
   },
+  /** Globally enable dragging, default true */
   isDraggable: {
     type: Boolean as PropType<boolean>,
     default: true
   },
+  /** Globally enable resizing, default true */
   isResizable: {
     type: Boolean as PropType<boolean>,
     default: true
   },
-  // If true, grid can be placed one over the other.
+  /** Allow grid items to overlap, automatically enables preventCollision */
   allowOverlap: {
     type: Boolean as PropType<boolean>,
     default: false
   },
-  // If true, grid items won't change position when being dragged over.
+  /** Prevent collision mode, items won't push others when dragging */
   preventCollision: {
     type: Boolean as PropType<boolean>,
     default: false
   },
-  // Use CSS transforms instead of top/left
+  /** Use CSS transform for positioning (better performance), default true */
   useCSSTransforms: {
     type: Boolean as PropType<boolean>,
     default: true
   },
-  // parent layout transform scale
+  /** Set scale ratio when parent has CSS scale transform */
   transformScale: {
     type: Number as PropType<number>,
     default: 1
   },
-  // Auto-scroll the nearest scroll container when dragging/resizing near an edge.
-  // If true, uses defaults. Or pass { margin?: number; speed?: number }.
+  /** Auto-scroll when dragging near edges; accepts boolean or { margin, speed } object */
   autoScroll: {
     type: [Boolean, Object] as PropType<boolean | { margin?: number; speed?: number }>,
     default: false
   },
-  // If true, an external element can trigger onDrop callback with a specific grid position as a parameter
+  /** Allow dropping elements from outside, requires @drop and @dropDragOver handlers */
   isDroppable: {
     type: Boolean as PropType<boolean>,
     default: false
   },
-  // Determines how an external element is positioned while dragging over the grid.
-  // - 'cursor': place based on the mouse position (default)
-  // - 'auto': snap to the nearest existing block adjacent position
+  /** Drop positioning strategy: cursor (mouse position) / auto (auto-snap) */
   dropStrategy: {
     type: String as PropType<'cursor' | 'auto'>,
     default: 'cursor',
     validator: (value: string) => ['cursor', 'auto'].includes(value),
   },
-
-  // Resize handle options
+  /** Array of enabled resize handle directions, e.g. ["se", "n", "e"] */
   resizeHandles: {
     type: Array as PropType<Array<'s' | 'w' | 'e' | 'n' | 'sw' | 'nw' | 'se' | 'ne'>>,
     default: () => ['se']
   },
+  /** Custom resize handle render function or VNode */
   resizeHandle: resizeHandleType,
-
-  // Optional pinia history store for undo/redo orchestration
+  /** Pinia history store instance for undo/redo functionality */
   historyStore: {
     type: Object as PropType<GridHistoryStore>,
     default: null
   },
-
-  //
-  // Callbacks
-  //
-
-  // Callback so you can save the layout. Calls after each drag & resize stops.
-  // layoutChange: {
-  //   type: Function as PropType<(layout: Layout) => void>,
-  //   default: noop
-  // },
-
-  // Calls when drag starts. Callback is of the signature (layout, oldItem, newItem, placeholder, e, ?node).
-  // All callbacks below have the same signature. 'start' and 'stop' callbacks omit the 'placeholder'.
-  // dragStartFn: {
-  //   type: Function as PropType<EventCallback>,
-  //   default: noop
-  // },
-  // // Calls on each drag movement.
-  // dragFn: {
-  //   type: Function as PropType<EventCallback>,
-  //   default: noop
-  // },
-  // // Calls when drag is complete.
-  // dragStopFn: {
-  //   type: Function as PropType<EventCallback>,
-  //   default: () => noop
-  // },
-  //Calls when resize starts.
-  // resizeStartFn: {
-  //   type: Function as PropType<EventCallback>,
-  //   default: () => noop
-  // },
-  // // Calls when resize movement happens.
-  // resizeFn: {
-  //   type: Function as PropType<EventCallback>,
-  //   default: () => noop
-  // },
-  // // Calls when resize is complete.
-  // resizeStopFn: {
-  //   type: Function as PropType<EventCallback>,
-  //   default: () => noop
-  // },
-  // Calls when some element is dropped.
-  // dropFn: {
-  //   type: Function as PropType<(layout: Layout, item: LayoutItem, e: Event) => void>,
-  //   default: () => noop
-  // },
-  // dropDragOverFn: {
-  //   type: Function as PropType<(e: DragEvent) => ({ w?: number; h?: number } | false) | null | undefined>,
-  //   default: () => noop
-  // },
-
-  //
-  // Other validations
-  //
-
+  /** Durable save/load persistence configuration */
+  persistence: {
+    type: [Boolean, Object] as PropType<GridLayoutPersistenceProp>,
+    default: false
+  },
+  /** Layout engine configuration; false or { mode: "legacy" } uses the legacy path */
+  layoutEngine: {
+    type: [Boolean, Object] as PropType<false | GridLayoutEngineProp>,
+    default: undefined
+  },
+  /** Placeholder config for external drop { i, w, h } */
   droppingItem: {
     type: Object as PropType<DroppingItem>,
     default: () => ({
@@ -326,7 +261,6 @@ export const basicProps = {
       w: 1
     }),
     validator: (value: DroppingItem) => {
-      // Perform additional validation if necessary
       return (
         typeof value.i === 'string' &&
         typeof value.w === 'number' &&
@@ -334,8 +268,7 @@ export const basicProps = {
       );
     }
   },
-
-  // Optional ref for getting a reference for the wrapping div.
+  /** Ref reference to container DOM element */
   innerRef: {
     type: Object as PropType<Ref<HTMLElement>>,
     default: () => null

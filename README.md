@@ -15,12 +15,14 @@ VGL is Vue3-only and does not require jQuery.
 - [MCP Integration](#mcp-integration)
 - [Installation](#installation)
 - [Usage](#usage)
+- [History (Pinia-powered undo/redo)](#history-pinia-powered-undoredo)
+- [Layout Persistence](#layout-persistence)
+- [Layout Engine Performance](#layout-engine-performance)
 - [Responsive Usage](#responsive-usage)
 - [Providing Grid Width](#providing-grid-width)
 - [Grid Layout Props](#grid-layout-props)
 - [Responsive Grid Layout Props](#responsive-grid-layout-props)
 - [Grid Item Props](#grid-item-props)
-- [MCP Integration](#mcp-integration)
 
 ## Demos
 
@@ -39,6 +41,7 @@ VGL is Vue3-only and does not require jQuery.
 1. [Responsive Bootstrap-style Layout](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/14-responsive-bootstrap-style.js)
 1. [Allow Overlap](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/15-allow-overlap.js)
 1. [History / Undo-Redo](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/16-history.js)
+1. [Persistence](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/18-persistence.js)
 
 ## Features
 
@@ -92,20 +95,6 @@ Install the Vue-Grid-Layout [package](https://www.npmjs.com/package/@marsio/vue-
 ```bash
 npm install @marsio/vue-grid-layout
 ```
-
-### Styles
-
-VGL ships with a minimal stylesheet for placeholder/resize handles:
-
-```js
-import "@marsio/vue-grid-layout/css/styles.css";
-```
-
-CSS variables you can override:
-
-- `--vgl-placeholder-bg`, `--vgl-placeholder-border`
-- `--vgl-resize-handle-size`, `--vgl-resize-handle-indicator-inset`, `--vgl-resize-handle-indicator-size`, `--vgl-resize-handle-indicator-color`
-- `--vgl-blocked-outline`
 
 ## Usage
 
@@ -204,6 +193,163 @@ watch(
 )
 </script>
 ```
+
+## Layout Persistence
+
+Use `persistence` when a layout should survive refreshes. The persistence layer writes a versioned document through an adapter; it does not depend on Pinia. `historyStore` is still for in-session undo/redo, while persistence is for durable save/load.
+
+Built-in adapters:
+
+- `localStorageAdapter()` for durable browser-local storage and cross-tab updates through the `storage` event.
+- `sessionStorageAdapter()` for per-tab browser session storage.
+- `indexedDBAdapter()` for larger browser-local documents without blocking on string-only Web Storage.
+- `remoteHttpAdapter()` for simple REST backends using `GET`, `PUT` and `DELETE`.
+- `memoryPersistenceAdapter()` for tests and demos.
+
+### localStorage refresh recovery
+
+```vue
+<template>
+  <VGL
+    v-model="layout"
+    :cols="12"
+    :width="1200"
+    :persistence="{ key: 'dashboard-main', adapter }"
+  >
+    <div v-for="item in layout" :key="item.i">{{ item.i }}</div>
+  </VGL>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import VGL, { localStorageAdapter } from '@marsio/vue-grid-layout'
+
+const layout = ref([
+  { i: 'a', x: 0, y: 0, w: 2, h: 2 },
+  { i: 'b', x: 2, y: 0, w: 2, h: 2 }
+])
+
+const adapter = localStorageAdapter({ prefix: 'vgl:' })
+</script>
+```
+
+`autoSave` defaults to `true` and saves committed layout changes after drag/resize stop, debounced by `debounceMs` (default `300`). It does not write drag or resize preview frames. Adapter operations time out after `timeoutMs` (default `10000`) so a stalled remote store leaves the current in-memory layout intact and surfaces an `adapter-timeout` error.
+
+### autosave dirty state
+
+```vue
+<script setup>
+import { ref } from 'vue'
+import {
+  localStorageAdapter,
+  useGridLayoutPersistence
+} from '@marsio/vue-grid-layout'
+
+const layout = ref([{ i: 'a', x: 0, y: 0, w: 2, h: 2 }])
+const persistence = useGridLayoutPersistence({
+  key: 'dashboard-editing',
+  kind: 'layout',
+  target: layout,
+  adapter: localStorageAdapter({ prefix: 'vgl:' }),
+  debounceMs: 500,
+  onError: error => console.warn(error.message)
+})
+
+await persistence.load()
+
+// Bind these to toolbar controls when you need manual review.
+const save = () => persistence.save()
+const discard = () => persistence.discard()
+</script>
+```
+
+The controller exposes `status`, `dirty`, `lastSavedAt`, `error`, `conflict`, `load()`, `save()`, `discard()`, `reset()`, `remove()`, `resolveConflict()` and `stop()`.
+
+### custom remote adapter
+
+```ts
+import type { LayoutPersistenceAdapter } from '@marsio/vue-grid-layout'
+
+export const remoteAdapter: LayoutPersistenceAdapter = {
+  async load(key) {
+    const response = await fetch(`/api/layouts/${key}`)
+    if (response.status === 404) return null
+    return response.json()
+  },
+  async save(key, document) {
+    await fetch(`/api/layouts/${key}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(document)
+    })
+  },
+  async remove(key) {
+    await fetch(`/api/layouts/${key}`, { method: 'DELETE' })
+  }
+}
+```
+
+For a standard REST endpoint, use the built-in HTTP adapter:
+
+```ts
+import { remoteHttpAdapter } from '@marsio/vue-grid-layout'
+
+const adapter = remoteHttpAdapter({
+  endpoint: key => `/api/layouts/${encodeURIComponent(key)}`
+})
+```
+
+For larger browser-local layouts, use IndexedDB:
+
+```ts
+import { indexedDBAdapter } from '@marsio/vue-grid-layout'
+
+const adapter = indexedDBAdapter({
+  dbName: 'dashboard-layouts',
+  storeName: 'layouts',
+  prefix: 'vgl:'
+})
+```
+
+Adapters can also implement `subscribe(key, callback)` for remote or multi-tab updates. If an adapter does not implement `subscribe`, single-tab save/load still works, but external updates will not be observed. If a dirty page receives an external update, the default conflict strategy is `manual`; configure `conflictStrategy: 'newer-wins'` or `'keep-local'` only when that matches your product rules.
+
+For responsive grids, pass `persistence` to `<ResponsiveVueGridLayout>`; it stores the full breakpoint layout map. The responsive prop is not forwarded to the inner grid.
+
+Migration note: replace ad-hoc `layoutChange` saves with `persistence` or `useGridLayoutPersistence()`. Keep `historyStore` only where you need undo/redo inside the current browser session.
+
+Security note: `localStorage` is not suitable for sensitive data. Do not put credentials, private query keys or confidential business data in layout `meta`. During SSR or when browser storage is unavailable, the default localStorage adapter reports an unavailable/error state instead of touching `window`.
+
+## Layout Engine Performance
+
+The default interaction path uses the layout engine module. It keeps preview work separate from committed layout changes, uses a row/column occupancy index for collision and fit checks, and reports structured diagnostics through `layoutEngine.onEvent`.
+
+```vue
+<VGL
+  v-model="layout"
+  :cols="12"
+  :width="1200"
+  :layoutEngine="{
+    scheduler: { mode: 'auto' },
+    diagnostics: { debug: true, budgetMs: 8 },
+    onEvent: event => {
+      if (event.type === 'budget-warning') {
+        console.warn(event.message, event.diagnostics)
+      }
+    }
+  }"
+/>
+```
+
+Recommended scheduler modes:
+
+- `auto` for most dashboards. It chooses eager, rAF-coalesced, or commit-only preview based on layout size, density, and recent compute time.
+- `eager` for small layouts and deterministic tests.
+- `raf` for larger dashboards where pointermove events arrive faster than rendering.
+- `commitOnly` when preview should stay lightweight and full solving should happen on drag/resize stop.
+
+For very large compact, drop-fit, responsive breakpoint generation, batch import, or commit validation tasks, use `workerLayoutExecutor({ workerUrl })`, `createLayoutExecutor({ kind: 'worker', workerUrl })`, or pass a custom executor. The built artifact is `build/web/vue-grid-layout.worker.js`; if the worker cannot start, the library falls back to the main-thread executor and emits a `fallback` or `worker-error` event. Pointermove preview for drag/resize stays on the main-thread low-latency path; worker-capable execution is used for commits and heavy fit/responsive operations.
+
+Preview frames are not durable state. `layoutChange`, `update:modelValue`, `historyStore`, and `persistence` are updated only from committed drag/resize/drop results. Diagnostics summarize operation id, phase, layout size, affected item count, collision count, scheduler mode, executor kind, index usage, and duration; debug mode adds a compact replay summary without logging the full layout by default. The benchmark matrix can be run with `yarn bench:layout-engine`; set `EXECUTOR=worker` to include worker queue/compute/end-to-end reporting and `SIZES`, `SCENARIOS`, `SEED`, or `BUDGET_FILE` to customize the run.
 
 You may also choose to set layout properties directly on the children:
 
@@ -514,7 +660,36 @@ onDrop: (layout: Layout, e: Event, item?: LayoutItem) => void,
 onDropDragOver: (e: DragEvent) => { w?: number; h?: number } | false;
 
 // Ref for getting a reference for the grid's wrapping div.
-innerRef?: Ref<"div">
+innerRef?: Ref<"div">,
+
+// Durable persistence. Pass false or omit to keep existing behavior.
+persistence?: false | {
+  key: string,
+  adapter?: LayoutPersistenceAdapter,
+  autoSave?: boolean,
+  debounceMs?: number,
+  timeoutMs?: number,
+  validation?: 'strict' | 'sanitize',
+  fallback?: Layout,
+  conflictStrategy?: 'manual' | 'newer-wins' | 'keep-local',
+  onEvent?: (event: LayoutPersistenceEvent<Layout>) => void,
+  onError?: (error: LayoutPersistenceError) => void
+},
+
+// Layout engine configuration. Omit for the default engine path.
+// Set false or { mode: 'legacy' } to use the legacy path.
+layoutEngine?: false | {
+  mode?: 'default' | 'legacy',
+  scheduler?: {
+    mode?: 'eager' | 'raf' | 'commitOnly' | 'auto',
+    maxTaskMs?: number
+  },
+  executor?: LayoutExecutor | { kind: 'worker', workerUrl?: string, timeoutMs?: number },
+  compareLegacy?: boolean,
+  legacyFallback?: boolean,
+  diagnostics?: boolean | { debug?: boolean, budgetMs?: number },
+  onEvent?: (event: LayoutEngineEvent) => void
+}
 ```
 
 ### Responsive Grid Layout Props
@@ -542,6 +717,20 @@ containerPadding: [number, number],
 // layouts is an object mapping breakpoints to layouts.
 // e.g. {lg: Layout, md: Layout, ...}
 layouts,
+
+// Durable persistence for the complete breakpoint layout map.
+persistence?: false | {
+  key: string,
+  adapter?: LayoutPersistenceAdapter,
+  autoSave?: boolean,
+  debounceMs?: number,
+  timeoutMs?: number,
+  fallback?: Record<string, Layout>,
+  conflictStrategy?: 'manual' | 'newer-wins' | 'keep-local'
+},
+
+// Passed to the inner grid and used for responsive layout generation.
+layoutEngine?: false | GridLayoutEngineProp,
 
 //
 // Emit

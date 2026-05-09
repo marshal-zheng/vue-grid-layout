@@ -1,10 +1,5 @@
 import type { VueGridLayoutProp } from '../props.generated.js'
 import { VUE_GRID_LAYOUT_PROPS, RESPONSIVE_VUE_GRID_LAYOUT_PROPS, WIDTH_PROVIDER_PROPS } from '../props.generated.js'
-import {
-  VUE_GRID_LAYOUT_PROP_DESCRIPTIONS,
-  RESPONSIVE_GRID_LAYOUT_PROP_DESCRIPTIONS,
-  WIDTH_PROVIDER_PROP_DESCRIPTIONS,
-} from '../propDescriptions.js'
 import { toKebabCase, kebabToCamel, normalizeQuery } from '../utils/index.js'
 import type { ComponentName, PropSource } from './types.js'
 
@@ -14,20 +9,12 @@ export const PROPS_BY_COMPONENT = {
   WidthProvider: WIDTH_PROVIDER_PROPS,
 } as const satisfies Record<ComponentName, VueGridLayoutProp[]>
 
-export const PROP_DESCRIPTIONS_BY_COMPONENT: Record<ComponentName, Record<string, string>> = {
-  VueGridLayout: VUE_GRID_LAYOUT_PROP_DESCRIPTIONS,
-  ResponsiveVueGridLayout: RESPONSIVE_GRID_LAYOUT_PROP_DESCRIPTIONS,
-  WidthProvider: WIDTH_PROVIDER_PROP_DESCRIPTIONS,
-}
-
 export function enrichPropSource(source: PropSource): Record<string, unknown> {
   const { prop, availableOn, declaredOn, forwardedViaAttrs } = source
-  const description = PROP_DESCRIPTIONS_BY_COMPONENT[declaredOn]?.[prop.name] ?? ''
   const payload: Record<string, unknown> = {
     ...prop,
     component: availableOn,
     kebabName: toKebabCase(prop.name),
-    description,
   }
   if (forwardedViaAttrs) {
     payload.declaredOn = declaredOn
@@ -86,7 +73,7 @@ export function findPropsByName(
     const name = s.prop.name
     if (name.toLowerCase().includes(q)) return true
     if (toKebabCase(name).includes(qKebab)) return true
-    const desc = (PROP_DESCRIPTIONS_BY_COMPONENT[s.declaredOn]?.[name] ?? '').toLowerCase()
+    const desc = (s.prop.description ?? '').toLowerCase()
     return desc.includes(q) || desc.includes(qKebab)
   })
 
