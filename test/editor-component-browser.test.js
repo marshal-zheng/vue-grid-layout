@@ -96,6 +96,15 @@ const html = `<!doctype html>
 	          editorMetaById: editorMetaById,
 	          sectionRows: sectionRows,
 	          persistence: persistence,
+          commandPolicy: 'skip-blocked',
+          layoutEngineOptions: {
+            cols: 12,
+            maxRows: Infinity,
+            compactType: 'vertical',
+            allowOverlap: false,
+            preventCollision: false,
+            diagnostics: { debug: true }
+          },
           keyboard: {
             ariaMessage: function (message) { messages.push(message.message); }
           },
@@ -108,6 +117,7 @@ const html = `<!doctype html>
         var editorProp = computed(function () {
           return {
             controller: editor,
+            commandPolicy: 'skip-blocked',
             keyboard: { ariaMessage: function (message) { messages.push(message.message); } },
             guides: {
               enabled: true,
@@ -122,22 +132,44 @@ const html = `<!doctype html>
         createApp({
           components: { SingleGrid: SingleGrid },
           setup: function () {
-            return { layout: layout, mode: mode, editor: editor, editorProp: editorProp };
+            return {
+              layout: layout,
+              mode: mode,
+              editor: editor,
+              editorProp: editorProp,
+              onEditorModelUpdate: function (nextLayout) {
+                layout.value = nextLayout;
+              }
+            };
           },
-          template: '<div><input id="ignored-input" value="text"><SingleGrid class="editor-grid" v-model="layout" :width="900" :cols="12" :rowHeight="30" :editor="editorProp" :isDroppable="true" :droppingItem="{ i: \\'drop-a\\', w: 1, h: 1 }"><div v-for="item in layout" :key="item.i">{{ item.i }}</div></SingleGrid></div>'
+          template: '<div><input id="ignored-input" value="text"><SingleGrid class="editor-grid" :model-value="layout" @update:model-value="onEditorModelUpdate" :width="900" :cols="12" :rowHeight="30" :editor="editorProp" :isDroppable="true" :droppingItem="{ i: \\'drop-a\\', w: 1, h: 1 }"><div v-for="item in layout" :key="item.i">{{ item.i }}</div></SingleGrid></div>'
         }).mount('#editor');
 
         var responsiveLayouts = ref({
-          lg: [{ i: 'r-a', x: 0, y: 0, w: 2, h: 2 }],
-          sm: [{ i: 'r-a', x: 0, y: 0, w: 1, h: 2 }]
+          lg: [
+            { i: 'r-a', x: 0, y: 0, w: 2, h: 2 },
+            { i: 'r-b', x: 2, y: 0, w: 2, h: 2 }
+          ],
+          sm: [
+            { i: 'r-a', x: 0, y: 0, w: 1, h: 2 },
+            { i: 'r-b', x: 1, y: 0, w: 1, h: 2 }
+          ]
         });
+        var responsiveBreakpoint = ref('lg');
         var responsiveMode = ref('edit');
         var responsiveEditor = VGL.createGridEditorController({
           kind: 'responsive',
           layouts: responsiveLayouts,
-          breakpoint: ref('lg'),
+          breakpoint: responsiveBreakpoint,
           mode: responsiveMode,
-          editorMetaById: ref({})
+          editorMetaById: ref({}),
+          layoutEngineOptions: {
+            cols: 12,
+            maxRows: Infinity,
+            compactType: 'vertical',
+            allowOverlap: false,
+            preventCollision: false
+          }
         });
         createApp({
           components: { ResponsiveGrid: ResponsiveGrid },
@@ -153,6 +185,17 @@ const html = `<!doctype html>
 
         window.__editorBrowserTest = {
           layout: function () { return layout.value.map(function (item) { return Object.assign({}, item); }); },
+          resetLayout: function () {
+            layout.value = [
+              { i: 'a', x: 0, y: 0, w: 2, h: 2 },
+              { i: 'b', x: 2, y: 0, w: 2, h: 2 },
+              { i: 'c', x: 4, y: 0, w: 2, h: 2 }
+            ];
+            editor.setExternalLayout(layout.value, 'browser-reset');
+            editorMetaById.value = {};
+            messages.length = 0;
+            return editor.execute({ type: 'clearSelection' });
+          },
           mode: mode,
           editor: editor,
           messages: function () { return messages.slice(); },
@@ -182,6 +225,7 @@ const html = `<!doctype html>
           discard: function () { return editor.discard(); },
           undo: function () { return editor.undo(); },
           redo: function () { return editor.redo(); },
+          moveSelectionRight: function () { return editor.execute({ type: 'move', source: 'keyboard', payload: { dx: 1, dy: 0 } }); },
           computeGuides: function (options) {
             var current = layout.value;
             editor.guides.value = VGL.computeGridEditorGuides(
@@ -282,7 +326,11 @@ const html = `<!doctype html>
           },
           setView: function () { mode.value = 'view'; },
           setEdit: function () { mode.value = 'edit'; },
-          responsiveState: function () { return responsiveEditor.state.value; }
+          responsiveState: function () { return responsiveEditor.state.value; },
+          responsiveLayouts: function () { return JSON.parse(JSON.stringify(responsiveLayouts.value)); },
+          responsiveGroupMove: function () {
+            return responsiveEditor.execute({ type: 'move', targetIds: ['r-a', 'r-b'], payload: { dx: 1, dy: 0 } });
+          }
         };
       })();
     </script>
@@ -344,6 +392,37 @@ async function main() {
     await page.goto(`http://127.0.0.1:${port}/editor-test`, { waitUntil: 'load' });
     await page.waitForFunction(() => window.__editorBrowserTest);
     assert.deepEqual(pageErrors, []);
+    const primaryModifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+    const itemCenter = id => page.evaluate(targetId => {
+      const items = Array.from(document.querySelectorAll('#editor .vue-grid-item'));
+      const item = items.find(el => (el.textContent || '').trim().includes(targetId));
+      if (!item) throw new Error('missing item ' + targetId);
+      const rect = item.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    }, id);
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    const clickItem = async id => {
+      const center = await itemCenter(id);
+      await page.mouse.click(center.x, center.y);
+    };
+    const modifiedClickItem = async id => {
+      const center = await itemCenter(id);
+      await page.keyboard.down(primaryModifier);
+      await page.mouse.click(center.x, center.y);
+      await page.keyboard.up(primaryModifier);
+    };
+    const dragItem = async (id, dx, dy) => {
+      const center = await itemCenter(id);
+      await page.mouse.move(center.x, center.y);
+      await page.mouse.down();
+      await delay(50);
+      await page.mouse.move(center.x + dx / 2, center.y + dy / 2, { steps: 8 });
+      await delay(50);
+      await page.mouse.move(center.x + dx, center.y + dy, { steps: 16 });
+      await delay(50);
+      await page.mouse.up();
+      await delay(100);
+    };
 
     assert.equal(await page.$eval('#plain .vue-grid-layout', el => el.classList.contains('editor-enabled')), false);
     assert.equal(await page.$eval('#editor .vue-grid-layout', el => el.classList.contains('editor-mode-edit')), true);
@@ -362,10 +441,50 @@ async function main() {
     await page.waitForSelector('#editor .vue-grid-item.editor-selected');
     assert.deepEqual(await page.evaluate(() => Array.from(window.__editorBrowserTest.editor.selection.value.selectedIds)), ['a']);
 
-    await page.evaluate(() => window.__editorBrowserTest.editor.execute({ type: 'select', payload: { ids: ['a', 'b'] } }));
+    const toggledB = await page.evaluate(async () => {
+      const result = await window.__editorBrowserTest.editor.execute({ type: 'select', targetIds: ['b'], payload: { id: 'b', toggle: true }, source: 'pointer' });
+      return { result, ids: Array.from(window.__editorBrowserTest.editor.selection.value.selectedIds) };
+    });
+    assert.equal(toggledB.result.status, 'changed');
+    assert.deepEqual(toggledB.ids, ['a', 'b']);
+
+    await page.evaluate(() => window.__editorBrowserTest.resetLayout());
+    await page.waitForFunction(() => window.__editorBrowserTest.layout()[0].x === 0);
+    await page.evaluate(() => window.__editorBrowserTest.editor.execute({ type: 'lock', targetIds: ['b'] }));
+    await clickItem('a');
+    await modifiedClickItem('b');
+    await page.waitForFunction(() => {
+      const ids = Array.from(window.__editorBrowserTest.editor.selection.value.selectedIds);
+      return ids.length === 1 && ids[0] === 'a';
+    });
+    assert.equal(await page.evaluate(() => document.querySelectorAll('#editor .vue-grid-item.editor-selected').length), 1);
+    assert.equal(await page.evaluate(() => document.querySelectorAll('#editor .vue-grid-item.editor-locked.editor-selected').length), 0);
+
+    await page.evaluate(() => window.__editorBrowserTest.resetLayout());
+    await page.waitForFunction(() => window.__editorBrowserTest.layout()[0].x === 0);
+    await clickItem('a');
+    await modifiedClickItem('b');
     await page.waitForFunction(() => Array.from(window.__editorBrowserTest.editor.selection.value.selectedIds).length === 2);
+    await page.waitForFunction(() => document.querySelectorAll('#editor .vue-grid-item.editor-selected').length === 2);
+    assert.equal(await page.evaluate(() => window.__editorBrowserTest.editor.selection.value.activeId), 'b');
+    await dragItem('b', 130, 0);
+    await page.waitForFunction(() => {
+      const layout = window.__editorBrowserTest.layout();
+      return layout.find(item => item.i === 'a').x === 2 &&
+        layout.find(item => item.i === 'b').x === 4;
+    });
+    const afterGroupDrag = await page.evaluate(() => window.__editorBrowserTest.layout());
+    assert.equal(afterGroupDrag.find(item => item.i === 'a').x, 2);
+    assert.equal(afterGroupDrag.find(item => item.i === 'b').x, 4);
+    assert.deepEqual(await page.evaluate(() => Array.from(window.__editorBrowserTest.editor.selection.value.selectedIds)), ['a', 'b']);
+    await dragItem('c', 130, 0);
+    await page.waitForFunction(() => window.__editorBrowserTest.layout().find(item => item.i === 'c').x === 6);
+    assert.deepEqual(await page.evaluate(() => Array.from(window.__editorBrowserTest.editor.selection.value.selectedIds)), ['c']);
+    assert.equal(await page.evaluate(() => window.__editorBrowserTest.layout().find(item => item.i === 'a').x), 2);
+    assert.equal(await page.evaluate(() => window.__editorBrowserTest.layout().find(item => item.i === 'b').x), 4);
 
     await page.evaluate(() => window.__editorBrowserTest.clear());
+    await page.evaluate(() => window.__editorBrowserTest.resetLayout());
     await page.evaluate(() => window.__editorBrowserTest.selectA());
     await page.evaluate(() => window.__editorBrowserTest.duplicate());
     await page.waitForFunction(() => window.__editorBrowserTest.layout().length === 4);
@@ -463,7 +582,6 @@ async function main() {
     await page.evaluate(() => window.__editorBrowserTest.selectB());
     await page.keyboard.press('Delete');
     await page.waitForFunction(() => window.__editorBrowserTest.layout().length === 3);
-    const primaryModifier = process.platform === 'darwin' ? 'Meta' : 'Control';
     await page.keyboard.down(primaryModifier);
     await page.keyboard.press('z');
     await page.keyboard.up(primaryModifier);
@@ -497,6 +615,18 @@ async function main() {
     await page.evaluate(() => window.__editorBrowserTest.setView());
     await page.waitForSelector('#editor .vue-grid-layout.editor-mode-view');
     assert.equal(await page.$eval('#editor .vue-grid-item', el => el.classList.contains('vue-draggable')), false);
+
+    const responsiveBefore = await page.evaluate(() => window.__editorBrowserTest.responsiveLayouts());
+    assert.equal(responsiveBefore.sm.find(item => item.i === 'r-a').x, 0);
+    const responsiveMove = await page.evaluate(() => window.__editorBrowserTest.responsiveGroupMove());
+    assert.equal(responsiveMove.status, 'changed');
+    assert.ok(responsiveMove.layoutPatches.some(patch => patch.id === 'r-a'));
+    assert.ok(responsiveMove.layoutPatches.some(patch => patch.id === 'r-b'));
+    const responsiveAfter = await page.evaluate(() => window.__editorBrowserTest.responsiveLayouts());
+    assert.equal(responsiveAfter.sm.find(item => item.i === 'r-a').x, 1);
+    assert.equal(responsiveAfter.sm.find(item => item.i === 'r-b').x, 2);
+    assert.equal(responsiveAfter.lg.find(item => item.i === 'r-a').x, 0);
+    assert.equal(responsiveAfter.lg.find(item => item.i === 'r-b').x, 2);
 
     assert.ok((await page.evaluate(() => window.__editorBrowserTest.responsiveState())).startsWith('editing'));
     await page.screenshot({ path: path.join(root, '.tmp', 'editor-browser-smoke.png'), fullPage: true });

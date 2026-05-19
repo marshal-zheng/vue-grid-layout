@@ -138,7 +138,11 @@ export function useGridLayoutEngineBridge({
     if (executor.kind === "main-thread") return false;
     if (
       request.phase === "preview" &&
-      (request.operation.type === "move" || request.operation.type === "resize")
+      (
+        request.operation.type === "move" ||
+        request.operation.type === "resize" ||
+        request.operation.type === "groupMove"
+      )
     ) {
       return false;
     }
@@ -146,7 +150,8 @@ export function useGridLayoutEngineBridge({
       request.phase === "commit" ||
       Boolean(request.heavy) ||
       request.operation.type === "dropFit" ||
-      request.operation.type === "generateResponsiveLayout"
+      request.operation.type === "generateResponsiveLayout" ||
+      request.operation.type === "groupMove"
     );
   };
 

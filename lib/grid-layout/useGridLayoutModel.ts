@@ -109,6 +109,7 @@ export function useGridLayoutModel({
   };
 
   syncHistory(state.layout, 'replace');
+  let lastObservedModelValue = cloneLayout(props.modelValue || []);
 
   const persistenceConfig = props.persistence && typeof props.persistence === 'object'
     ? props.persistence
@@ -214,10 +215,21 @@ export function useGridLayoutModel({
   const watchLayoutDependencies = (options: WatchLayoutDependenciesOptions = {}) => watch(
     layoutDependencies,
     ({ children: newChildren, props: nextProps }, { children: oldChildren, props: prevProps }) => {
+      const childrenMatch = childrenEqual(newChildren, oldChildren);
+      const modelValueChanged = !deepEqual(nextProps.modelValue, lastObservedModelValue);
       const modelValueMatches = deepEqual(nextProps.modelValue, state.layout);
-      const compactTypeMatches = nextProps.compactType === prevProps.compactType;
+      const layoutPropsMatch =
+        nextProps.compactType === prevProps.compactType &&
+        nextProps.cols === prevProps.cols &&
+        nextProps.allowOverlap === prevProps.allowOverlap &&
+        nextProps.verticalCompact === prevProps.verticalCompact;
 
-      if (childrenEqual(newChildren, oldChildren) && modelValueMatches && compactTypeMatches) {
+      if (childrenMatch && !modelValueChanged && layoutPropsMatch) {
+        return;
+      }
+      lastObservedModelValue = cloneLayout(nextProps.modelValue || []);
+
+      if (childrenMatch && modelValueMatches && layoutPropsMatch) {
         return;
       }
 

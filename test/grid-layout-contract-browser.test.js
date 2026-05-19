@@ -256,6 +256,7 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function dragBy(page, selector, dx, dy, options = {}) {
   const box = await page.$eval(selector, element => {
+    element.scrollIntoView({ block: 'center', inline: 'center' });
     const rect = element.getBoundingClientRect();
     return {
       x: rect.left + rect.width / 2,
@@ -272,6 +273,7 @@ async function dragBy(page, selector, dx, dy, options = {}) {
 
 async function resizeBy(page, handleSelector, dx, dy) {
   const box = await page.$eval(handleSelector, element => {
+    element.scrollIntoView({ block: 'center', inline: 'center' });
     const rect = element.getBoundingClientRect();
     return {
       x: rect.left + rect.width / 2,

@@ -1,4 +1,4 @@
-import type { Layout } from "../utils";
+import type { Layout, LayoutItem } from "../utils";
 import type {
   GridEditorA11yItemDescription,
   GridEditorCommandType,
@@ -7,7 +7,7 @@ import type {
   GridEditorSelectionSource,
   GridEditorSelectionState
 } from "./types";
-import { resolveEditorCapabilities } from "./metadata";
+import { resolveEditorCapabilities, resolveEditorItemCapability } from "./metadata";
 
 export type GridEditorSelectionIntent = {
   id?: string | null;
@@ -52,18 +52,45 @@ export const normalizeSelection = (
 
 export const getLayoutIds = (layout: Layout): string[] => layout.map(item => item.i);
 
+const canJoinMultiSelection = (
+  item: LayoutItem,
+  metaById: GridEditorMetaById
+): boolean => resolveEditorItemCapability(item, metaById[item.i]).editable;
+
+const sanitizeMultiSelectionIds = (
+  selectedIds: string[],
+  activeId: string | null,
+  itemsById: Map<string, LayoutItem>,
+  metaById: GridEditorMetaById
+): string[] => {
+  if (selectedIds.length <= 1) return selectedIds;
+
+  const multiSelectableIds = selectedIds.filter(id => {
+    const item = itemsById.get(id);
+    return item ? canJoinMultiSelection(item, metaById) : false;
+  });
+  if (multiSelectableIds.length > 0) return multiSelectableIds;
+
+  const fallbackId = activeId && selectedIds.includes(activeId)
+    ? activeId
+    : selectedIds[selectedIds.length - 1];
+  return fallbackId ? [fallbackId] : [];
+};
+
 export const sanitizeSelectionForLayout = (
   selection: GridEditorSelectionState,
   layout: Layout,
   metaById: GridEditorMetaById = {},
   source: GridEditorSelectionSource = selection.source
 ): GridEditorSelectionState => {
-  const validIds = new Set(
-    layout
-      .filter(item => metaById[item.i]?.visible !== false)
-      .map(item => item.i)
+  const visibleItems = layout.filter(item => metaById[item.i]?.visible !== false);
+  const itemsById = new Map(visibleItems.map(item => [item.i, item]));
+  const selectedIds = sanitizeMultiSelectionIds(
+    selection.selectedIds.filter(id => itemsById.has(id)),
+    selection.activeId,
+    itemsById,
+    metaById
   );
-  const selectedIds = selection.selectedIds.filter(id => validIds.has(id));
   return normalizeSelection({
     ...selection,
     selectedIds,

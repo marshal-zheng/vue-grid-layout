@@ -129,6 +129,7 @@ const GridItem = defineComponent({
           cancel={`.vue-resizable-handle${props.cancel ? `,${props.cancel}` : ''}`}
           scale={props.transformScale}
           nodeRef={elementRef}
+          enableClickSuppression={true}
         >
           <div ref={elementRef} {...wrapperProps}>{child}</div>
         </DraggableCore>

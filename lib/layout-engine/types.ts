@@ -12,6 +12,14 @@ export type LayoutOperationPhase = "preview" | "commit";
 export type LayoutOperation =
   | { type: "move"; id: string; x: number; y: number; userAction?: boolean }
   | {
+      type: "groupMove";
+      ids: string[];
+      dx: number;
+      dy: number;
+      activeId?: string;
+      userAction?: boolean;
+    }
+  | {
       type: "resize";
       id: string;
       w: number;
@@ -69,7 +77,8 @@ export type LayoutBlockedReason =
   | "bounds"
   | "maxRows"
   | "missing-item"
-  | "invalid-input";
+  | "invalid-input"
+  | "unsupported";
 
 export type LayoutDiagnostics = {
   operationId: string;

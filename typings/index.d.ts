@@ -38,6 +38,7 @@ declare module "@marsio/vue-grid-layout" {
   export type LayoutOperationPhase = "preview" | "commit";
   export type LayoutOperation =
     | { type: "move"; id: string; x: number; y: number; userAction?: boolean }
+    | { type: "groupMove"; ids: string[]; dx: number; dy: number; activeId?: string; userAction?: boolean }
     | { type: "resize"; id: string; w: number; h: number; x?: number; y?: number; handle: ResizeHandleAxis }
     | { type: "dropFit"; item: Pick<LayoutItem, "w" | "h"> & Partial<Pick<LayoutItem, "i">>; strategy: "cursor" | "auto"; target?: { x: number; y: number } }
     | { type: "compact" }
@@ -50,7 +51,7 @@ declare module "@marsio/vue-grid-layout" {
     | { type: "add"; item: LayoutItem }
     | { type: "remove"; id: string }
     | { type: "compact"; affectedIds: string[] };
-  export type LayoutBlockedReason = "collision" | "static-item" | "bounds" | "maxRows" | "missing-item" | "invalid-input";
+  export type LayoutBlockedReason = "collision" | "static-item" | "bounds" | "maxRows" | "missing-item" | "invalid-input" | "unsupported";
   export type InteractionSchedulerMode = "eager" | "raf" | "commitOnly" | "auto";
   export type LayoutExecutorKind = "main-thread" | "worker" | "custom";
   export type LayoutDiagnostics = {
@@ -690,6 +691,7 @@ declare module "@marsio/vue-grid-layout" {
     | "missing-item"
     | "selection-count"
     | "unsupported-scope"
+    | "unsupported"
     | "section-row-locked"
     | "section-row-collapsed"
     | "section-row-policy"
@@ -851,6 +853,9 @@ declare module "@marsio/vue-grid-layout" {
       showSpacingChips?: boolean;
       showMeasurementHud?: boolean;
       startGeometry?: Record<string, Pick<LayoutItem, "x" | "y" | "w" | "h">>;
+      selectionCount?: number;
+      delta?: { dx?: number; dy?: number; dw?: number; dh?: number };
+      blocked?: { reason?: GridEditorBlockedReason; message?: string; itemIds?: string[] };
     };
   export type GridEditorIntelligenceInteraction = GridEditorGuideInteraction | "toolbar";
   export type GridEditorDiagnosticCode = string;
@@ -1148,6 +1153,13 @@ declare module "@marsio/vue-grid-layout" {
     | "nearest-fit"
     | "first-fit";
   export type GridEditorCommandPolicy = "all-or-nothing" | "skip-blocked";
+  export type GridEditorLayoutOperationRunner = (input: {
+    commandId: string;
+    layout: Layout;
+    operation: LayoutOperation;
+    phase: "commit";
+    source: GridEditorCommandSource;
+  }) => MaybePromise<LayoutOperationResult>;
   export type UseGridEditorOptions = {
     kind?: "layout" | "responsive";
     layout?: Ref<Layout>;
@@ -1163,6 +1175,8 @@ declare module "@marsio/vue-grid-layout" {
     sectionRows?: Ref<GridEditorSectionRowState>;
     defaultSectionRows?: GridEditorSectionRowState;
     layoutEngine?: false | GridLayoutEngineProp;
+    layoutEngineOptions?: GridLayoutEngineOptions | (() => GridLayoutEngineOptions);
+    layoutOperationRunner?: GridEditorLayoutOperationRunner;
     persistence?:
       | GridLayoutPersistenceProp
       | ResponsiveGridLayoutPersistenceProp

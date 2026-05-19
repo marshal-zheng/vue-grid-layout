@@ -92,6 +92,8 @@ export function createInteractionController(
     const itemId =
       request.operation.type === "dropFit"
         ? request.operation.item.i || "__dropping-elem__"
+        : request.operation.type === "groupMove"
+          ? request.operation.activeId || request.operation.ids[0] || "__layout__"
         : "id" in request.operation
           ? request.operation.id
           : "__layout__";
@@ -135,7 +137,7 @@ export function createInteractionController(
   };
 
   const applyAsyncResult = (result: LayoutOperationResult): LayoutOperationResult => {
-    if (latestRequestId && result.id !== latestRequestId) {
+    if (!latestRequestId || result.id !== latestRequestId) {
       emit(options, {
         type: "stale-result",
         id: result.id,

@@ -52,12 +52,21 @@ const createCommitOnlyPreview = (request: LayoutOperationRequest): LayoutOperati
   const placeholder =
     request.operation.type === "move" || request.operation.type === "resize"
       ? getLayoutItem(request.layout, request.operation.id)
+      : request.operation.type === "groupMove"
+        ? getLayoutItem(
+            request.layout,
+            request.operation.activeId || request.operation.ids[0] || ""
+          )
       : null;
   const nextPlaceholder = placeholder ? cloneLayoutItem(placeholder) : undefined;
 
   if (nextPlaceholder && request.operation.type === "move") {
     nextPlaceholder.x = request.operation.x;
     nextPlaceholder.y = request.operation.y;
+  }
+  if (nextPlaceholder && request.operation.type === "groupMove") {
+    nextPlaceholder.x += Math.trunc(request.operation.dx);
+    nextPlaceholder.y += Math.trunc(request.operation.dy);
   }
   if (nextPlaceholder && request.operation.type === "resize") {
     nextPlaceholder.w = request.operation.w;

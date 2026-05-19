@@ -239,6 +239,11 @@ Editor fundamentals:
 - `canExecute()` performs synchronous mode/capability checks for disabled toolbar states. `execute()` runs the same checks, optional async `beforeCommand`, then commits mutation only after the guard resolves.
 - `selectedIds`, `activeId`, `anchorId` and `selection.mode` support single and multiple selection. Selection/focus commands do not write persistence or layout history.
 - Item editor metadata lives in sidecar `editorMetaById`; `locked`, `visible`, `editable`, `deletable`, `duplicatable` and `copyable` are not written into `LayoutItem` by default.
+- Multi-selection move is engine-first: dragging a selected item in a multi-selection, using keyboard arrows, or executing a multi-target `move` command submits a layout-engine `groupMove` operation. The operation preserves selected item offsets, returns per-item layout patches/diagnostics, and records one undoable history entry at commit.
+- `locked: true` is editor metadata: it blocks direct editing of that item but does not make it a physical obstacle. `static: true` belongs on the `LayoutItem`: it blocks direct movement and acts as a collision obstacle for other moving items, including group moves.
+- `commandPolicy: "skip-blocked"` moves only allowed selected items and reports skipped ids; the default `"all-or-nothing"` policy blocks the whole command if any target is locked, hidden, static, missing or otherwise not movable.
+- Group move follows the same collision and bounds rules as the layout engine. `preventCollision=true` blocks group collisions with external items, `preventCollision=false` may push/compact external non-static items, `allowOverlap=true` permits overlap, and bounds/maxRows violations are reported as structured blocked results.
+- Legacy/disabled layout-engine paths do not implement a shadow group move. Multi-item group move returns `unsupported`; single-item move keeps the existing behavior.
 - `visible: false` preserves the layout item but does not render it. It is not permission isolation.
 - `meta.editor` stores `{ version, editorMetaById, sectionRows, updatedAt }` in the same persistence document as layout data. Do not store sensitive permission data in `meta.editor`; enforce permissions on your server or in `beforeCommand`.
 - Default copy/paste uses `internalGridEditorClipboard`; `systemClipboardAdapter()` is optional and safely reports unavailable or denied clipboard access.
@@ -316,7 +321,7 @@ Event order for committed layout commands is:
 
 Metadata-only commands emit editor command/state events and update editor history/dirty state without emitting `layoutChange`.
 
-Known editor limits: group resize returns `multi-resize-unsupported`, section/row metadata is a client editing model rather than a permission boundary, system clipboard depends on browser permission, hidden items are not a security boundary, and legacy `historyStore` remains layout-only while editor history tracks layout, metadata, selection and focus.
+Known editor limits: group resize and group bounding-box ghosting are not included, section/row metadata is a client editing model rather than a permission boundary, system clipboard depends on browser permission, hidden items are not a security boundary, legacy layout-engine mode does not support multi-item group move, and legacy `historyStore` remains layout-only while editor history tracks layout, metadata, selection and focus.
 
 ### localStorage refresh recovery
 

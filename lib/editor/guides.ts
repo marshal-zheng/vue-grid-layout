@@ -466,6 +466,7 @@ function computeMeasurementHud(
   if (options.blocked?.reason) hud.blocked = options.blocked.reason;
   if (options.blocked?.message) hud.blockedMessage = options.blocked.message;
   if (options.blocked?.itemIds) hud.blockedItemIds = options.blocked.itemIds;
+  if (typeof options.selectionCount === "number") hud.selectionCount = options.selectionCount;
   return hud;
 }
 

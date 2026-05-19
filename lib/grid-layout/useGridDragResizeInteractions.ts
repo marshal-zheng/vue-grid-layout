@@ -20,12 +20,35 @@ import type {
   GridInteractionCommonOptions,
   GridInteractionModelCommitters
 } from "./gridInteractionTypes";
+import type { GridEditorBlockedReason } from "../editor";
+import type { LayoutOperationResult } from "../layout-engine";
 
 const LARGE_LAYOUT_THRESHOLD = 200;
 
 type UseGridDragResizeInteractionsOptions =
   GridInteractionCommonOptions &
   GridInteractionModelCommitters;
+
+type ActiveMoveContext =
+  | {
+      kind: "single";
+      id: string;
+      startX: number;
+      startY: number;
+    }
+  | {
+      kind: "group";
+      activeId: string;
+      ids: string[];
+      startX: number;
+      startY: number;
+    }
+  | {
+      kind: "blocked";
+      reason: string;
+      ids: string[];
+      activeId?: string;
+    };
 
 export function useGridDragResizeInteractions({
   props,
@@ -43,6 +66,10 @@ export function useGridDragResizeInteractions({
   const resizeBlocked = ref(false);
   const activeDragId = ref<string | null>(null);
   const activeResizeId = ref<string | null>(null);
+  const dragBlockedReason = ref<GridEditorBlockedReason | null>(null);
+  const dragBlockedItemIds = ref<string[]>([]);
+  const dragBlockedMessage = ref<string | null>(null);
+  let activeMoveContext: ActiveMoveContext | null = null;
 
   const getLayoutEngineProp = () => engineBridge.getLayoutEngineProp();
   const isLegacyLayoutEngine = () => engineBridge.isLegacyLayoutEngine();
@@ -79,15 +106,62 @@ export function useGridDragResizeInteractions({
     return { ...item, x, y, w: nextW, h: nextH };
   };
 
+  const shouldUseWorkerForCurrentLayout = () =>
+    state.layout.length >= (getLayoutEngineProp()?.scheduler?.auto?.workerMinItems || 1000);
+
+  const clearDragBlockedFeedback = () => {
+    dragBlockedReason.value = null;
+    dragBlockedItemIds.value = [];
+    dragBlockedMessage.value = null;
+  };
+
+  const setDragBlockedFeedback = (
+    reason: GridEditorBlockedReason,
+    itemIds: string[],
+    message?: string
+  ) => {
+    dragBlocked.value = true;
+    dragBlockedReason.value = reason;
+    dragBlockedItemIds.value = itemIds.slice();
+    dragBlockedMessage.value = message || null;
+  };
+
+  const syncDragBlockedFromResult = (
+    result: LayoutOperationResult,
+    fallbackIds: string[],
+    activeId?: string,
+    notify = false
+  ) => {
+    if (result.status === "blocked" && result.blocked) {
+      const reason = result.blocked.reason as GridEditorBlockedReason;
+      const ids = result.blocked.itemIds.length > 0
+        ? result.blocked.itemIds
+        : fallbackIds;
+      const message = `Pointer move blocked by ${reason}.`;
+      setDragBlockedFeedback(reason, ids, message);
+      if (notify) {
+        editor.notifyMoveBlocked({
+          reason,
+          ids,
+          activeId,
+          message,
+          operationResult: result
+        });
+      }
+      return;
+    }
+    dragBlocked.value = false;
+    clearDragBlockedFeedback();
+  };
+
   const clearActiveInteraction = () => {
     activeDragId.value = null;
     activeResizeId.value = null;
     dragBlocked.value = false;
     resizeBlocked.value = false;
+    clearDragBlockedFeedback();
+    activeMoveContext = null;
   };
-
-  const shouldUseWorkerForCurrentLayout = () =>
-    state.layout.length >= (getLayoutEngineProp()?.scheduler?.auto?.workerMinItems || 1000);
 
   const onResizeStart = (i: string, w: number, h: number, { e, node }: GridResizeEvent) => {
     frameUpdate.cancel();
@@ -142,6 +216,7 @@ export function useGridDragResizeInteractions({
         },
         result => {
           if (result.status === "stale") return;
+          if (activeResizeId.value !== i) return;
           const nextLayout = result.status === "changed" || result.status === "fallback"
             ? result.layout
             : engineBridge.getCommitted();
@@ -391,6 +466,7 @@ export function useGridDragResizeInteractions({
 
     if (!isLegacyLayoutEngine()) {
       const commitGeometry = state.activeDrag || buildResizeCandidate(l, w, h, handle as ResizeHandleAxis);
+      const committedBefore = engineBridge.getCommitted();
       runEngineCommit(
         nextInteractionRequestId("resize-stop", i),
         {
@@ -418,10 +494,8 @@ export function useGridDragResizeInteractions({
           resizeBlocked.value = false;
           autoScroll.reset();
           editor.clearGuides();
-          if (newLayout === layout) {
-            state.oldLayout = null;
-            onLayoutMaybeChanged(newLayout, oldLayout || layout, "push");
-          }
+          state.oldLayout = null;
+          onLayoutMaybeChanged(newLayout, oldLayout || committedBefore || layout, "push");
         },
         shouldUseWorkerForCurrentLayout()
       );
@@ -440,10 +514,8 @@ export function useGridDragResizeInteractions({
     autoScroll.reset();
     editor.clearGuides();
 
-    if (newLayout === layout) {
-      state.oldLayout = null;
-      onLayoutMaybeChanged(newLayout, oldLayout || layout, "push");
-    }
+    state.oldLayout = null;
+    onLayoutMaybeChanged(newLayout, oldLayout || layout, "push");
   };
 
   const onDragStart = (i: string, x: number, y: number, { e, node }: GridDragEvent) => {
@@ -452,10 +524,55 @@ export function useGridDragResizeInteractions({
     const l = getLayoutItem(layout, i);
     if (!l) return;
 
+    const moveIntent = editor.resolveMoveDrag({
+      id: i,
+      item: l,
+      layout,
+      legacyLayoutEngine: isLegacyLayoutEngine(),
+      event: e
+    });
+    if (moveIntent.kind === "blocked") {
+      activeMoveContext = {
+        kind: "blocked",
+        reason: moveIntent.reason,
+        ids: moveIntent.ids,
+        activeId: moveIntent.activeId
+      };
+      activeDragId.value = moveIntent.activeId || i;
+      setDragBlockedFeedback(
+        moveIntent.reason as GridEditorBlockedReason,
+        moveIntent.ids,
+        `Pointer move blocked by ${moveIntent.reason}.`
+      );
+      state.oldDragItem = cloneLayoutItem(l);
+      state.oldLayout = cloneLayout(layout);
+      state.activeDrag = markRaw({ w: l.w, h: l.h, x: l.x, y: l.y, placeholder: true, i });
+      editor.notifyMoveBlocked({
+        ...moveIntent,
+        message: `Pointer move blocked by ${moveIntent.reason}.`
+      });
+      return eventBridge.emitDragStart(layout, l, l, undefined, e, node);
+    }
+
     const placeholder = { w: l.w, h: l.h, x: l.x, y: l.y, placeholder: true, i: i };
     syncHistory(layout, "replace");
-    activeDragId.value = i;
+    activeMoveContext = moveIntent.kind === "group"
+      ? {
+          kind: "group",
+          activeId: moveIntent.activeId,
+          ids: moveIntent.ids,
+          startX: l.x,
+          startY: l.y
+        }
+      : {
+          kind: "single",
+          id: moveIntent.id,
+          startX: l.x,
+          startY: l.y
+        };
+    activeDragId.value = activeMoveContext.kind === "group" ? activeMoveContext.activeId : i;
     dragBlocked.value = false;
+    clearDragBlockedFeedback();
     editor.resetSnap();
     autoScroll.init(node);
     state.oldDragItem = cloneLayoutItem(l);
@@ -464,9 +581,9 @@ export function useGridDragResizeInteractions({
     if (!isLegacyLayoutEngine()) {
       resetInteractionController(layout);
       engineBridge.start({
-        id: nextInteractionRequestId("drag-start", i),
+        id: nextInteractionRequestId("drag-start", activeDragId.value || i),
         type: "drag",
-        itemId: i
+        itemId: activeDragId.value || i
       });
     }
 
@@ -481,6 +598,62 @@ export function useGridDragResizeInteractions({
     if (!l) return;
     autoScroll.maybeScroll(e, node);
 
+    if (activeMoveContext?.kind === "blocked") {
+      dragBlocked.value = true;
+      return;
+    }
+
+    if (activeMoveContext?.kind === "group" && !isLegacyLayoutEngine()) {
+      const context = activeMoveContext;
+      const activeItem = getLayoutItem(layout, context.activeId) || l;
+      const snapped = editor.snapCandidate(
+        context.activeId,
+        activeItem,
+        { ...activeItem, x, y },
+        layout
+      );
+      const dx = snapped.x - context.startX;
+      const dy = snapped.y - context.startY;
+      runEnginePreview(
+        nextInteractionRequestId("drag", context.activeId),
+        {
+          type: "groupMove",
+          ids: context.ids,
+          activeId: context.activeId,
+          dx,
+          dy,
+          userAction: true
+        },
+        result => {
+          if (result.status === "stale") return;
+          if (activeMoveContext !== context || activeDragId.value !== context.activeId) return;
+          const nextLayout = result.status === "changed" || result.status === "fallback"
+            ? result.layout
+            : engineBridge.getCommitted();
+          const nextItem = getLayoutItem(nextLayout, context.activeId) || activeItem;
+          const placeholder = result.placeholder || {
+            w: nextItem.w,
+            h: nextItem.h,
+            x: nextItem.x,
+            y: nextItem.y,
+            placeholder: true,
+            i: context.activeId
+          };
+          if (activeDragId.value === context.activeId) {
+            syncDragBlockedFromResult(result, context.ids, context.activeId);
+          }
+          eventBridge.emitDrag(nextLayout, oldDragItem, nextItem, placeholder, e, node);
+          if (result.status === "changed" || result.status === "fallback") {
+            state.layout = markRaw(nextLayout);
+          }
+          state.activeDrag = markRaw(placeholder);
+          editor.updateIntelligence(context.activeId, activeItem, placeholder);
+        },
+        shouldUseWorkerForCurrentLayout()
+      );
+      return;
+    }
+
     if (!isLegacyLayoutEngine()) {
       const snapped = editor.snapCandidate(i, l, { ...l, x, y }, layout);
       runEnginePreview(
@@ -488,6 +661,7 @@ export function useGridDragResizeInteractions({
         { type: "move", id: i, x: snapped.x, y: snapped.y, userAction: true },
         result => {
           if (result.status === "stale") return;
+          if (activeMoveContext?.kind !== "single" || activeMoveContext.id !== i || activeDragId.value !== i) return;
           const nextLayout = result.status === "changed" || result.status === "fallback"
             ? result.layout
             : engineBridge.getCommitted();
@@ -500,7 +674,9 @@ export function useGridDragResizeInteractions({
             placeholder: true,
             i
           };
-          if (activeDragId.value === i) dragBlocked.value = result.status === "blocked";
+          if (activeDragId.value === i) {
+            syncDragBlockedFromResult(result, [i], i);
+          }
           eventBridge.emitDrag(nextLayout, oldDragItem, nextItem, placeholder, e, node);
           if (result.status === "changed" || result.status === "fallback") {
             state.layout = markRaw(nextLayout);
@@ -518,10 +694,19 @@ export function useGridDragResizeInteractions({
     const prevY = l.y;
 
     if (activeDragId.value === i) {
-      dragBlocked.value =
-        Boolean(preventCollision) &&
-        !allowOverlap &&
-        getAllCollisions(layout, { ...l, x, y }).length > 0;
+      const collisions = Boolean(preventCollision) && !allowOverlap
+        ? getAllCollisions(layout, { ...l, x, y })
+        : [];
+      if (collisions.length > 0) {
+        setDragBlockedFeedback(
+          "collision",
+          collisions.map(item => item.i),
+          "Pointer move blocked by collision."
+        );
+      } else {
+        dragBlocked.value = false;
+        clearDragBlockedFeedback();
+      }
     }
 
     const isUserAction = true;
@@ -588,13 +773,75 @@ export function useGridDragResizeInteractions({
     const l = getLayoutItem(layout, i);
     if (!l) return;
 
+    if (activeMoveContext?.kind === "blocked") {
+      eventBridge.emitDragStop(prevLayout, oldDragItem, l, undefined, e, node);
+      state.activeDrag = null;
+      state.oldDragItem = null;
+      state.oldLayout = null;
+      activeDragId.value = null;
+      dragBlocked.value = false;
+      clearDragBlockedFeedback();
+      activeMoveContext = null;
+      autoScroll.reset();
+      editor.clearGuides();
+      return;
+    }
+
+    if (activeMoveContext?.kind === "group" && !isLegacyLayoutEngine()) {
+      const context = activeMoveContext;
+      const commitGeometry = state.activeDrag || { x, y };
+      const dx = commitGeometry.x - context.startX;
+      const dy = commitGeometry.y - context.startY;
+      const committedBefore = engineBridge.getCommitted();
+      runEngineCommit(
+        nextInteractionRequestId("drag-stop", context.activeId),
+        {
+          type: "groupMove",
+          ids: context.ids,
+          activeId: context.activeId,
+          dx,
+          dy,
+          userAction: true
+        },
+        result => {
+          if (result.status === "stale") return;
+          if (result.status === "blocked") {
+            syncDragBlockedFromResult(result, context.ids, context.activeId, true);
+          }
+          const newLayout = result.status === "changed" || result.status === "fallback"
+            ? result.layout
+            : engineBridge.getCommitted();
+          const nextItem = getLayoutItem(newLayout, context.activeId) || l;
+          eventBridge.emitDragStop(newLayout, oldDragItem, nextItem, undefined, e, node);
+
+          state.activeDrag = null;
+          state.layout = markRaw(newLayout);
+          state.oldDragItem = null;
+          activeDragId.value = null;
+          dragBlocked.value = false;
+          clearDragBlockedFeedback();
+          activeMoveContext = null;
+          autoScroll.reset();
+          editor.clearGuides();
+          state.oldLayout = null;
+          onLayoutMaybeChanged(newLayout, oldLayout || committedBefore || prevLayout, "push");
+        },
+        shouldUseWorkerForCurrentLayout()
+      );
+      return;
+    }
+
     if (!isLegacyLayoutEngine()) {
       const commitGeometry = state.activeDrag || { x, y };
+      const committedBefore = engineBridge.getCommitted();
       runEngineCommit(
         nextInteractionRequestId("drag-stop", i),
         { type: "move", id: i, x: commitGeometry.x, y: commitGeometry.y, userAction: true },
         result => {
           if (result.status === "stale") return;
+          if (result.status === "blocked") {
+            syncDragBlockedFromResult(result, [i], i, true);
+          }
           const newLayout = result.status === "changed" || result.status === "fallback"
             ? result.layout
             : engineBridge.getCommitted();
@@ -606,12 +853,12 @@ export function useGridDragResizeInteractions({
           state.oldDragItem = null;
           activeDragId.value = null;
           dragBlocked.value = false;
+          clearDragBlockedFeedback();
+          activeMoveContext = null;
           autoScroll.reset();
           editor.clearGuides();
-          if (newLayout === prevLayout) {
-            state.oldLayout = null;
-            onLayoutMaybeChanged(newLayout, oldLayout || prevLayout, "push");
-          }
+          state.oldLayout = null;
+          onLayoutMaybeChanged(newLayout, oldLayout || committedBefore || prevLayout, "push");
         },
         shouldUseWorkerForCurrentLayout()
       );
@@ -640,19 +887,22 @@ export function useGridDragResizeInteractions({
     state.oldDragItem = null;
     activeDragId.value = null;
     dragBlocked.value = false;
+    clearDragBlockedFeedback();
+    activeMoveContext = null;
     autoScroll.reset();
     editor.clearGuides();
 
-    if (newLayout === prevLayout) {
-      state.oldLayout = null;
-      onLayoutMaybeChanged(newLayout, oldLayout || prevLayout, "push");
-    }
+    state.oldLayout = null;
+    onLayoutMaybeChanged(newLayout, oldLayout || prevLayout, "push");
   };
 
   return {
     activeDragId,
     activeResizeId,
     dragBlocked,
+    dragBlockedReason,
+    dragBlockedItemIds,
+    dragBlockedMessage,
     resizeBlocked,
     clearActiveInteraction,
     onResizeStart,

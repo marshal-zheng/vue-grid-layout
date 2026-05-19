@@ -6,6 +6,8 @@ import type {
   ResizeHandleAxis
 } from "../utils";
 import type { DropDragOverResult } from "./contract";
+import type { GridEditorBlockedReason } from "../editor";
+import type { LayoutOperationResult } from "../layout-engine";
 import type { GridLayoutState } from "./useGridLayoutModel";
 import type { useGridAutoScroll } from "./useGridAutoScroll";
 import type { useGridFrameUpdate } from "./useGridFrameUpdate";
@@ -61,6 +63,28 @@ export type GridInteractionsEditor = {
     candidateItem: LayoutItem,
     resizeHandle?: ResizeHandleAxis
   ) => unknown;
+  resolveMoveDrag: (input: {
+    id: string;
+    item: LayoutItem;
+    layout: Layout;
+    legacyLayoutEngine: boolean;
+    event?: Event;
+  }) =>
+    | { kind: "single"; id: string }
+    | { kind: "group"; activeId: string; ids: string[] }
+    | {
+        kind: "blocked";
+        reason: GridEditorBlockedReason;
+        ids: string[];
+        activeId?: string;
+      };
+  notifyMoveBlocked: (input: {
+    reason: GridEditorBlockedReason;
+    ids: string[];
+    activeId?: string;
+    message?: string;
+    operationResult?: LayoutOperationResult;
+  }) => void;
 };
 
 export type GridInteractionCommonOptions = {

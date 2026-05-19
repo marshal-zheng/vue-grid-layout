@@ -363,6 +363,306 @@ const withMovedFlagsCleared = (layout: Layout): Layout => {
   return layout;
 };
 
+type NormalizedGroupMove = {
+  ids: string[];
+  movingIds: Set<string>;
+  activeId: string;
+  dx: number;
+  dy: number;
+  movingItems: LayoutItem[];
+  targetItems: LayoutItem[];
+};
+
+const uniqueLayoutItems = (items: LayoutItem[]): LayoutItem[] => {
+  const seen = new Set<string>();
+  const unique: LayoutItem[] = [];
+  items.forEach(item => {
+    if (seen.has(item.i)) return;
+    seen.add(item.i);
+    unique.push(item);
+  });
+  return unique;
+};
+
+const normalizeGroupMove = (
+  request: LayoutOperationRequest,
+  start: number
+): { ok: true; value: NormalizedGroupMove } | { ok: false; result: LayoutOperationResult } => {
+  const operation = request.operation;
+  if (operation.type !== "groupMove") {
+    return { ok: false, result: executeError(request, "invalid groupMove operation", start) };
+  }
+  if (!Number.isFinite(operation.dx) || !Number.isFinite(operation.dy)) {
+    return {
+      ok: false,
+      result: makeBlockedResult(request, "invalid-input", [], start, true)
+    };
+  }
+
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  operation.ids.forEach(id => {
+    if (typeof id !== "string") return;
+    const normalized = id.trim();
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    ids.push(normalized);
+  });
+  if (ids.length === 0) {
+    return {
+      ok: false,
+      result: makeBlockedResult(request, "invalid-input", [], start, true)
+    };
+  }
+
+  const missingIds = ids.filter(id => !getLayoutItem(request.layout, id));
+  if (missingIds.length > 0) {
+    return {
+      ok: false,
+      result: makeBlockedResult(request, "missing-item", [], start, true, missingIds)
+    };
+  }
+
+  const movingItems = ids
+    .map(id => getLayoutItem(request.layout, id))
+    .filter(Boolean) as LayoutItem[];
+  const staticItems = movingItems.filter(item => item.static);
+  if (staticItems.length > 0) {
+    return {
+      ok: false,
+      result: makeBlockedResult(
+        request,
+        "static-item",
+        staticItems,
+        start,
+        true,
+        staticItems.map(item => item.i)
+      )
+    };
+  }
+
+  const movingIds = new Set(ids);
+  const activeId = operation.activeId && movingIds.has(operation.activeId)
+    ? operation.activeId
+    : ids[0];
+  const dx = Math.trunc(operation.dx);
+  const dy = Math.trunc(operation.dy);
+  const targetItems = movingItems.map(item => ({
+    ...cloneLayoutItem(item),
+    x: item.x + dx,
+    y: item.y + dy
+  }));
+
+  return {
+    ok: true,
+    value: {
+      ids,
+      movingIds,
+      activeId,
+      dx,
+      dy,
+      movingItems,
+      targetItems
+    }
+  };
+};
+
+const validateGroupTargets = (
+  normalized: NormalizedGroupMove,
+  options: GridLayoutEngineOptions
+): { reason: "bounds" | "maxRows"; itemIds: string[] } | null => {
+  const boundsIds: string[] = [];
+  const maxRowsIds: string[] = [];
+  normalized.targetItems.forEach(item => {
+    if (item.x < 0 || item.y < 0 || item.x + item.w > options.cols) {
+      boundsIds.push(item.i);
+      return;
+    }
+    if (Number.isFinite(options.maxRows) && item.y + item.h > (options.maxRows as number)) {
+      maxRowsIds.push(item.i);
+    }
+  });
+  if (boundsIds.length > 0) return { reason: "bounds", itemIds: boundsIds };
+  if (maxRowsIds.length > 0) return { reason: "maxRows", itemIds: maxRowsIds };
+  return null;
+};
+
+const getGroupExternalCollisions = (
+  normalized: NormalizedGroupMove,
+  index: LayoutIndex,
+  predicate?: (item: LayoutItem) => boolean
+): LayoutItem[] => uniqueLayoutItems(
+  normalized.targetItems.flatMap(item =>
+    index.queryAllCollisions(item).filter(candidate =>
+      !normalized.movingIds.has(candidate.i) && (!predicate || predicate(candidate))
+    )
+  )
+);
+
+const applyGroupTargets = (
+  layout: Layout,
+  normalized: NormalizedGroupMove,
+  temporaryStatic: boolean
+): Layout => {
+  const nextLayout = cloneForMutation(layout);
+  normalized.targetItems.forEach(target => {
+    const item = getLayoutItem(nextLayout, target.i);
+    if (!item) return;
+    item.x = target.x;
+    item.y = target.y;
+    item.moved = true;
+    if (temporaryStatic) item.static = true;
+  });
+  return nextLayout;
+};
+
+const restoreGroupStaticFlags = (
+  layout: Layout,
+  normalized: NormalizedGroupMove
+): Layout => {
+  normalized.movingItems.forEach(source => {
+    const item = getLayoutItem(layout, source.i);
+    if (!item) return;
+    if (typeof source.static === "undefined") delete item.static;
+    else item.static = source.static;
+  });
+  return layout;
+};
+
+const executeSingleGroupMove = (
+  request: LayoutOperationRequest,
+  index: LayoutIndex,
+  normalized: NormalizedGroupMove,
+  start: number,
+  collisions: LayoutItem[]
+): LayoutOperationResult => {
+  const sourceItem = normalized.movingItems[0];
+  const targetItem = normalized.targetItems[0];
+  if (!sourceItem || !targetItem) {
+    return makeBlockedResult(request, "invalid-input", [], start, true);
+  }
+  if (sourceItem.x === targetItem.x && sourceItem.y === targetItem.y) {
+    return makeNoopResult(request, start, true, cloneLayoutItem(sourceItem));
+  }
+  if (collisions.some(item => item.static)) {
+    const staticCollisions = collisions.filter(item => item.static);
+    return makeBlockedResult(
+      request,
+      "static-item",
+      staticCollisions,
+      start,
+      true,
+      staticCollisions.map(item => item.i)
+    );
+  }
+  if (collisions.length > 0 && request.options.preventCollision && !request.options.allowOverlap) {
+    return makeBlockedResult(request, "collision", collisions, start, true);
+  }
+
+  const nextLayout = cloneForMutation(request.layout);
+  const nextItem = getLayoutItem(nextLayout, sourceItem.i);
+  if (!nextItem) return makeBlockedResult(request, "missing-item", [], start, true, [sourceItem.i]);
+
+  const moved = moveElement(
+    nextLayout,
+    nextItem,
+    request.options.compactType,
+    request.options.cols,
+    request.options.allowOverlap,
+    targetItem.x,
+    targetItem.y,
+    request.operation.type === "groupMove" ? request.operation.userAction !== false : true,
+    request.options.preventCollision
+  );
+  const finalLayout = withMovedFlagsCleared(applyFinalCompaction(moved, request.options));
+  const patches = collectPatches(request.layout, finalLayout, request.options.compactType);
+  const finalItem = getLayoutItem(finalLayout, sourceItem.i) || nextItem;
+  const status = patches.length === 0 || shallowLayoutEqual(request.layout, finalLayout) ? "noop" : "changed";
+
+  return makeResult(
+    request,
+    status,
+    status === "noop" ? request.layout : finalLayout,
+    patches,
+    collisions,
+    start,
+    true,
+    { placeholder: cloneLayoutItem(finalItem) }
+  );
+};
+
+const executeGroupMove = (
+  request: LayoutOperationRequest,
+  index: LayoutIndex,
+  start: number
+): LayoutOperationResult => {
+  const normalizedResult = normalizeGroupMove(request, start);
+  if (!normalizedResult.ok) return normalizedResult.result;
+  const normalized = normalizedResult.value;
+  const activeItem = normalized.movingItems.find(item => item.i === normalized.activeId) ||
+    normalized.movingItems[0];
+
+  const validation = validateGroupTargets(normalized, request.options);
+  if (validation) {
+    return makeBlockedResult(request, validation.reason, [], start, true, validation.itemIds);
+  }
+  if (normalized.dx === 0 && normalized.dy === 0 && activeItem) {
+    return makeNoopResult(request, start, true, cloneLayoutItem(activeItem));
+  }
+
+  const externalCollisions = getGroupExternalCollisions(normalized, index);
+  const staticCollisions = externalCollisions.filter(item => item.static);
+  if (staticCollisions.length > 0) {
+    return makeBlockedResult(
+      request,
+      "static-item",
+      staticCollisions,
+      start,
+      true,
+      staticCollisions.map(item => item.i)
+    );
+  }
+
+  if (normalized.ids.length === 1) {
+    return executeSingleGroupMove(request, index, normalized, start, externalCollisions);
+  }
+
+  if (
+    externalCollisions.length > 0 &&
+    request.options.preventCollision &&
+    !request.options.allowOverlap
+  ) {
+    return makeBlockedResult(request, "collision", externalCollisions, start, true);
+  }
+
+  const rigidCompaction = !request.options.allowOverlap;
+  const nextLayout = applyGroupTargets(request.layout, normalized, rigidCompaction);
+  let finalLayout = nextLayout;
+  if (!request.options.allowOverlap) {
+    finalLayout = compact(
+      nextLayout,
+      request.options.compactType,
+      request.options.cols,
+      request.options.allowOverlap
+    );
+  }
+  finalLayout = withMovedFlagsCleared(restoreGroupStaticFlags(finalLayout, normalized));
+  const patches = collectPatches(request.layout, finalLayout, request.options.compactType);
+  const finalItem = getLayoutItem(finalLayout, normalized.activeId) || activeItem;
+  const status = patches.length === 0 || shallowLayoutEqual(request.layout, finalLayout) ? "noop" : "changed";
+
+  return makeResult(
+    request,
+    status,
+    status === "noop" ? request.layout : finalLayout,
+    patches,
+    externalCollisions,
+    start,
+    true,
+    finalItem ? { placeholder: cloneLayoutItem(finalItem) } : {}
+  );
+};
+
 const executeMove = (
   request: LayoutOperationRequest,
   index: LayoutIndex,
@@ -692,6 +992,25 @@ const computeLegacyLayout = (request: LayoutOperationRequest): Layout => {
       );
       return applyFinalCompaction(moved, options);
     }
+    case "groupMove": {
+      const ids = Array.from(new Set(request.operation.ids.filter(Boolean)));
+      if (ids.length !== 1) return request.layout;
+      const nextLayout = cloneLayout(request.layout);
+      const item = getLayoutItem(nextLayout, ids[0]);
+      if (!item) return request.layout;
+      const moved = moveElement(
+        nextLayout,
+        item,
+        options.compactType,
+        options.cols,
+        options.allowOverlap,
+        item.x + Math.trunc(request.operation.dx),
+        item.y + Math.trunc(request.operation.dy),
+        request.operation.userAction !== false,
+        options.preventCollision
+      );
+      return applyFinalCompaction(moved, options);
+    }
     case "compact":
       return options.allowOverlap || options.compactType == null
         ? request.layout
@@ -732,6 +1051,9 @@ export function compareWithLegacyLayout(
   request: LayoutOperationRequest,
   result: LayoutOperationResult
 ): { matches: boolean; differences: string[] } {
+  if (request.operation.type === "groupMove" && request.operation.ids.length > 1) {
+    return { matches: true, differences: [] };
+  }
   const legacyLayout = computeLegacyLayout(request);
   const differences: string[] = [];
   const resultById = new Map<string, LayoutItem>();
@@ -775,6 +1097,8 @@ function executeLayoutOperationWithIndex(
     switch (normalizedRequest.operation.type) {
       case "move":
         return executeMove(normalizedRequest, index, start);
+      case "groupMove":
+        return executeGroupMove(normalizedRequest, index, start);
       case "resize":
         return executeResize(normalizedRequest, index, start);
       case "dropFit":

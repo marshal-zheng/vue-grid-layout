@@ -1,8 +1,10 @@
 import type { ComputedRef, Ref } from "vue";
 import type { GridHistoryStore } from "../history";
 import type {
+  GridLayoutEngineOptions,
   GridLayoutEngineProp,
   LayoutDiagnostics,
+  LayoutOperation,
   LayoutOperationResult,
   LayoutPatch
 } from "../layout-engine";
@@ -171,6 +173,7 @@ export type GridEditorBlockedReason =
   | "missing-item"
   | "selection-count"
   | "unsupported-scope"
+  | "unsupported"
   | "section-row-locked"
   | "section-row-collapsed"
   | "section-row-policy"
@@ -816,6 +819,7 @@ export type GridEditorGuidesOptions = {
   spacingChipMinDistance?: number;
   itemLabels?: Record<string, string>;
   startGeometry?: Record<string, Pick<LayoutItem, "x" | "y" | "w" | "h">>;
+  selectionCount?: number;
   delta?: { dx?: number; dy?: number; dw?: number; dh?: number };
   blocked?: { reason?: GridEditorBlockedReason; message?: string; itemIds?: string[] };
 };
@@ -918,6 +922,14 @@ export type GridEditorPasteStrategy =
 
 export type GridEditorCommandPolicy = "all-or-nothing" | "skip-blocked";
 
+export type GridEditorLayoutOperationRunner = (input: {
+  commandId: string;
+  layout: Layout;
+  operation: LayoutOperation;
+  phase: "commit";
+  source: GridEditorCommandSource;
+}) => MaybePromise<LayoutOperationResult>;
+
 export type UseGridEditorOptions = {
   kind?: "layout" | "responsive";
   layout?: Ref<Layout>;
@@ -933,6 +945,8 @@ export type UseGridEditorOptions = {
   sectionRows?: Ref<GridEditorSectionRowState>;
   defaultSectionRows?: GridEditorSectionRowState;
   layoutEngine?: false | GridLayoutEngineProp;
+  layoutEngineOptions?: GridLayoutEngineOptions | (() => GridLayoutEngineOptions);
+  layoutOperationRunner?: GridEditorLayoutOperationRunner;
   persistence?:
     | GridLayoutPersistenceProp
     | ResponsiveGridLayoutPersistenceProp

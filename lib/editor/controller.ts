@@ -8,8 +8,18 @@ import {
   getAllCollisions,
   getLayoutItem,
   type Layout,
-  type LayoutItem
+  type LayoutItem,
+  type CompactType
 } from "../utils";
+import {
+  executeLayoutOperation
+} from "../layout-engine";
+import type {
+  GridLayoutEngineOptions,
+  LayoutBlockedReason,
+  LayoutOperation,
+  LayoutOperationResult
+} from "../layout-engine";
 import {
   cloneLayoutsMap,
   type GridLayoutPersistenceController,
@@ -71,6 +81,7 @@ import {
 import type {
   GridEditorClipboardAdapter,
   GridEditorCommand,
+  GridEditorBlockedReason,
   GridEditorCommandResult,
   GridEditorController,
   GridEditorDerivedState,
@@ -164,6 +175,51 @@ const getPayloadRecord = (command: GridEditorCommand): Record<string, unknown> =
   command.payload && typeof command.payload === "object"
     ? command.payload as Record<string, unknown>
     : {};
+
+const isCompactType = (value: unknown): value is CompactType =>
+  value === "vertical" || value === "horizontal" || value === null;
+
+const mapLayoutBlockedReason = (
+  reason: LayoutBlockedReason | undefined
+): GridEditorBlockedReason => {
+  if (!reason) return "invalid-input";
+  return reason;
+};
+
+const makeUnsupportedLayoutResult = (
+  id: string,
+  layout: Layout,
+  operation: LayoutOperation
+): LayoutOperationResult => {
+  const itemIds = operation.type === "groupMove"
+    ? operation.ids.slice()
+    : "id" in operation
+      ? [operation.id]
+      : [];
+  return {
+    id,
+    status: "blocked",
+    layout,
+    patches: [],
+    affectedIds: [],
+    collisions: [],
+    blocked: {
+      reason: "unsupported",
+      itemIds
+    },
+    diagnostics: {
+      operationId: id,
+      operationType: operation.type,
+      phase: "commit",
+      layoutSize: layout.length,
+      affectedCount: 0,
+      collisionCount: 0,
+      indexHit: false,
+      executorKind: "main-thread",
+      durationMs: 0
+    }
+  };
+};
 
 const mapIds = (
   items: Layout,
@@ -463,6 +519,52 @@ export const createGridEditorController = (
       "api"
     );
     setSelection(nextSelection);
+  };
+
+  const resolveLayoutEngineOptions = (
+    payload: Record<string, unknown>
+  ): GridLayoutEngineOptions | null => {
+    if (typeof options.layoutEngineOptions === "function") {
+      return options.layoutEngineOptions();
+    }
+    if (options.layoutEngineOptions) return options.layoutEngineOptions;
+    if (!isFiniteGridNumber(payload.cols)) return null;
+    return {
+      cols: Math.max(1, Math.floor(payload.cols)),
+      maxRows: isFiniteGridNumber(payload.maxRows) ? payload.maxRows : Infinity,
+      compactType: isCompactType(payload.compactType) ? payload.compactType : "vertical",
+      allowOverlap: payload.allowOverlap === true,
+      preventCollision: payload.preventCollision === true
+    };
+  };
+
+  const runLayoutOperation = async (
+    command: ReturnType<typeof normalizeGridEditorCommand>,
+    layout: Layout,
+    operation: LayoutOperation,
+    payload: Record<string, unknown>
+  ): Promise<LayoutOperationResult> => {
+    const operationId = `${command.id}:layout`;
+    if (options.layoutOperationRunner) {
+      return await options.layoutOperationRunner({
+        commandId: command.id,
+        layout,
+        operation,
+        phase: "commit",
+        source: command.source || "api"
+      });
+    }
+    const engineOptions = resolveLayoutEngineOptions(payload);
+    if (!engineOptions) {
+      return makeUnsupportedLayoutResult(operationId, layout, operation);
+    }
+    return await Promise.resolve(executeLayoutOperation({
+      id: operationId,
+      phase: "commit",
+      layout,
+      operation,
+      options: engineOptions
+    }));
   };
 
   const readClipboard = async (
@@ -881,7 +983,11 @@ export const createGridEditorController = (
       const previousSelection = selection.value;
       const nextSelection = updateSelectionByIntent(layout, selection.value, {
         id: typeof payload.id === "string" ? payload.id : undefined,
-        ids: Array.isArray(payload.ids) ? payload.ids.filter((id): id is string => typeof id === "string") : allowedIds,
+        ids: Array.isArray(payload.ids)
+          ? payload.ids.filter((id): id is string => typeof id === "string")
+          : typeof payload.id === "string"
+            ? undefined
+            : allowedIds,
         toggle: payload.toggle === true,
         range: payload.range === true,
         source: command.source === "keyboard" ? "keyboard" : command.source === "pointer" ? "pointer" : "api"
@@ -904,13 +1010,104 @@ export const createGridEditorController = (
     if (command.type === "move") {
       const dx = isFiniteGridNumber(payload.dx) ? payload.dx : null;
       const dy = isFiniteGridNumber(payload.dy) ? payload.dy : null;
+      const absoluteX = isFiniteGridNumber(payload.x);
+      const absoluteY = isFiniteGridNumber(payload.y);
+      const targetIds = Array.from(new Set([...allowedIds, ...blockedIds]));
+      const activeId = selection.value.activeId && allowedIds.includes(selection.value.activeId)
+        ? selection.value.activeId
+        : allowedIds[0];
+      const activeItem = activeId ? getLayoutItem(layout, activeId) : undefined;
+      const explicitMultiTarget = (command.targetIds?.filter(Boolean).length || 0) > 1;
+      const selectionRelativeGroup =
+        !command.targetIds &&
+        selection.value.selectedIds.length > 1 &&
+        (dx !== null || dy !== null);
+      const multiMoveRequest = explicitMultiTarget || selectionRelativeGroup;
+      const singleAbsoluteMove =
+        allowedIds.length === 1 &&
+        !explicitMultiTarget &&
+        (absoluteX || absoluteY);
+      const shouldUseGroupMove =
+        allowedIds.length > 0 &&
+        !singleAbsoluteMove &&
+        (allowedIds.length > 1 || multiMoveRequest);
+
+      if (shouldUseGroupMove) {
+        const groupDx = dx !== null
+          ? dx
+          : absoluteX && activeItem
+            ? (payload.x as number) - activeItem.x
+            : 0;
+        const groupDy = dy !== null
+          ? dy
+          : absoluteY && activeItem
+            ? (payload.y as number) - activeItem.y
+            : 0;
+        const operation: LayoutOperation = {
+          type: "groupMove",
+          ids: allowedIds,
+          activeId,
+          dx: groupDx,
+          dy: groupDy,
+          userAction: command.source !== "api"
+        };
+        const operationResult = await runLayoutOperation(command, layout, operation, payload);
+        resultDiagnostics = {
+          durationMs: 0,
+          layoutDiagnostics: operationResult.diagnostics,
+          operationResult
+        };
+
+        if (operationResult.status === "blocked") {
+          const reason = mapLayoutBlockedReason(operationResult.blocked?.reason);
+          return createGridEditorCommandResult(command, "blocked", {
+            targetIds,
+            blocked: {
+              reason,
+              itemIds: operationResult.blocked?.itemIds || targetIds,
+              skippedIds: blockedIds.length > 0 ? blockedIds : undefined,
+              message: `Move command blocked by ${reason}.`
+            },
+            diagnostics: resultDiagnostics
+          });
+        }
+        if (operationResult.status === "error") {
+          return createGridEditorCommandResult(command, "error", {
+            targetIds,
+            diagnostics: resultDiagnostics,
+            error: operationResult.error || { message: "Layout operation failed." }
+          });
+        }
+
+        const layoutPatches = operationResult.patches;
+        if (operationResult.status === "changed" || operationResult.status === "fallback") {
+          applyLayoutAndMetadata(operationResult.layout, metadataPatches);
+        }
+        const affectedIds = operationResult.affectedIds;
+        const status = layoutPatches.length > 0 || operationResult.status === "changed" || operationResult.status === "fallback"
+          ? "changed"
+          : "noop";
+        const result = createGridEditorCommandResult(command, status, {
+          targetIds,
+          layoutPatches,
+          metadataPatches,
+          affectedIds,
+          selection: selection.value,
+          blocked: blockedIds.length > 0
+            ? { reason: "capability", skippedIds: blockedIds, itemIds: blockedIds }
+            : undefined,
+          diagnostics: resultDiagnostics
+        });
+        return commitHistory(command, before, result);
+      }
+
       nextLayout = nextLayout.map(item => {
         if (!allowedIds.includes(item.i)) return item;
-        const x = allowedIds.length === 1 && isFiniteGridNumber(payload.x)
-          ? payload.x
+        const x = allowedIds.length === 1 && absoluteX
+          ? payload.x as number
           : item.x + (dx || 0);
-        const y = allowedIds.length === 1 && isFiniteGridNumber(payload.y)
-          ? payload.y
+        const y = allowedIds.length === 1 && absoluteY
+          ? payload.y as number
           : item.y + (dy || 0);
         return { ...item, x: Math.max(0, Math.floor(x)), y: Math.max(0, Math.floor(y)) };
       });

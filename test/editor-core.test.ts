@@ -73,13 +73,26 @@ async function testSelectionCapabilityAndHistory() {
     layout,
     editorMetaById,
     defaultMode: 'edit',
-    commandPolicy: 'skip-blocked'
+    commandPolicy: 'skip-blocked',
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
   })
 
-  await editor.execute({ type: 'select', payload: { ids: ['a', 'b'] } })
-  assert.deepEqual(editor.selection.value.selectedIds, ['a', 'b'])
+  await editor.execute({ type: 'select', payload: { ids: ['b'] } })
+  assert.deepEqual(editor.selection.value.selectedIds, ['b'])
 
-  const moved = await editor.execute({ type: 'move', payload: { dx: 1, dy: 0 } })
+  await editor.execute({ type: 'select', payload: { ids: ['a', 'b'] } })
+  assert.deepEqual(editor.selection.value.selectedIds, ['a'])
+
+  await editor.execute({ type: 'select', payload: { ids: ['a', 'c'] } })
+  assert.deepEqual(editor.selection.value.selectedIds, ['a'])
+
+  const moved = await editor.execute({ type: 'move', targetIds: ['a', 'b'], payload: { dx: 1, dy: 0 } })
   assert.equal(moved.status, 'changed')
   assert.deepEqual(moved.blocked?.skippedIds, ['b'])
   assert.equal(layout.value.find(item => item.i === 'a')?.x, 1)
@@ -96,6 +109,202 @@ async function testSelectionCapabilityAndHistory() {
   const undone = await editor.undo()
   assert.equal(undone.status, 'changed')
   assert.equal(editor.editorMetaById.value.a?.locked, undefined)
+}
+
+async function testGroupMoveCommands() {
+  const unsupportedLayout = ref<Layout>([
+    { i: 'a', x: 0, y: 0, w: 2, h: 1 },
+    { i: 'b', x: 2, y: 0, w: 2, h: 1 }
+  ])
+  const unsupported = createGridEditorController({
+    layout: unsupportedLayout,
+    defaultMode: 'edit'
+  })
+  await unsupported.execute({ type: 'select', payload: { ids: ['a', 'b'] } })
+  const unsupportedMove = await unsupported.execute({ type: 'move', source: 'keyboard', payload: { dx: 1, dy: 0 } })
+  assert.equal(unsupportedMove.status, 'blocked')
+  assert.equal(unsupportedMove.blocked?.reason, 'unsupported')
+  assert.equal(unsupportedLayout.value.find(item => item.i === 'a')?.x, 0)
+
+  const layout = ref<Layout>([
+    { i: 'a', x: 0, y: 0, w: 2, h: 1 },
+    { i: 'b', x: 2, y: 0, w: 2, h: 1 },
+    { i: 'c', x: 4, y: 0, w: 2, h: 1 }
+  ])
+  const editor = createGridEditorController({
+    layout,
+    defaultMode: 'edit',
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false,
+      diagnostics: { debug: true }
+    }
+  })
+  await editor.execute({ type: 'select', payload: { ids: ['a', 'b'] } })
+  const moved = await editor.execute({
+    type: 'move',
+    source: 'keyboard',
+    payload: { dx: 1, dy: 1 },
+    history: { mergeKey: 'keyboard-move', mergeWindowMs: 650 }
+  })
+  assert.equal(moved.status, 'changed')
+  assert.equal(moved.diagnostics?.operationResult?.diagnostics?.operationType, 'groupMove')
+  assert.deepEqual(moved.layoutPatches.filter(patch => patch.type === 'move').map(patch => patch.id).sort(), ['a', 'b'])
+  assert.equal(layout.value.find(item => item.i === 'a')?.x, 1)
+  assert.equal(layout.value.find(item => item.i === 'b')?.x, 3)
+  assert.deepEqual(editor.selection.value.selectedIds, ['a', 'b'])
+  const undone = await editor.undo()
+  assert.equal(undone.status, 'changed')
+  assert.equal(layout.value.find(item => item.i === 'a')?.x, 0)
+  assert.deepEqual(editor.selection.value.selectedIds, ['a', 'b'])
+  const redone = await editor.redo()
+  assert.equal(redone.status, 'changed')
+  assert.equal(layout.value.find(item => item.i === 'a')?.x, 1)
+
+  const explicit = await editor.execute({
+    type: 'move',
+    targetIds: ['a', 'b'],
+    payload: { dx: 2, dy: 1 }
+  })
+  assert.equal(explicit.status, 'changed')
+  assert.equal(explicit.diagnostics?.operationResult?.diagnostics?.operationType, 'groupMove')
+  assert.equal(layout.value.find(item => item.i === 'a')?.x, 3)
+  assert.equal(layout.value.find(item => item.i === 'b')?.x, 5)
+
+  const absoluteSingleLayout = ref<Layout>([
+    { i: 'a', x: 0, y: 0, w: 2, h: 1 },
+    { i: 'b', x: 2, y: 0, w: 2, h: 1 }
+  ])
+  const absoluteSingle = createGridEditorController({
+    layout: absoluteSingleLayout,
+    defaultMode: 'edit'
+  })
+  const single = await absoluteSingle.execute({ type: 'move', targetIds: ['a'], payload: { x: 5, y: 4 } })
+  assert.equal(single.status, 'changed')
+  assert.equal(single.diagnostics?.operationResult, undefined)
+  assert.equal(absoluteSingleLayout.value.find(item => item.i === 'a')?.x, 5)
+  assert.equal(absoluteSingleLayout.value.find(item => item.i === 'a')?.y, 4)
+
+  const skipLayout = ref<Layout>([
+    { i: 'a', x: 0, y: 0, w: 1, h: 1 },
+    { i: 'b', x: 1, y: 0, w: 1, h: 1 },
+    { i: 'c', x: 2, y: 0, w: 1, h: 1 }
+  ])
+  const skip = createGridEditorController({
+    layout: skipLayout,
+    defaultMode: 'edit',
+    commandPolicy: 'skip-blocked',
+    editorMetaById: ref({ b: { locked: true } }),
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
+  })
+  await skip.execute({ type: 'select', payload: { ids: ['a', 'b', 'c'] } })
+  assert.deepEqual(skip.selection.value.selectedIds, ['a', 'c'])
+  const skipMove = await skip.execute({ type: 'move', targetIds: ['a', 'b', 'c'], payload: { dx: 1, dy: 0 } })
+  assert.equal(skipMove.status, 'changed')
+  assert.deepEqual(skipMove.blocked?.skippedIds, ['b'])
+  assert.equal(skipMove.diagnostics?.operationResult?.diagnostics?.operationType, 'groupMove')
+  assert.equal(skipLayout.value.find(item => item.i === 'a')?.x, 1)
+  assert.equal(skipLayout.value.find(item => item.i === 'c')?.x, 3)
+  assert.equal(skipLayout.value.find(item => item.i === 'b')?.x, 1)
+
+  const skipSingleAllowedLayout = ref<Layout>([
+    { i: 'a', x: 0, y: 0, w: 1, h: 1 },
+    { i: 'b', x: 1, y: 0, w: 1, h: 1 },
+    { i: 'c', x: 2, y: 0, w: 1, h: 1 }
+  ])
+  const skipSingleAllowed = createGridEditorController({
+    layout: skipSingleAllowedLayout,
+    defaultMode: 'edit',
+    commandPolicy: 'skip-blocked',
+    editorMetaById: ref({ b: { locked: true } }),
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: true
+    }
+  })
+  await skipSingleAllowed.execute({ type: 'select', payload: { ids: ['a', 'b'] } })
+  assert.deepEqual(skipSingleAllowed.selection.value.selectedIds, ['a'])
+  const skipSingleBlocked = await skipSingleAllowed.execute({
+    type: 'move',
+    targetIds: ['a', 'b'],
+    payload: { dx: 2, dy: 0 }
+  })
+  assert.equal(skipSingleBlocked.status, 'blocked')
+  assert.equal(skipSingleBlocked.blocked?.reason, 'collision')
+  assert.deepEqual(skipSingleBlocked.blocked?.skippedIds, ['b'])
+  assert.equal(skipSingleBlocked.diagnostics?.operationResult?.diagnostics?.operationType, 'groupMove')
+  assert.equal(skipSingleAllowedLayout.value.find(item => item.i === 'a')?.x, 0)
+
+  const blockedLayout = ref<Layout>([
+    { i: 'a', x: 0, y: 0, w: 2, h: 1 },
+    { i: 'b', x: 2, y: 0, w: 2, h: 1 },
+    { i: 'c', x: 4, y: 0, w: 2, h: 1 }
+  ])
+  const events: string[] = []
+  const blocked = createGridEditorController({
+    layout: blockedLayout,
+    defaultMode: 'edit',
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: true
+    },
+    onEvent: event => events.push(event.type)
+  })
+  await blocked.execute({ type: 'select', payload: { ids: ['a', 'b'] } })
+  const blockedMove = await blocked.execute({ type: 'move', payload: { dx: 1, dy: 0 } })
+  assert.equal(blockedMove.status, 'blocked')
+  assert.equal(blockedMove.blocked?.reason, 'collision')
+  assert.ok(events.includes('command-blocked'))
+  assert.equal(blockedLayout.value.find(item => item.i === 'a')?.x, 0)
+
+  const responsiveLayouts = ref({
+    lg: [
+      { i: 'r-a', x: 0, y: 0, w: 2, h: 1 },
+      { i: 'r-b', x: 2, y: 0, w: 2, h: 1 }
+    ],
+    sm: [
+      { i: 'r-a', x: 0, y: 0, w: 1, h: 1 },
+      { i: 'r-b', x: 1, y: 0, w: 1, h: 1 }
+    ]
+  })
+  const responsive = createGridEditorController({
+    kind: 'responsive',
+    layouts: responsiveLayouts,
+    breakpoint: ref('lg'),
+    defaultMode: 'edit',
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
+  })
+  const responsiveResult = await responsive.execute({
+    type: 'move',
+    targetIds: ['r-a', 'r-b'],
+    payload: { dx: 1, dy: 0 }
+  })
+  assert.equal(responsiveResult.status, 'changed')
+  assert.equal(responsiveLayouts.value.lg.find(item => item.i === 'r-a')?.x, 1)
+  assert.equal(responsiveLayouts.value.lg.find(item => item.i === 'r-b')?.x, 3)
+  assert.equal(responsiveLayouts.value.sm.find(item => item.i === 'r-a')?.x, 0)
+  assert.equal(responsiveLayouts.value.sm.find(item => item.i === 'r-b')?.x, 1)
 }
 
 async function testMetadataClipboardAndPaste() {
@@ -602,6 +811,7 @@ async function testL3IntelligenceSnapCommandsAndSectionRows() {
 async function run() {
   await testModeAndGuard()
   await testSelectionCapabilityAndHistory()
+  await testGroupMoveCommands()
   await testMetadataClipboardAndPaste()
   await testKeyboardShortcuts()
   await testPersistenceBridgeAndGuides()

@@ -13,7 +13,7 @@ const defaultLayout = () => [
   { i: "forecast", x: 9, y: 0, w: 3, h: 3 },
   { i: "region", x: 0, y: 3, w: 4, h: 3 },
   { i: "accounts", x: 4, y: 3, w: 4, h: 3 },
-  { i: "health", x: 8, y: 3, w: 4, h: 3 }
+  { i: "health", x: 8, y: 3, w: 4, h: 3, static: true }
 ];
 
 const labels = {
@@ -127,6 +127,14 @@ const App = {
       editorMetaById,
       sectionRows,
       persistence,
+      layoutEngineOptions: {
+        cols: 12,
+        maxRows: Infinity,
+        compactType: "vertical",
+        allowOverlap: false,
+        preventCollision: false,
+        diagnostics: { debug: true }
+      },
       clipboard: VGL.internalGridEditorClipboard,
       guides: {
         enabled: true,
@@ -194,6 +202,7 @@ const App = {
 
     const editorProp = computed(() => ({
       controller: editor,
+      commandPolicy: "skip-blocked",
       keyboard: {
         ariaMessage: message => {
           state.ariaMessage = `${message.level}: ${message.message}`;
@@ -371,6 +380,7 @@ const App = {
         <div><strong>Toolbar:</strong> {{ toolbarState.selectionSummary.count }} selected, align {{ toolbarState.commands.align?.enabled ? 'enabled' : toolbarState.commands.align?.reason }}, distribute {{ toolbarState.commands.distribute?.enabled ? 'enabled' : toolbarState.commands.distribute?.reason }}</div>
         <div><strong>Guides:</strong> {{ guideSummary }}</div>
         <div><strong>HUD:</strong> {{ hudSummary }}</div>
+        <div><strong>Group move:</strong> Ctrl/Cmd-click cards, then drag a selected card or use arrow keys. Forecast is editor-locked; Customer Health is layout static.</div>
         <div><strong>Last event:</strong> {{ state.lastEvent }} | <strong>Last result:</strong> {{ state.lastResult }}</div>
         <div v-if="state.ariaMessage" style="color:#8a4b00;">{{ state.ariaMessage }}</div>
         <div v-if="state.conflict" style="color:#b00020;">Conflict: {{ state.conflict }}</div>

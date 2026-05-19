@@ -68,6 +68,7 @@ const VueGridLayout = defineComponent({
       props,
       layoutRef: toRef(state, 'layout') as Ref<Layout>,
       persistenceController,
+      engineBridge,
       getLayout: () => state.layout,
       getOldDragItem: () => state.oldDragItem,
       getOldResizeItem: () => state.oldResizeItem,
@@ -77,6 +78,9 @@ const VueGridLayout = defineComponent({
             activeDragId: interactionState.current.activeDragId.value,
             activeResizeId: interactionState.current.activeResizeId.value,
             dragBlocked: interactionState.current.dragBlocked.value,
+            dragBlockedReason: interactionState.current.dragBlockedReason.value,
+            dragBlockedItemIds: interactionState.current.dragBlockedItemIds.value,
+            dragBlockedMessage: interactionState.current.dragBlockedMessage.value,
             resizeBlocked: interactionState.current.resizeBlocked.value
           }
         : null
@@ -112,7 +116,9 @@ const VueGridLayout = defineComponent({
         clearGuides: editorRuntime.clearGuides,
         resetSnap: editorRuntime.resetSnap,
         snapCandidate: editorRuntime.snapCandidate,
-        updateIntelligence: editorRuntime.updateIntelligence
+        updateIntelligence: editorRuntime.updateIntelligence,
+        resolveMoveDrag: editorRuntime.resolveMoveDrag,
+        notifyMoveBlocked: editorRuntime.notifyMoveBlocked
       },
       isFirefox,
       layoutClassName,

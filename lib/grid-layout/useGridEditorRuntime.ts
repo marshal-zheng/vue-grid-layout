@@ -4,19 +4,27 @@ import type { Ref } from "vue";
 import {
   bindGridEditorKeyboard,
   computeGridEditorIntelligence,
+  createGridEditorCommandResult,
   createGridEditorController,
   resolveEditorItemCapability,
   resolveGridEditorSnap
 } from "../editor";
-import { compactType } from "../utils";
+import { executeLayoutOperation } from "../layout-engine";
+import { compactType, getLayoutItem } from "../utils";
 import type { CompactType, Layout, LayoutItem, ResizeHandleAxis } from "../utils";
 import type {
   GridEditorController,
+  GridEditorBlockedReason,
   GridEditorGuideInteraction,
   GridEditorGuidesOptions,
   GridEditorItemMeta,
   GridEditorProp
 } from "../editor";
+import type { GridLayoutEngineBridge } from "./gridInteractionTypes";
+import type {
+  LayoutOperation,
+  LayoutOperationResult
+} from "../layout-engine";
 
 type GridEditorRuntimeProps = {
   allowOverlap: boolean;
@@ -34,6 +42,9 @@ type GridEditorInteractionSnapshot = {
   activeDragId: string | null;
   activeResizeId: string | null;
   dragBlocked: boolean;
+  dragBlockedReason?: GridEditorBlockedReason | null;
+  dragBlockedItemIds?: string[];
+  dragBlockedMessage?: string | null;
   resizeBlocked: boolean;
 };
 
@@ -47,6 +58,7 @@ type UseGridEditorRuntimeOptions = {
   props: GridEditorRuntimeProps;
   layoutRef: Ref<Layout>;
   persistenceController: unknown;
+  engineBridge: GridLayoutEngineBridge;
   getLayout: () => Layout;
   getOldDragItem: () => LayoutItem | null | undefined;
   getOldResizeItem: () => LayoutItem | null | undefined;
@@ -65,10 +77,43 @@ const emptyGuideState = () => ({
   anchorEdges: []
 });
 
+const unsupportedLayoutResult = (
+  id: string,
+  layout: Layout,
+  operation: LayoutOperation
+): LayoutOperationResult => ({
+  id,
+  status: "blocked",
+  layout,
+  patches: [],
+  affectedIds: [],
+  collisions: [],
+  blocked: {
+    reason: "unsupported",
+    itemIds: operation.type === "groupMove"
+      ? operation.ids
+      : "id" in operation
+        ? [operation.id]
+        : []
+  },
+  diagnostics: {
+    operationId: id,
+    operationType: operation.type,
+    phase: "commit",
+    layoutSize: layout.length,
+    affectedCount: 0,
+    collisionCount: 0,
+    indexHit: false,
+    executorKind: "main-thread",
+    durationMs: 0
+  }
+});
+
 export function useGridEditorRuntime({
   props,
   layoutRef,
   persistenceController,
+  engineBridge,
   getLayout,
   getOldDragItem,
   getOldResizeItem,
@@ -78,11 +123,30 @@ export function useGridEditorRuntime({
   const config = props.editor && typeof props.editor === "object"
     ? props.editor
     : null;
+  const layoutOperationRunner = config?.layoutOperationRunner || ((input: {
+    commandId: string;
+    layout: Layout;
+    operation: LayoutOperation;
+    phase: "commit";
+  }) => {
+    const id = `${input.commandId}:layout`;
+    if (engineBridge.isLegacyLayoutEngine()) {
+      return unsupportedLayoutResult(id, input.layout, input.operation);
+    }
+    return executeLayoutOperation({
+      id,
+      phase: input.phase,
+      layout: input.layout,
+      operation: input.operation,
+      options: engineBridge.getLayoutEngineOptions()
+    });
+  });
   const controller: GridEditorController | null = config
     ? config.controller || createGridEditorController({
         ...config,
         kind: "layout",
         layout: layoutRef,
+        layoutOperationRunner,
         persistence: (persistenceController as never) || config.persistence
       })
     : null;
@@ -134,7 +198,13 @@ export function useGridEditorRuntime({
   ): GridEditorGuidesOptions => {
     const interactionState = getInteractionState();
     const blocked = interaction === "drag" && interactionState?.dragBlocked
-      ? { reason: "collision" as const, itemIds: activeId ? [activeId] : undefined }
+      ? {
+          reason: interactionState.dragBlockedReason || "collision" as const,
+          itemIds: interactionState.dragBlockedItemIds?.length
+            ? interactionState.dragBlockedItemIds
+            : activeId ? [activeId] : undefined,
+          message: interactionState.dragBlockedMessage || undefined
+        }
       : interaction === "resize" && interactionState?.resizeBlocked
         ? { reason: "collision" as const, itemIds: activeId ? [activeId] : undefined }
         : undefined;
@@ -147,6 +217,7 @@ export function useGridEditorRuntime({
       rowHeight: props.rowHeight,
       startGeometry: activeId ? getInteractionStartGeometry(activeId) : undefined,
       resizeHandle,
+      selectionCount: controller?.selection.value.selectedIds.length || 0,
       blocked
     };
   };
@@ -227,6 +298,155 @@ export function useGridEditorRuntime({
       ...candidateItem,
       ...resolution.geometry
     };
+  };
+
+  const reasonForCapability = (
+    item: LayoutItem,
+    meta: GridEditorItemMeta | undefined
+  ): GridEditorBlockedReason => {
+    if (meta?.locked) return "locked";
+    if (meta?.visible === false) return "hidden";
+    if (item.static) return "static-item";
+    return "capability";
+  };
+
+  const resolveMoveDrag = (input: {
+    id: string;
+    item: LayoutItem;
+    layout: Layout;
+    legacyLayoutEngine: boolean;
+    event?: Event;
+  }) => {
+    if (!controller) return { kind: "single" as const, id: input.id };
+    if (!isEditMode()) {
+      return {
+        kind: "blocked" as const,
+        reason: "mode-readonly" as const,
+        ids: [input.id],
+        activeId: input.id
+      };
+    }
+
+    const metaById = getMetaById();
+    const draggedCapability = resolveEditorItemCapability(
+      input.item,
+      metaById[input.id],
+      { isDraggable: true, isResizable: true, isBounded: true }
+    );
+    if (!draggedCapability.draggable) {
+      return {
+        kind: "blocked" as const,
+        reason: reasonForCapability(input.item, metaById[input.id]),
+        ids: [input.id],
+        activeId: input.id
+      };
+    }
+
+    const selection = controller.selection.value;
+    const selectedIds = selection.selectedIds.filter(Boolean);
+    const selectionModifier =
+      typeof MouseEvent !== "undefined" &&
+      input.event instanceof MouseEvent &&
+      (input.event.metaKey || input.event.ctrlKey || input.event.shiftKey);
+    const isSelectedGroupDrag = selectedIds.length > 1 && selectedIds.includes(input.id);
+    if (!isSelectedGroupDrag) {
+      if (!selectedIds.includes(input.id) && !selectionModifier) {
+        void controller.execute({
+          type: "select",
+          targetIds: [input.id],
+          payload: { id: input.id },
+          source: "pointer",
+          history: { skip: true }
+        });
+      }
+      return { kind: "single" as const, id: input.id };
+    }
+
+    const allowedIds: string[] = [];
+    const blockedIds: string[] = [];
+    let blockedReason: GridEditorBlockedReason = "capability";
+    selectedIds.forEach(id => {
+      const item = getLayoutItem(input.layout, id);
+      if (!item) {
+        blockedIds.push(id);
+        blockedReason = "missing-item";
+        return;
+      }
+      const capability = resolveEditorItemCapability(
+        item,
+        metaById[id],
+        { isDraggable: true, isResizable: true, isBounded: true }
+      );
+      if (capability.draggable) {
+        allowedIds.push(id);
+      } else {
+        blockedIds.push(id);
+        blockedReason = reasonForCapability(item, metaById[id]);
+      }
+    });
+
+    if (blockedIds.length > 0 && config?.commandPolicy !== "skip-blocked") {
+      return {
+        kind: "blocked" as const,
+        reason: blockedReason,
+        ids: blockedIds,
+        activeId: input.id
+      };
+    }
+    if (input.legacyLayoutEngine) {
+      return {
+        kind: "blocked" as const,
+        reason: "unsupported" as const,
+        ids: allowedIds,
+        activeId: input.id
+      };
+    }
+    if (allowedIds.length === 0) {
+      return {
+        kind: "blocked" as const,
+        reason: blockedReason,
+        ids: blockedIds.length > 0 ? blockedIds : [input.id],
+        activeId: input.id
+      };
+    }
+    return {
+      kind: "group" as const,
+      activeId: input.id,
+      ids: allowedIds
+    };
+  };
+
+  const notifyMoveBlocked = (input: {
+    reason: GridEditorBlockedReason;
+    ids: string[];
+    activeId?: string;
+    message?: string;
+    operationResult?: LayoutOperationResult;
+  }) => {
+    if (!controller) return;
+    const command = {
+      id: `pointer-move-blocked:${input.activeId || input.ids[0] || "layout"}:${Date.now()}`,
+      type: "move" as const,
+      targetIds: input.ids,
+      source: "pointer" as const
+    };
+    const result = createGridEditorCommandResult(command, "blocked", {
+      targetIds: input.ids,
+        blocked: {
+          reason: input.reason,
+          itemIds: input.ids,
+          message: input.message || `Pointer move blocked by ${input.reason}.`
+        },
+        diagnostics: input.operationResult
+          ? {
+              durationMs: 0,
+              layoutDiagnostics: input.operationResult.diagnostics,
+              operationResult: input.operationResult
+            }
+          : undefined
+      });
+    controller.lastResult.value = result;
+    config?.onEvent?.({ type: "command-blocked", command, result });
   };
 
   const executeSelect = (id: string, event: MouseEvent) => {
@@ -318,6 +538,8 @@ export function useGridEditorRuntime({
     resetSnap,
     snapCandidate,
     updateIntelligence,
+    resolveMoveDrag,
+    notifyMoveBlocked,
     getItemRenderState,
     onRootClick,
     mount,

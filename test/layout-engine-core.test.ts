@@ -16,6 +16,7 @@ import {
   compact,
   findFirstFit,
   findNearestFit,
+  getAllCollisions,
   getLayoutItem,
   moveElement,
   type Layout
@@ -176,6 +177,190 @@ function testNoopAndBlocked() {
   assert.deepEqual(blocked.blocked?.itemIds, ['b'])
 }
 
+function testGroupMoveValidationAndParity() {
+  const layout: Layout = [
+    { i: 'a', x: 0, y: 0, w: 2, h: 1 },
+    { i: 'b', x: 3, y: 0, w: 2, h: 1 },
+    { i: 's', x: 0, y: 2, w: 2, h: 1, static: true }
+  ]
+
+  const moved = executeLayoutOperation({
+    id: 'group-basic',
+    phase: 'commit',
+    layout,
+    operation: { type: 'groupMove', ids: ['a', 'a', 'b'], activeId: 'b', dx: 1.8, dy: 1.2 },
+    options: { ...options, compactType: null }
+  })
+  assert.equal(moved.status, 'changed')
+  assert.equal(moved.diagnostics?.operationType, 'groupMove')
+  assert.deepEqual(moved.patches.filter(patch => patch.type === 'move').map(patch => patch.id).sort(), ['a', 'b'])
+  assert.deepEqual(moved.placeholder && { i: moved.placeholder.i, x: moved.placeholder.x, y: moved.placeholder.y }, { i: 'b', x: 4, y: 1 })
+
+  const empty = executeLayoutOperation({
+    id: 'group-empty',
+    phase: 'preview',
+    layout,
+    operation: { type: 'groupMove', ids: [], dx: 1, dy: 0 },
+    options
+  })
+  assert.equal(empty.status, 'blocked')
+  assert.equal(empty.blocked?.reason, 'invalid-input')
+
+  const missing = executeLayoutOperation({
+    id: 'group-missing',
+    phase: 'preview',
+    layout,
+    operation: { type: 'groupMove', ids: ['a', 'missing'], dx: 1, dy: 0 },
+    options
+  })
+  assert.equal(missing.status, 'blocked')
+  assert.equal(missing.blocked?.reason, 'missing-item')
+  assert.deepEqual(missing.blocked?.itemIds, ['missing'])
+
+  const invalidDelta = executeLayoutOperation({
+    id: 'group-invalid-delta',
+    phase: 'preview',
+    layout,
+    operation: { type: 'groupMove', ids: ['a'], dx: Number.NaN, dy: 0 },
+    options
+  })
+  assert.equal(invalidDelta.status, 'blocked')
+  assert.equal(invalidDelta.blocked?.reason, 'invalid-input')
+
+  const selectedStatic = executeLayoutOperation({
+    id: 'group-selected-static',
+    phase: 'preview',
+    layout,
+    operation: { type: 'groupMove', ids: ['a', 's'], dx: 1, dy: 0 },
+    options
+  })
+  assert.equal(selectedStatic.status, 'blocked')
+  assert.equal(selectedStatic.blocked?.reason, 'static-item')
+  assert.deepEqual(selectedStatic.blocked?.itemIds, ['s'])
+
+  const bounds = executeLayoutOperation({
+    id: 'group-bounds',
+    phase: 'preview',
+    layout,
+    operation: { type: 'groupMove', ids: ['a'], dx: -1, dy: 0 },
+    options
+  })
+  assert.equal(bounds.status, 'blocked')
+  assert.equal(bounds.blocked?.reason, 'bounds')
+
+  const maxRows = executeLayoutOperation({
+    id: 'group-maxRows',
+    phase: 'preview',
+    layout,
+    operation: { type: 'groupMove', ids: ['a'], dx: 0, dy: 2 },
+    options: { ...options, maxRows: 2 }
+  })
+  assert.equal(maxRows.status, 'blocked')
+  assert.equal(maxRows.blocked?.reason, 'maxRows')
+
+  const singleGroup = executeLayoutOperation({
+    id: 'single-group',
+    phase: 'commit',
+    layout,
+    operation: { type: 'groupMove', ids: ['a'], dx: 2, dy: 1, userAction: true },
+    options
+  })
+  const singleMove = executeLayoutOperation({
+    id: 'single-move',
+    phase: 'commit',
+    layout,
+    operation: { type: 'move', id: 'a', x: 2, y: 1, userAction: true },
+    options
+  })
+  assertSamePositions(singleGroup.layout, singleMove.layout)
+  assert.deepEqual(singleGroup.patches, singleMove.patches)
+}
+
+function testGroupMoveCollisionsAndCompaction() {
+  const layout: Layout = [
+    { i: 'a', x: 0, y: 0, w: 2, h: 1 },
+    { i: 'b', x: 2, y: 0, w: 2, h: 1 },
+    { i: 'c', x: 4, y: 0, w: 2, h: 1 }
+  ]
+
+  const blocked = executeLayoutOperation({
+    id: 'group-prevent-collision',
+    phase: 'preview',
+    layout,
+    operation: { type: 'groupMove', ids: ['a', 'b'], activeId: 'a', dx: 1, dy: 0 },
+    options: { ...options, preventCollision: true }
+  })
+  assert.equal(blocked.status, 'blocked')
+  assert.equal(blocked.blocked?.reason, 'collision')
+  assert.deepEqual(blocked.blocked?.itemIds, ['c'])
+
+  const overlap = executeLayoutOperation({
+    id: 'group-overlap',
+    phase: 'preview',
+    layout,
+    operation: { type: 'groupMove', ids: ['a', 'b'], activeId: 'b', dx: 1, dy: 0 },
+    options: { ...options, allowOverlap: true, preventCollision: false }
+  })
+  assert.equal(overlap.status, 'changed')
+  assert.equal(getLayoutItem(overlap.layout, 'b')?.x, 3)
+  assert.equal(getLayoutItem(overlap.layout, 'c')?.x, 4)
+  assert.ok(overlap.affectedIds.includes('c'))
+
+  const pushed = executeLayoutOperation({
+    id: 'group-push',
+    phase: 'commit',
+    layout,
+    operation: { type: 'groupMove', ids: ['a', 'b'], activeId: 'b', dx: 1, dy: 0 },
+    options: { ...options, preventCollision: false, compactType: 'vertical' }
+  })
+  assert.equal(pushed.status, 'changed')
+  assert.equal(getLayoutItem(pushed.layout, 'a')?.x, 1)
+  assert.equal(getLayoutItem(pushed.layout, 'b')?.x, 3)
+  assert.equal(getLayoutItem(pushed.layout, 'c')?.y, 1)
+  assert.ok(pushed.affectedIds.includes('a'))
+  assert.ok(pushed.affectedIds.includes('b'))
+  assert.ok(pushed.affectedIds.includes('c'))
+  assert.equal(getAllCollisions(pushed.layout, getLayoutItem(pushed.layout, 'c')!).length, 0)
+
+  const horizontal = executeLayoutOperation({
+    id: 'group-horizontal',
+    phase: 'commit',
+    layout: [
+      { i: 'a', x: 0, y: 0, w: 1, h: 1 },
+      { i: 'b', x: 1, y: 0, w: 1, h: 1 },
+      { i: 'c', x: 2, y: 0, w: 1, h: 1 }
+    ],
+    operation: { type: 'groupMove', ids: ['a', 'b'], dx: 1, dy: 0 },
+    options: { ...options, cols: 6, compactType: 'horizontal' }
+  })
+  assert.equal(horizontal.status, 'changed')
+  assert.equal(getLayoutItem(horizontal.layout, 'c')?.x, 3)
+
+  const noCompactType = executeLayoutOperation({
+    id: 'group-null-compact',
+    phase: 'commit',
+    layout,
+    operation: { type: 'groupMove', ids: ['a', 'b'], dx: 1, dy: 0 },
+    options: { ...options, compactType: null }
+  })
+  assert.equal(noCompactType.status, 'changed')
+  assert.equal(getAllCollisions(noCompactType.layout, getLayoutItem(noCompactType.layout, 'c')!).length, 0)
+
+  const staticObstacle = executeLayoutOperation({
+    id: 'group-static-obstacle',
+    phase: 'preview',
+    layout: [
+      { i: 'a', x: 0, y: 0, w: 2, h: 1 },
+      { i: 's', x: 2, y: 0, w: 2, h: 1, static: true }
+    ],
+    operation: { type: 'groupMove', ids: ['a'], dx: 2, dy: 0 },
+    options: { ...options, preventCollision: false }
+  })
+  assert.equal(staticObstacle.status, 'blocked')
+  assert.equal(staticObstacle.blocked?.reason, 'static-item')
+  assert.deepEqual(staticObstacle.blocked?.itemIds, ['s'])
+}
+
 function testResizeDropResponsive() {
   const resized = executeLayoutOperation({
     id: 'resize-nw',
@@ -242,6 +427,31 @@ async function testSchedulerAndExecutors() {
   assert.equal(scheduledResult?.status, 'noop')
   assert.equal(scheduledResult?.diagnostics?.schedulerMode, 'commitOnly')
 
+  scheduled = null
+  scheduler.schedule(
+    {
+      id: 'group-preview',
+      phase: 'preview',
+      layout: baseLayout,
+      operation: { type: 'groupMove', ids: ['a', 'b'], activeId: 'b', dx: 1, dy: 2 },
+      options
+    },
+    request => executeLayoutOperation(request),
+    result => {
+      scheduled = result
+    }
+  )
+  const groupScheduledResult = scheduled as LayoutOperationResult | null
+  assert.equal(groupScheduledResult?.status, 'noop')
+  assert.deepEqual(
+    groupScheduledResult?.placeholder && {
+      i: groupScheduledResult.placeholder.i,
+      x: groupScheduledResult.placeholder.x,
+      y: groupScheduledResult.placeholder.y
+    },
+    { i: 'b', x: 3, y: 2 }
+  )
+
   const main = await mainThreadLayoutExecutor().execute({
     id: 'main',
     phase: 'commit',
@@ -275,11 +485,15 @@ async function testSchedulerAndExecutors() {
   const workerResult = await worker.execute({
     id: 'worker',
     phase: 'commit',
-    layout: baseLayout,
-    operation: { type: 'compact' },
+    layout: [
+      { i: 'a', x: 0, y: 0, w: 1, h: 1 },
+      { i: 'b', x: 1, y: 0, w: 1, h: 1 }
+    ],
+    operation: { type: 'groupMove', ids: ['a', 'b'], dx: 1, dy: 1 },
     options
   })
-  assert.ok(['changed', 'noop'].includes(workerResult.status))
+  assert.equal(workerResult.status, 'changed')
+  assert.equal(workerResult.diagnostics?.operationType, 'groupMove')
   worker.dispose?.()
 }
 
@@ -322,15 +536,37 @@ function testLargeSmokeCases() {
   }
 }
 
+function testGroupMoveLegacyComparison() {
+  const events: string[] = []
+  const engine = createLayoutEngine({
+    ...options,
+    compareLegacy: true,
+    onEvent: event => events.push(event.type)
+  }, [
+    { i: 'a', x: 0, y: 0, w: 1, h: 1 },
+    { i: 'b', x: 1, y: 0, w: 1, h: 1 }
+  ])
+  const result = engine.execute({
+    id: 'group-legacy-compare',
+    phase: 'commit',
+    operation: { type: 'groupMove', ids: ['a', 'b'], dx: 1, dy: 0 }
+  })
+  assert.equal(result.status, 'changed')
+  assert.equal(events.includes('legacy-mismatch'), false)
+}
+
 async function main() {
   testIndex()
   testMoveCompactParity()
   testStatefulEngineIndexLifecycle()
   testNoopAndBlocked()
+  testGroupMoveValidationAndParity()
+  testGroupMoveCollisionsAndCompaction()
   testResizeDropResponsive()
   testInteractionController()
   testPublicComponentSurface()
   testLargeSmokeCases()
+  testGroupMoveLegacyComparison()
   await testSchedulerAndExecutors()
 }
 

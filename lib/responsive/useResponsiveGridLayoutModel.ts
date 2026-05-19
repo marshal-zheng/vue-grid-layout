@@ -26,7 +26,9 @@ import {
 } from "../layout-engine";
 import type {
   GridLayoutEngineOptions,
-  GridLayoutEngineProp
+  GridLayoutEngineProp,
+  LayoutOperation,
+  LayoutOperationResult
 } from "../layout-engine";
 import { createGridEditorController } from "../editor";
 import type { GridEditorController, GridEditorProp } from "../editor";
@@ -78,6 +80,38 @@ type UseResponsiveGridLayoutModelOptions = {
   };
   emit: ResponsiveEmit;
 };
+
+const unsupportedLayoutResult = (
+  id: string,
+  layout: Layout,
+  operation: LayoutOperation
+): LayoutOperationResult => ({
+  id,
+  status: "blocked",
+  layout,
+  patches: [],
+  affectedIds: [],
+  collisions: [],
+  blocked: {
+    reason: "unsupported",
+    itemIds: operation.type === "groupMove"
+      ? operation.ids
+      : "id" in operation
+        ? [operation.id]
+        : []
+  },
+  diagnostics: {
+    operationId: id,
+    operationType: operation.type,
+    phase: "commit",
+    layoutSize: layout.length,
+    affectedCount: 0,
+    collisionCount: 0,
+    indexHit: false,
+    executorKind: "main-thread",
+    durationMs: 0
+  }
+});
 
 export function getIndentationValue<T extends Array<number> | null>(
   param: { [key: string]: T } | T,
@@ -165,34 +199,6 @@ export function useResponsiveGridLayoutModel({
       })
     : null;
 
-  const editorConfig = props.editor && typeof props.editor === "object"
-    ? props.editor
-    : null;
-  const editorController: GridEditorController | null = editorConfig
-    ? editorConfig.controller || createGridEditorController({
-        ...editorConfig,
-        kind: "responsive",
-        layout: toRef(state, "layout") as Ref<Layout>,
-        layouts: toRef(state, "layouts") as Ref<LayoutsMap>,
-        breakpoint: toRef(state, "breakpoint") as Ref<string>,
-        persistence: (persistenceController as never) || editorConfig.persistence
-      })
-    : null;
-
-  const onLayoutChange = (layout: Layout) => {
-    if (restoringPersistence) return;
-    const nextLayout = cloneLayout(layout);
-    const newLayouts = {
-      ...state.layouts,
-      [state.breakpoint]: nextLayout
-    };
-    state.layout = nextLayout;
-    state.layouts = newLayouts;
-    emit("update:layouts", newLayouts);
-    emit("layoutChange", nextLayout, newLayouts);
-    persistenceController?.commit(cloneLayoutsMap(newLayouts), { source: "component" });
-  };
-
   const getLayoutEngineProp = () =>
     props.layoutEngine && typeof props.layoutEngine === "object"
       ? props.layoutEngine
@@ -233,6 +239,47 @@ export function useResponsiveGridLayoutModel({
       diagnostics: config?.diagnostics,
       onEvent: config?.onEvent
     };
+  };
+
+  const editorConfig = props.editor && typeof props.editor === "object"
+    ? props.editor
+    : null;
+  const editorController: GridEditorController | null = editorConfig
+    ? editorConfig.controller || createGridEditorController({
+        ...editorConfig,
+        kind: "responsive",
+        layout: toRef(state, "layout") as Ref<Layout>,
+        layouts: toRef(state, "layouts") as Ref<LayoutsMap>,
+        breakpoint: toRef(state, "breakpoint") as Ref<string>,
+        layoutOperationRunner: editorConfig.layoutOperationRunner || (input => {
+          const id = `${input.commandId}:layout`;
+          if (isLegacyLayoutEngine()) {
+            return unsupportedLayoutResult(id, input.layout, input.operation);
+          }
+          return executeLayoutOperation({
+            id,
+            phase: input.phase,
+            layout: input.layout,
+            operation: input.operation,
+            options: getLayoutEngineOptions(state.cols, resolveCompactType(props))
+          });
+        }),
+        persistence: (persistenceController as never) || editorConfig.persistence
+      })
+    : null;
+
+  const onLayoutChange = (layout: Layout) => {
+    if (restoringPersistence) return;
+    const nextLayout = cloneLayout(layout);
+    const newLayouts = {
+      ...state.layouts,
+      [state.breakpoint]: nextLayout
+    };
+    state.layout = nextLayout;
+    state.layouts = newLayouts;
+    emit("update:layouts", newLayouts);
+    emit("layoutChange", nextLayout, newLayouts);
+    persistenceController?.commit(cloneLayoutsMap(newLayouts), { source: "component" });
   };
 
   const onWidthChange = (prevProps) => {
