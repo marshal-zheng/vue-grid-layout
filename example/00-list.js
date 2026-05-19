@@ -23,7 +23,9 @@ const demos = [
   ["Persistence - localStorage", "18-persistence"],
   ["Persistence - sessionStorage", "19-persistence-sessionstorage"],
   ["Persistence - IndexedDB", "20-persistence-indexeddb"],
-  ["Persistence - Remote HTTP", "21-persistence-remote-http"]
+  ["Persistence - Remote HTTP", "21-persistence-remote-http"],
+  ["Layout Engine Diagnostics / Worker", "22-layout-engine-performance"],
+  ["Professional Dashboard Editor", "23-professional-dashboard-editor"]
 ];
 
 const App = {

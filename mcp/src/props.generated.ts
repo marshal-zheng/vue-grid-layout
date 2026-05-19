@@ -536,6 +536,66 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     }
   },
   {
+    "name": "persistence",
+    "component": "VueGridLayout",
+    "definedIn": "basicProps",
+    "description": "Durable save/load persistence configuration",
+    "vueRuntimeTypes": [
+      "Boolean",
+      "Object"
+    ],
+    "tsType": "GridLayoutPersistenceProp",
+    "default": "false",
+    "hasDefault": true,
+    "defaultIsFactory": false,
+    "required": null,
+    "validator": null,
+    "sourceType": "[Boolean, Object] as PropType<GridLayoutPersistenceProp>",
+    "source": {
+      "file": "lib/VueGridLayoutPropTypes.ts"
+    }
+  },
+  {
+    "name": "layoutEngine",
+    "component": "VueGridLayout",
+    "definedIn": "basicProps",
+    "description": "Layout engine configuration; false or { mode: \"legacy\" } uses the legacy path",
+    "vueRuntimeTypes": [
+      "Boolean",
+      "Object"
+    ],
+    "tsType": "false | GridLayoutEngineProp",
+    "default": "undefined",
+    "hasDefault": true,
+    "defaultIsFactory": false,
+    "required": null,
+    "validator": null,
+    "sourceType": "[Boolean, Object] as PropType<false | GridLayoutEngineProp>",
+    "source": {
+      "file": "lib/VueGridLayoutPropTypes.ts"
+    }
+  },
+  {
+    "name": "editor",
+    "component": "VueGridLayout",
+    "definedIn": "basicProps",
+    "description": "Headless professional editor controller/options. Disabled by default.",
+    "vueRuntimeTypes": [
+      "Boolean",
+      "Object"
+    ],
+    "tsType": "false | GridEditorProp",
+    "default": "false",
+    "hasDefault": true,
+    "defaultIsFactory": false,
+    "required": null,
+    "validator": null,
+    "sourceType": "[Boolean, Object] as PropType<false | GridEditorProp>",
+    "source": {
+      "file": "lib/VueGridLayoutPropTypes.ts"
+    }
+  },
+  {
     "name": "droppingItem",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
@@ -764,6 +824,66 @@ export const RESPONSIVE_VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "required": null,
     "validator": "(value: CompactType) => value == null || ['vertical', 'horizontal'].includes(value)",
     "sourceType": "String as PropType<CompactType>",
+    "source": {
+      "file": "lib/ResponsiveVueGridLayout.tsx"
+    }
+  },
+  {
+    "name": "persistence",
+    "component": "ResponsiveVueGridLayout",
+    "definedIn": "defineComponent.props",
+    "description": "Durable save/load persistence configuration for all breakpoint layouts",
+    "vueRuntimeTypes": [
+      "Boolean",
+      "Object"
+    ],
+    "tsType": "ResponsiveGridLayoutPersistenceProp",
+    "default": "false",
+    "hasDefault": true,
+    "defaultIsFactory": false,
+    "required": null,
+    "validator": null,
+    "sourceType": "[Boolean, Object] as PropType<ResponsiveGridLayoutPersistenceProp>",
+    "source": {
+      "file": "lib/ResponsiveVueGridLayout.tsx"
+    }
+  },
+  {
+    "name": "layoutEngine",
+    "component": "ResponsiveVueGridLayout",
+    "definedIn": "defineComponent.props",
+    "description": "Layout engine configuration for responsive heavy operations and the inner grid",
+    "vueRuntimeTypes": [
+      "Boolean",
+      "Object"
+    ],
+    "tsType": "false | GridLayoutEngineProp",
+    "default": "undefined",
+    "hasDefault": true,
+    "defaultIsFactory": false,
+    "required": null,
+    "validator": null,
+    "sourceType": "[Boolean, Object] as PropType<false | GridLayoutEngineProp>",
+    "source": {
+      "file": "lib/ResponsiveVueGridLayout.tsx"
+    }
+  },
+  {
+    "name": "editor",
+    "component": "ResponsiveVueGridLayout",
+    "definedIn": "defineComponent.props",
+    "description": "Headless professional editor controller/options. Disabled by default.",
+    "vueRuntimeTypes": [
+      "Boolean",
+      "Object"
+    ],
+    "tsType": "false | GridEditorProp",
+    "default": "false",
+    "hasDefault": true,
+    "defaultIsFactory": false,
+    "required": null,
+    "validator": null,
+    "sourceType": "[Boolean, Object] as PropType<false | GridEditorProp>",
     "source": {
       "file": "lib/ResponsiveVueGridLayout.tsx"
     }

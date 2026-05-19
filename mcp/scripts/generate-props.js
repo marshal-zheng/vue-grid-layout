@@ -31,6 +31,7 @@ const TYPE_TARGETS = [
   'LayoutItem',
   'Layout',
   'AutoScrollOptions',
+  'GridLayoutInteractionEventProps',
   'VueGridLayoutProps',
   'ResponsiveProps',
   'WidthProviderProps',

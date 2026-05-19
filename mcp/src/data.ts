@@ -153,6 +153,7 @@ const TYPE_OTHER_TYPES = [
   formatTypeDef('ResizeHandle'),
   formatTypeDef('AutoScrollOptions'),
   formatTypeDef('ItemCallback'),
+  formatTypeDef('GridLayoutInteractionEventProps'),
 ].join('\n\n')
 
 export const DOCS = `# @marsio/vue-grid-layout
@@ -271,7 +272,7 @@ ${vueGridLayoutPropsTable}
 
 ${responsivePropsTable}
 
-说明：组件会将未声明的 attrs 透传给内部 \`VueGridLayout\`（例如 \`rowHeight\` / \`isDraggable\` / \`isResizable\` 等）。布局数据由 \`layouts\` + \`layoutChange\` 管理，\`modelValue\` / \`cols\` / \`margin\` / \`containerPadding\` 等会由内部计算并覆盖。
+说明：组件会将未声明的 attrs 透传给内部 \`VueGridLayout\`（例如 \`rowHeight\` / \`isDraggable\` / \`isResizable\` 等）。布局数据由 \`layouts\` + \`layoutChange\` 管理，\`modelValue\` / \`cols\` / \`margin\` / \`containerPadding\` 等会由内部计算并覆盖。拖拽、缩放和外部 drop 事件也会透传给内部 \`VueGridLayout\`，payload 与基础组件保持一致。
 
 ### 事件
 
@@ -280,6 +281,10 @@ ${responsivePropsTable}
 | \`layoutChange\` | \`(layout: Layout, layouts: Record<string, Layout>) => void\` | 布局变更 |
 | \`breakpointChange\` | \`(breakpoint: string, cols: number) => void\` | 断点变化 |
 | \`widthChange\` | \`(width: number, margin: [number, number], cols: number, containerPadding: [number, number]) => void\` | 宽度变化 |
+| \`dragStart\` / \`drag\` / \`dragStop\` | \`ItemCallback\` | 透传内部网格拖拽事件 |
+| \`resizeStart\` / \`resize\` / \`resizeStop\` | \`ItemCallback\` | 透传内部网格缩放事件 |
+| \`drop\` | \`(layout: Layout, e: Event, item?: LayoutItem) => void\` | 透传内部网格外部 drop 事件 |
+| \`dropDragOver\` | \`(e: DragEvent) => { w?: number; h?: number } \\| false\` | 透传内部网格 return-valued drop drag over 事件 |
 
 ### 默认值
 

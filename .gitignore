@@ -3,6 +3,7 @@
 node_modules/
 build/
 docs/
+.tmp/
 
 # OS
 .DS_Store

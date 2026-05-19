@@ -8,6 +8,7 @@ import type {
 import type { GridHistoryStore } from './history'
 import type { GridLayoutPersistenceProp } from './persistence'
 import type { GridLayoutEngineProp } from './layout-engine'
+import type { GridEditorProp } from './editor'
 
 interface DroppingItem {
   i: string;
@@ -74,6 +75,7 @@ export type Props = {
   historyStore?: GridHistoryStore
   persistence?: GridLayoutPersistenceProp
   layoutEngine?: false | GridLayoutEngineProp
+  editor?: false | GridEditorProp
   innerRef?: Ref<"div">
 };
 
@@ -251,6 +253,11 @@ export const basicProps = {
   layoutEngine: {
     type: [Boolean, Object] as PropType<false | GridLayoutEngineProp>,
     default: undefined
+  },
+  /** Headless professional editor controller/options. Disabled by default. */
+  editor: {
+    type: [Boolean, Object] as PropType<false | GridEditorProp>,
+    default: false
   },
   /** Placeholder config for external drop { i, w, h } */
   droppingItem: {

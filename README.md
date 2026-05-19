@@ -17,6 +17,7 @@ VGL is Vue3-only and does not require jQuery.
 - [Usage](#usage)
 - [History (Pinia-powered undo/redo)](#history-pinia-powered-undoredo)
 - [Layout Persistence](#layout-persistence)
+- [Professional Dashboard Editor](#professional-dashboard-editor)
 - [Layout Engine Performance](#layout-engine-performance)
 - [Responsive Usage](#responsive-usage)
 - [Providing Grid Width](#providing-grid-width)
@@ -42,6 +43,7 @@ VGL is Vue3-only and does not require jQuery.
 1. [Allow Overlap](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/15-allow-overlap.js)
 1. [History / Undo-Redo](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/16-history.js)
 1. [Persistence](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/18-persistence.js)
+1. [Professional Dashboard Editor](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/23-professional-dashboard-editor.js)
 
 ## Features
 
@@ -205,6 +207,116 @@ Built-in adapters:
 - `indexedDBAdapter()` for larger browser-local documents without blocking on string-only Web Storage.
 - `remoteHttpAdapter()` for simple REST backends using `GET`, `PUT` and `DELETE`.
 - `memoryPersistenceAdapter()` for tests and demos.
+
+## Professional Dashboard Editor
+
+The professional editor API is headless-first. Use `useGridEditor()` or pass an `editor` prop to `VueGridLayout` / `ResponsiveVueGridLayout` to get mode, selection, commands, metadata, keyboard, clipboard, guides, dirty/conflict state and CSS contracts without adopting a bundled toolbar or product shell.
+
+```ts
+import {
+  useGridEditor,
+  internalGridEditorClipboard,
+  memoryPersistenceAdapter
+} from "@marsio/vue-grid-layout";
+
+const editor = useGridEditor({
+  layout,
+  defaultMode: "edit",
+  clipboard: internalGridEditorClipboard,
+  beforeCommand: async ({ command }) => {
+    if (command.type === "delete" && !canDelete.value) {
+      return { status: "block", reason: "before-command-blocked" };
+    }
+    return { status: "allow" };
+  }
+});
+```
+
+Editor fundamentals:
+
+- `mode` is controlled; `defaultMode` is uncontrolled. If editor is enabled without either value, it fail-safes to `view` and emits `editor-mode-missing`.
+- Commands include `select`, `clearSelection`, `move`, `resize`, `add`, `delete`, `duplicate`, `copy`, `paste`, `align`, `distribute`, `tidy`, `lock`, `unlock`, `show`, `hide`, `save`, `discard`, `reset`, `undo`, `redo`, `section-row-collapse`, `section-row-expand`, `section-row-move`, `section-row-delete` and `section-row-reorder`.
+- `canExecute()` performs synchronous mode/capability checks for disabled toolbar states. `execute()` runs the same checks, optional async `beforeCommand`, then commits mutation only after the guard resolves.
+- `selectedIds`, `activeId`, `anchorId` and `selection.mode` support single and multiple selection. Selection/focus commands do not write persistence or layout history.
+- Item editor metadata lives in sidecar `editorMetaById`; `locked`, `visible`, `editable`, `deletable`, `duplicatable` and `copyable` are not written into `LayoutItem` by default.
+- `visible: false` preserves the layout item but does not render it. It is not permission isolation.
+- `meta.editor` stores `{ version, editorMetaById, sectionRows, updatedAt }` in the same persistence document as layout data. Do not store sensitive permission data in `meta.editor`; enforce permissions on your server or in `beforeCommand`.
+- Default copy/paste uses `internalGridEditorClipboard`; `systemClipboardAdapter()` is optional and safely reports unavailable or denied clipboard access.
+- Keyboard editing covers arrows, accelerated arrows, Alt+arrows resize, Delete/Backspace, Cmd/Ctrl+C/V/D/S and Esc. Input, textarea, select and contenteditable targets are ignored.
+- CSS state classes include `.editor-enabled`, `.editor-mode-view`, `.editor-mode-edit`, `.editor-selected`, `.editor-active`, `.editor-locked`, `.editor-hidden`, `.editor-readonly`, `.editor-keyboard-editing`, `.editor-drop-target` and guide classes.
+- Smart guides keep full candidates in `guides` and expose the product-safe subset in `displayGuides`. By default drag/drop renders at most 3 guides, resize renders at most 2, and only one spacing guide receives a distance label. `debug: "layer"` or `debug: "panel"` exposes full candidates separately from the default user-facing guides.
+- Background grid lines are optional editing scaffolding, not smart guides. `showGrid` defaults to interaction-only rendering, uses `.editor-guide-grid`, and stays visually below placeholder, active item, snapped guide and candidate guide layers.
+- Alignment guides use blue guide styling and endpoint markers to show which edge or center is aligned. Spacing guides use green dashed styling plus a short label such as `2 cols` or `1 row`; non-debug mode should not show full-canvas high-saturation lines or label every candidate.
+
+L3 layout intelligence APIs are stable headless APIs:
+
+```ts
+const intelligence = computeGridEditorIntelligence({
+  layout,
+  activeItem,
+  candidateItem,
+  selectionIds: editor.selection.value.selectedIds,
+  metaById: editor.editorMetaById.value,
+  sectionRows: editor.sectionRows.value,
+  cols: 12,
+  interaction: "toolbar"
+});
+
+const toolbar = editor.getToolbarState();
+
+const alignPreview = applyGridEditorAlign(layout, {
+  mode: "left",
+  target: { type: "selection-bounds" }
+}, {
+  targetIds: editor.selection.value.selectedIds,
+  sectionRows: editor.sectionRows.value,
+  cols: 12
+});
+
+const distributePreview = applyGridEditorDistribute(layout, {
+  mode: "horizontal",
+  strategy: "edge-to-edge",
+  bounds: "active-item"
+}, {
+  targetIds: editor.selection.value.selectedIds,
+  activeId: editor.selection.value.activeId,
+  cols: 12
+});
+
+await editor.execute({
+  type: "align",
+  source: "toolbar",
+  payload: { mode: "left", target: { type: "selection-bounds" }, cols: 12 }
+});
+
+await editor.execute({
+  type: "distribute",
+  source: "toolbar",
+  payload: { mode: "horizontal", strategy: "edge-to-edge", cols: 12 }
+});
+
+await editor.execute({
+  type: "section-row-collapse",
+  source: "toolbar",
+  payload: { id: "executive-row" }
+});
+```
+
+`applyGridEditorAlign()`, `applyGridEditorDistribute()`, `deriveGridEditorToolbarState()` and `getToolbarState()` are headless state helpers. The toolbar in `example/23-professional-dashboard-editor.js` is demonstration UI only; its DOM, labels and styling are not API. `snap: false` still allows predictive guide calculation, but snapped visual state and preview/commit geometry correction are disabled. Snap candidates include edge, center, spacing and section/row bounds. Legacy guide options such as `thresholdPx`, `showSpacingLabels` and `maxVisibleGuides` continue to map into intelligence options.
+
+Event order for committed layout commands is:
+
+1. `command-start`
+1. synchronous capability check
+1. optional `beforeCommand`
+1. `command-commit`
+1. component `layoutChange`
+1. `update:modelValue` or `update:layouts`
+1. editor history and persistence dirty/save state
+
+Metadata-only commands emit editor command/state events and update editor history/dirty state without emitting `layoutChange`.
+
+Known editor limits: group resize returns `multi-resize-unsupported`, section/row metadata is a client editing model rather than a permission boundary, system clipboard depends on browser permission, hidden items are not a security boundary, and legacy `historyStore` remains layout-only while editor history tracks layout, metadata, selection and focus.
 
 ### localStorage refresh recovery
 
@@ -745,6 +857,13 @@ onLayoutChange: (currentLayout: Layout, allLayouts) => void,
 
 // Callback when the width changes, so you can modify the layout as needed.
 onWidthChange: (containerWidth: number, margin: [number, number], cols: number, containerPadding: [number, number]) => void;
+
+// ResponsiveVueGridLayout forwards inner VueGridLayout interaction events.
+// Payloads match the base grid exactly.
+onDragStart / onDrag / onDragStop: ItemCallback,
+onResizeStart / onResize / onResizeStop: ItemCallback,
+onDrop: (layout: Layout, e: Event, item?: LayoutItem) => void,
+onDropDragOver: (e: DragEvent) => { w?: number; h?: number } | false,
 
 ```
 

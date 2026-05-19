@@ -1,110 +1,40 @@
 import { defineComponent, VNode, reactive, ref, Ref, CSSProperties, PropType, onMounted, h, watch, computed } from 'vue'
 import { DraggableCore } from "@marsio/vue-draggable";
 import { Resizable } from "@marsio/vue-resizable";
-import clsx from "clsx";
-import {
-  perc,
-  resizeItemInDirection,
-  setTopLeft,
-  setTransform,
-} from "./utils";
 import {
   calcGridItemPosition,
-  calcGridItemWHPx,
-  calcGridColWidth,
-  calcXY,
-  calcWH,
-  clamp
 } from "./calculateUtils";
 import {
   resizeHandleAxesType,
-  resizeHandleType,
-  ResizeHandle
+  resizeHandleType
 } from "./VueGridLayoutPropTypes";
-import { Kv } from './type'
 
 import type {
-  VueDraggableCallbackData,
-  GridDragEvent,
-  GridResizeEvent,
   DroppingPosition,
-  Position,
-  ResizeHandleAxis
+  Position
 } from "./utils";
 
-import { PositionParams } from "./calculateUtils";
+import type { PositionParams } from "./calculateUtils";
+import {
+  useGridItemDrag,
+  type GridItemDragAttrs
+} from "./grid-item/useGridItemDrag";
+import {
+  useGridItemResize,
+  type GridItemResizeAttrs
+} from "./grid-item/useGridItemResize";
+import {
+  createGridItemClassName,
+  createGridItemMergedStyle,
+  createGridItemPositionStyle
+} from "./grid-item/gridItemStyle";
 
-export interface AttrsEvents {
-  onDrag?: GridItemCallback<GridDragEvent>,
-  onDragStart?: GridItemCallback<GridDragEvent>,
-  onDragStop?: GridItemCallback<GridDragEvent>,
-  onResize?: GridItemCallback<GridResizeEvent>,
-  onResizeStart?: GridItemCallback<GridResizeEvent>,
-  onResizeStop?: GridItemCallback<GridResizeEvent>
-}
-
-type PartialPosition = { top: number, left: number };
-type GridItemCallback<Data extends GridDragEvent | GridResizeEvent> = (
-  i: string,
-  w: number,
-  h: number,
-  data: Data
-) => void;
-
-type ResizeCallbackData = {
-  node: HTMLElement,
-  size: Position,
-  handle: ResizeHandleAxis
-};
-
-type GridItemResizeCallback = (
-  e: Event,
-  data: ResizeCallbackData,
-  position: Position
-) => void;
+export type AttrsEvents = GridItemDragAttrs & GridItemResizeAttrs;
 
 type State = {
   resizing?: { top: number, left: number, width: number, height: number } | null,
   dragging?: { top: number, left: number } | null,
   className: string
-};
-
-type Props = {
-  cols: number,
-  containerWidth: number,
-  margin: [number, number],
-  containerPadding: [number, number],
-  rowHeight: number,
-  maxRows: number,
-  isDraggable: boolean,
-  isResizable: boolean,
-  isBounded: boolean,
-  isDragBlocked: boolean,
-  isResizeBlocked: boolean,
-  static?: boolean,
-  useCSSTransforms?: boolean,
-  usePercentages?: boolean,
-  transformScale: number,
-  droppingPosition?: DroppingPosition | null,
-
-  className: string,
-  style?: Kv,
-  cancel: string,
-  handle: string,
-
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-
-  minW: number,
-  maxW: number,
-  minH: number,
-  maxH: number,
-  i: string,
-
-  resizeHandles?: ResizeHandleAxis[],
-  resizeHandle?: ResizeHandle,
 };
 
 const componentName = 'GridItem'
@@ -132,6 +62,10 @@ const GridItem = defineComponent({
     i: { type: String, required: true },
     resizeHandles: resizeHandleAxesType, // Define more specific type if necessary
     resizeHandle: resizeHandleType, // Define more specific type if necessary
+    onItemClick: {
+      type: Function as PropType<(event: MouseEvent) => void>,
+      default: undefined
+    },
     isDraggable: { type: Boolean, required: true },
     isResizable: { type: Boolean, required: true },
     isBounded: { type: Boolean, required: true },
@@ -166,211 +100,19 @@ const GridItem = defineComponent({
       rowHeight: props.rowHeight
     }));
 
-    const resizeConstraints = computed(() => {
-      const { cols, minW, minH, maxW, maxH } = props;
-      const positionParamsValue = positionParams.value;
-
-      // This is the max possible width - doesn't go to infinity because of the width of the window
-      const maxWidth = calcGridItemPosition(positionParamsValue, 0, 0, cols, 0).width;
-
-      // Calculate min/max constraints using our min & maxes
-      const mins = calcGridItemPosition(positionParamsValue, 0, 0, minW, minH);
-      const maxes = calcGridItemPosition(positionParamsValue, 0, 0, maxW, maxH);
-
-      return {
-        minConstraints: [mins.width, mins.height] as [number, number],
-        maxConstraints: [
-          Math.min(maxes.width, maxWidth),
-          Math.min(maxes.height, Infinity)
-        ] as [number, number]
-      };
+    const drag = useGridItemDrag({
+      attrs: vAttrs,
+      elementRef,
+      positionParams,
+      props,
+      state
     });
-
-    /**
-     * onDragStart event handler
-     * @param  {Event}  e             event data
-     * @param  {Object} callbackData  an object with node, delta and position information
-     */
-    const onDragStart = (e: Event, { node }: VueDraggableCallbackData) => {
-      const { onDragStart: dragStart } = vAttrs
-      if (!dragStart) return;
-
-      const pos = calcGridItemPosition(
-        positionParams.value,
-        props.x,
-        props.y,
-        props.w,
-        props.h,
-        state
-      );
-      const newPosition: PartialPosition = { top: pos.top, left: pos.left };
-      state.dragging = newPosition
-
-      // Call callback with this data
-      const { x, y } = calcXY(
-        positionParams.value,
-        newPosition.top,
-        newPosition.left,
-        props.w,
-        props.h
-      );
-
-
-      dragStart(props.i, x, y, {
-        e,
-        node,
-        newPosition
-      });
-    };
-
-    /**
-     * onDrag event handler
-     * @param  {Event}  e             event data
-     * @param  {Object} callbackData  an object with node, delta and position information
-     */
-    const onDrag = (
-      e: Event,
-      { node, deltaX, deltaY }: VueDraggableCallbackData
-    ) => {
-      const { onDrag } = vAttrs;
-      if (!onDrag) return;
-
-      if (!state.dragging) {
-        throw new Error("onDrag called before onDragStart.");
-      }
-      let top = state.dragging.top + deltaY;
-      let left = state.dragging.left + deltaX;
-
-      const { isBounded, w, h, containerWidth } = props;
-      const positionParamsValue = positionParams.value;
-
-      // Boundary calculations; keeps items within the grid
-      if (isBounded) {
-        const { offsetParent } = node;
-
-        if (offsetParent) {
-          // const { margin, rowHeight, containerPadding } = props;
-          const { margin, rowHeight } = props
-          const bottomBoundary = offsetParent.clientHeight - calcGridItemWHPx(h, rowHeight, margin[1]);
-          top = clamp(top, 0, bottomBoundary)
-
-          const colWidth = calcGridColWidth(positionParamsValue);
-          const rightBoundary =
-            containerWidth - calcGridItemWHPx(w, colWidth, margin[0]);
-          left = clamp(left, 0, rightBoundary);
-        }
-      }
-
-      const newPosition: PartialPosition = { top, left };
-      state.dragging = newPosition;
-
-      // Call callback with this data
-      const { x, y } = calcXY(positionParamsValue, top, left, w, h);
-      onDrag(props.i, x, y, {
-        e,
-        node,
-        newPosition
-      });
-    };
-
-    /**
-     * onDragStop event handler
-     * @param  {Event}  e             event data
-     * @param  {Object} callbackData  an object with node, delta and position information
-     */
-    const onDragStop = (e: Event, { node }: VueDraggableCallbackData) => {
-      const { onDragStop: dragStop } = vAttrs
-      if (!dragStop) return;
-
-      if (!state.dragging) {
-        throw new Error("onDragEnd called before onDragStart.");
-      }
-      const { w, h } = props;
-      const { left, top } = state.dragging;
-      const newPosition: PartialPosition = { top, left };
-      state.dragging = null
-
-      const { x, y } = calcXY(positionParams.value, top, left, w, h);
-
-      dragStop(props.i, x, y, {
-        e,
-        node,
-        newPosition
-      });
-    };
-
-    /**
-     * Wrapper around resize events to provide more useful data.
-     */
-    const onResizeHandler = (
-      e: Event,
-      { node, size, handle }: ResizeCallbackData, // 'size' is updated position
-      position: Position, // existing position
-      handlerName: string
-    ): void => {
-      const handler = vAttrs[handlerName];
-      if (!handler) return;
-      const { x, y, i, maxH, minH, maxW, minW, containerWidth } = props;
-
-      // Clamping of dimensions based on resize direction
-      let updatedSize = size;
-      if (node) {
-        updatedSize = resizeItemInDirection(
-          handle,
-          position,
-          size,
-          containerWidth
-        );
-        state.resizing = handlerName === "onResizeStop" ? null : updatedSize
-      }
-
-      // Get new XY based on pixel size
-      let { w, h } = calcWH(
-        positionParams.value,
-        updatedSize.width,
-        updatedSize.height,
-        x,
-        y,
-        handle
-      );
-
-      // Min/max capping.
-      // minW should be at least 1 (TODO propTypes validation?)
-      w = clamp(w, Math.max(minW, 1), maxW);
-      h = clamp(h, minH, maxH);
-
-      handler.call(this, i, w, h, { e, node, size: updatedSize, handle });
-    }
-
-    const onResizeStop: GridItemResizeCallback = (e, callbackData, position) =>
-      onResizeHandler(e, callbackData, position, "onResizeStop");
-
-    const onResizeStart: GridItemResizeCallback = (e, callbackData, position) =>
-      onResizeHandler(e, callbackData, position, "onResizeStart");
-
-    const onResize: GridItemResizeCallback = (e, callbackData, position) =>
-      onResizeHandler(e, callbackData, position, "onResize");
-
-    const createStyle = (pos: Position): { [key: string]: string } => {
-      const { usePercentages, containerWidth, useCSSTransforms } = props;
-
-      let style;
-      // CSS Transforms support (default)
-      if (useCSSTransforms) {
-        style = setTransform(pos);
-      } else {
-        // top,left (slow)
-        style = setTopLeft(pos);
-
-        // This is used for server rendering.
-        if (usePercentages) {
-          style.left = perc(pos.left / containerWidth);
-          style.width = perc(pos.width / containerWidth);
-        }
-      }
-
-      return style;
-    }
+    const resize = useGridItemResize({
+      attrs: vAttrs,
+      positionParams,
+      props,
+      state
+    });
 
     const mixinDraggable = (
       child: VNode,
@@ -380,9 +122,9 @@ const GridItem = defineComponent({
       return (
         <DraggableCore
           disabled={!isDraggable}
-          startFn={onDragStart}
-          dragFn={onDrag}
-          stopFn={onDragStop}
+          startFn={drag.onDragStart}
+          dragFn={drag.onDrag}
+          stopFn={drag.onDragStop}
           handle={props.handle}
           cancel={`.vue-resizable-handle${props.cancel ? `,${props.cancel}` : ''}`}
           scale={props.transformScale}
@@ -393,52 +135,12 @@ const GridItem = defineComponent({
       );
     }
 
-    const curryResizeHandler = (position: Position, handler) => {
-      return (e: Event, data: ResizeCallbackData) =>
-        handler(e, data, position);
-    }
-
     watch(
       () => props.droppingPosition,
       (_nextDroppingPosition, prevDroppingPosition) => {
-        moveDroppingItem(prevDroppingPosition);
+        drag.moveDroppingItem(prevDroppingPosition);
       }
     );
-
-    const moveDroppingItem = (
-      prevDroppingPosition?: Partial<Props>["droppingPosition"] | null
-    ) => {
-      const { droppingPosition } = props;
-      if (!droppingPosition) return;
-      const node = elementRef.value;
-      // Can't find DOM node (are we unmounted?)
-
-      if (!node) return;
-
-      const prevPosition = prevDroppingPosition || { left: 0, top: 0 };
-      const { dragging } = state;
-
-      const shouldDrag =
-        (dragging && droppingPosition.left !== prevPosition.left) ||
-        droppingPosition.top !== prevPosition.top;
-
-      if (!dragging) {
-        onDragStart(droppingPosition.e, {
-          node,
-          deltaX: droppingPosition.left,
-          deltaY: droppingPosition.top
-        });
-      } else if (shouldDrag) {
-        const deltaX = droppingPosition.left - dragging.left;
-        const deltaY = droppingPosition.top - dragging.top;
-
-        onDrag(droppingPosition.e, {
-          node,
-          deltaX,
-          deltaY
-        });
-      }
-    }
 
     const mixinResizable = (
       child: VNode,
@@ -450,7 +152,7 @@ const GridItem = defineComponent({
         resizeHandles,
         resizeHandle
       } = props;
-      const { minConstraints, maxConstraints } = resizeConstraints.value;
+      const { minConstraints, maxConstraints } = resize.resizeConstraints.value;
       return (
         <Resizable
           // These are opts for the resize handle itself
@@ -462,9 +164,9 @@ const GridItem = defineComponent({
           height={position.height}
           minConstraints={minConstraints}
           maxConstraints={maxConstraints}
-          fnResizeStop={curryResizeHandler(position, onResizeStop)}
-          fnResizeStart={curryResizeHandler(position, onResizeStart)}
-          fnResize={curryResizeHandler(position, onResize)}
+          fnResizeStop={resize.curryResizeHandler(position, resize.onResizeStop)}
+          fnResizeStart={resize.curryResizeHandler(position, resize.onResizeStart)}
+          fnResize={resize.curryResizeHandler(position, resize.onResize)}
           transformScale={transformScale}
           resizeHandles={resizeHandles}
           handle={resizeHandle}
@@ -476,7 +178,7 @@ const GridItem = defineComponent({
 
 
     onMounted(() => {
-      moveDroppingItem();
+      drag.moveDroppingItem();
     });
 
     return () => {
@@ -502,27 +204,29 @@ const GridItem = defineComponent({
       if (!child) return null;
 
       const wrapperProps = {
-        class: clsx(
-          "vue-grid-item",
-          child.props?.class,
-          props.class,
-          {
-            static: props.static,
-            resizing: Boolean(state.resizing),
-            "vue-draggable": isDraggable,
-            "has-drag-handle": Boolean(props.handle),
-            "drag-blocked": props.isDragBlocked,
-            "resize-blocked": props.isResizeBlocked,
-            "vue-draggable-dragging": Boolean(state.dragging),
-            dropping: Boolean(droppingPosition),
-            cssTransforms: useCSSTransforms
-          }
-        ),
-        style: {
-          ...props.style,
-          ...child.props?.style,
-          ...createStyle(pos)
-        }
+        class: createGridItemClassName({
+          childClass: child.props?.class,
+          className: props.class,
+          dropping: Boolean(droppingPosition),
+          hasDragHandle: Boolean(props.handle),
+          isDragBlocked: props.isDragBlocked,
+          isDraggable,
+          isDragging: Boolean(state.dragging),
+          isResizeBlocked: props.isResizeBlocked,
+          isResizing: Boolean(state.resizing),
+          isStatic: props.static,
+          useCSSTransforms
+        }),
+        onClick: props.onItemClick,
+        style: createGridItemMergedStyle(
+          props.style,
+          child.props?.style,
+          createGridItemPositionStyle(pos, {
+            containerWidth: props.containerWidth,
+            useCSSTransforms,
+            usePercentages: props.usePercentages
+          })
+        )
       }
 
       // Resizable support. This is usually on but the user can toggle it off.

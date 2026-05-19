@@ -1,59 +1,21 @@
-import { defineComponent, PropType, reactive, watch, Fragment, VNode, onMounted, onBeforeUnmount, toRef, markRaw, nextTick, type Ref } from 'vue'
-import { deepEqual } from "fast-equals";
-import { pick } from 'lodash'
+import { defineComponent, PropType } from 'vue'
 
+import type { CompactType } from "./utils";
 import {
-  cloneLayout,
-  compactType as resolveCompactType,
-  synchronizeLayoutWithChildren,
-  CompactType,
-  Layout,
-  getNonFragmentChildren
-} from "./utils";
-import {
-  getBreakpointFromWidth,
-  getColsFromBreakpoint,
-  findOrGenerateResponsiveLayout,
   ResponsiveLayout,
   Breakpoints
 } from "./responsiveUtils";
 import VueGridLayout from "./VueGridLayout";
+import type { ResponsiveGridLayoutPersistenceProp } from "./persistence";
+import type { GridLayoutEngineProp } from "./layout-engine";
+import type { GridEditorProp } from "./editor";
 import {
-  cloneLayoutsMap,
-  useGridLayoutPersistence,
-  type LayoutPersistenceEvent,
-  type ResponsiveGridLayoutPersistenceProp
-} from "./persistence";
-import {
-  createLayoutExecutor,
-  executeLayoutOperation
-} from "./layout-engine";
-import type {
-  GridLayoutEngineOptions,
-  GridLayoutEngineProp
-} from "./layout-engine";
-
-/**
- * Get a value of margin or containerPadding.
- *
- * @param  {Array | Object} param Margin | containerPadding, e.g. [10, 10] | {lg: [10, 10], ...}.
- * @param  {String} breakpoint   Breakpoint: lg, md, sm, xs and etc.
- * @return {Array}
- */
-function getIndentationValue<T extends Array<number> | null>(
-  param: { [key: string]: T } | T,
-  breakpoint: string
-): T | null {
-  if (param == null) return null;
-  return Array.isArray(param) ? param : param[breakpoint];
-}
-
-type State = {
-  layout: Layout,
-  breakpoint: string,
-  cols: number,
-  layouts: LayoutsMap
-};
+  getIndentationValue,
+  useResponsiveGridLayoutModel,
+  type BreakpointMap,
+  type LayoutsMap,
+  type MarginPaddingMap
+} from "./responsive/useResponsiveGridLayoutModel";
 
 export interface Props<Breakpoint extends string = string> {
   // Responsive config
@@ -72,18 +34,7 @@ export interface Props<Breakpoint extends string = string> {
   containerPadding: Record<Breakpoint, [number, number] | null> | [number, number] | null;
   persistence?: ResponsiveGridLayoutPersistenceProp;
   layoutEngine?: false | GridLayoutEngineProp;
-}
-
-interface BreakpointMap {
-  [key: string]: number; // For breakpoints and cols
-}
-
-interface MarginPaddingMap {
-  [key: string]: [number, number]; // For margin and containerPadding
-}
-
-interface LayoutsMap {
-  [key: string]: Layout;
+  editor?: false | GridEditorProp;
 }
 
 const ResponsiveVueGridLayout = defineComponent({
@@ -140,310 +91,20 @@ const ResponsiveVueGridLayout = defineComponent({
       type: [Boolean, Object] as PropType<false | GridLayoutEngineProp>,
       default: undefined
     },
+    /** Headless professional editor controller/options. Disabled by default. */
+    editor: {
+      type: [Boolean, Object] as PropType<false | GridEditorProp>,
+      default: false
+    },
   },
   emits: ['update:layouts', 'layoutChange', 'breakpointChange', 'widthChange'],
   setup(props, { slots, emit }) {
-    const generateInitialState = (): State => {
-      const { width, breakpoints, layouts, cols } = props;
-      const breakpoint = props.breakpoint || getBreakpointFromWidth(breakpoints, width);
-      const colNo = getColsFromBreakpoint(breakpoint, cols);
-      // verticalCompact compatibility, now deprecated
-
-      const compactType = resolveCompactType(props);
-      // Get the initial layout. This can tricky; we try to generate one however possible if one doesn't exist
-      // for this layout.
-      const initialLayout = findOrGenerateResponsiveLayout(
-        layouts,
-        breakpoints,
-        breakpoint,
-        breakpoint,
-        colNo,
-        compactType
-      );
-  
-      return {
-        layout: initialLayout,
-        breakpoint: breakpoint,
-        cols: colNo,
-        layouts: {
-          ...layouts,
-          [breakpoint]: initialLayout
-        }
-      };
-    }
-
-    const state = reactive(generateInitialState());
-    let restoringPersistence = false;
-
-    const applyRestoredLayouts = (layouts: LayoutsMap) => {
-      restoringPersistence = true;
-      const restoredLayouts = cloneLayoutsMap(layouts);
-      const layout = findOrGenerateResponsiveLayout(
-        restoredLayouts,
-        props.breakpoints,
-        state.breakpoint,
-        state.breakpoint,
-        state.cols,
-        resolveCompactType(props)
-      );
-      const nextLayouts = {
-        ...restoredLayouts,
-        [state.breakpoint]: layout
-      };
-      state.layout = markRaw(layout);
-      state.layouts = nextLayouts;
-      emit('update:layouts', nextLayouts)
-      emit('layoutChange', layout, nextLayouts)
-      void nextTick().then(() => {
-        restoringPersistence = false;
-      });
-    };
-
-    const persistenceConfig = props.persistence && typeof props.persistence === 'object'
-      ? props.persistence
-      : null;
-
-    const onPersistenceEvent = (event: LayoutPersistenceEvent<LayoutsMap>) => {
-      if (event.type === 'external-apply') {
-        applyRestoredLayouts(event.value);
-      }
-      persistenceConfig?.onEvent?.(event);
-    };
-
-    const persistenceController = persistenceConfig
-      ? useGridLayoutPersistence<LayoutsMap>({
-          ...persistenceConfig,
-          onEvent: onPersistenceEvent,
-          kind: 'responsive',
-          target: toRef(state, 'layouts') as Ref<LayoutsMap>,
-          watchTarget: false
-        })
-      : null;
-
-    const onLayoutChange = (layout: Layout) => {
-      if (restoringPersistence) return;
-      const nextLayout = cloneLayout(layout);
-      const newLayouts = {
-        ...state.layouts,
-        [state.breakpoint]: nextLayout
-      }
-      state.layout = nextLayout;
-      state.layouts = newLayouts;
-      emit('update:layouts', newLayouts)
-      emit('layoutChange', nextLayout, newLayouts)
-      persistenceController?.commit(cloneLayoutsMap(newLayouts), { source: 'component' })
-    };
-
-    const getLayoutEngineProp = () =>
-      props.layoutEngine && typeof props.layoutEngine === "object"
-        ? props.layoutEngine
-        : null;
-
-    const isLegacyLayoutEngine = () => {
-      const config = getLayoutEngineProp();
-      return props.layoutEngine === false || config?.mode === "legacy";
-    };
-
-    let executorConfigRef: unknown = undefined;
-    let layoutExecutor = createLayoutExecutor();
-
-    const getLayoutExecutor = () => {
-      const config = getLayoutEngineProp();
-      const nextExecutorConfig = config?.executor;
-      if (nextExecutorConfig !== executorConfigRef) {
-        layoutExecutor.dispose?.();
-        layoutExecutor = createLayoutExecutor(nextExecutorConfig);
-        executorConfigRef = nextExecutorConfig;
-      }
-      return layoutExecutor;
-    };
-
-    const getLayoutEngineOptions = (
-      colNo: number,
-      compact: CompactType
-    ): GridLayoutEngineOptions => {
-      const config = getLayoutEngineProp();
-      return {
-        cols: colNo,
-        compactType: compact,
-        allowOverlap: props.allowOverlap,
-        scheduler: config?.scheduler,
-        executor: getLayoutExecutor(),
-        compareLegacy: config?.compareLegacy,
-        legacyFallback: config?.legacyFallback !== false,
-        diagnostics: config?.diagnostics,
-        onEvent: config?.onEvent
-      };
-    };
-
-    watch(
-      () => pick(props, ['width', 'breakpoint', 'breakpoints', 'cols']),
-      (nextProps, prevProps) => {
-        if (
-          nextProps.width != prevProps.width ||
-          nextProps.breakpoint !== prevProps.breakpoint ||
-          !deepEqual(nextProps.breakpoints, prevProps.breakpoints) ||
-          !deepEqual(nextProps.cols, prevProps.cols)
-        ) {
-          onWidthChange(prevProps);
-        }
-      },
-      { deep: true }
-    );
-
-    /**
-   * When the width changes work through breakpoints and reset state with the new width & breakpoint.
-   * Width changes are necessary to figure out the widget widths.
-   */
-    const onWidthChange = (prevProps) => {
-      const { breakpoints, cols } = props;
-      const compactType = resolveCompactType(props);
-      const newBreakpoint =
-        props.breakpoint ||
-        getBreakpointFromWidth(props.breakpoints, props.width);
-
-      const lastBreakpoint = state.breakpoint;
-      const newCols: number = getColsFromBreakpoint(newBreakpoint, cols);
-      const newLayouts = { ...state.layouts };
-
-      // Breakpoint change
-      if (
-        lastBreakpoint !== newBreakpoint ||
-        prevProps.breakpoints !== breakpoints ||
-        prevProps.cols !== cols
-      ) {
-        // Preserve the current breakpoint before generating the next one.
-        newLayouts[lastBreakpoint] = cloneLayout(state.layout);
-
-        const commitGeneratedLayout = (candidateLayout: Layout) => {
-          const children: VNode[] = slots.default ? getNonFragmentChildren({ type: Fragment, children: slots.default() } as VNode) : [];
-          const layout = synchronizeLayoutWithChildren(
-            candidateLayout,
-            children,
-            newCols,
-            compactType,
-            props.allowOverlap
-          );
-
-          newLayouts[newBreakpoint] = layout;
-
-          emit('breakpointChange', newBreakpoint, newCols)
-          emit('update:layouts', newLayouts)
-          emit('layoutChange', layout, newLayouts)
-          persistenceController?.commit(cloneLayoutsMap(newLayouts), { source: 'component' })
-
-          state.breakpoint = newBreakpoint;
-          state.layout = layout
-          state.cols = newCols
-          state.layouts = newLayouts
-        };
-
-        // Find or generate a new layout. This remains the synchronous fallback for
-        // legacy mode and for environments where an async executor is unavailable.
-        let layout = findOrGenerateResponsiveLayout(
-          newLayouts,
-          breakpoints,
-          newBreakpoint,
-          lastBreakpoint,
-          newCols,
-          compactType
-        );
-
-        if (!isLegacyLayoutEngine()) {
-          const request = {
-            id: `responsive:${lastBreakpoint}->${newBreakpoint}`,
-            phase: 'commit',
-            layout: newLayouts[lastBreakpoint] || state.layout,
-            operation: {
-              type: 'generateResponsiveLayout',
-              breakpoint: newBreakpoint,
-              sourceBreakpoint: lastBreakpoint,
-              cols: newCols,
-              layouts: newLayouts,
-              breakpoints
-            },
-            options: getLayoutEngineOptions(newCols, compactType),
-            heavy: layout.length >= 500
-          } as const;
-          const executor = getLayoutExecutor();
-          if (request.heavy && executor.kind !== "main-thread") {
-            void executor.execute(request).then(result => {
-              if (result.status === 'changed' || result.status === 'noop' || result.status === 'fallback') {
-                commitGeneratedLayout(result.layout);
-              } else {
-                commitGeneratedLayout(layout);
-              }
-            }).catch(() => {
-              commitGeneratedLayout(layout);
-            });
-          } else {
-            const result = executeLayoutOperation(request);
-            if (result.status === 'changed' || result.status === 'noop' || result.status === 'fallback') {
-              layout = result.layout;
-            }
-            commitGeneratedLayout(layout);
-          }
-        } else {
-          commitGeneratedLayout(layout);
-        }
-      }
-
-      const margin = getIndentationValue(props.margin, newBreakpoint);
-      const containerPadding = getIndentationValue(
-        props.containerPadding,
-        newBreakpoint
-      );
-
-      emit('widthChange', props.width, margin, newCols, containerPadding )
-    }
-
-    watch(
-      () => props.layouts,
-      (newLayouts) => {
-        if (!deepEqual(newLayouts, state.layouts)) {
-          const { breakpoint, cols } = state;
-
-          const newLayout = findOrGenerateResponsiveLayout(
-            newLayouts,
-            props.breakpoints,
-            breakpoint,
-            breakpoint,
-            cols,
-            resolveCompactType(props)
-          );
-
-          state.layout = newLayout;
-          state.layouts = {
-            ...newLayouts,
-            [breakpoint]: newLayout
-          };
-          if (!restoringPersistence) {
-            persistenceController?.commit(cloneLayoutsMap(state.layouts), { source: 'programmatic' })
-          }
-        }
-      },
-      { immediate: true }
-    );
-
-    onMounted(() => {
-      if (!persistenceController) return;
-      restoringPersistence = true;
-      void persistenceController.load().then(async result => {
-        if (result.value && (result.ok || result.fallbackApplied)) {
-          applyRestoredLayouts(result.value)
-        }
-        await nextTick();
-        restoringPersistence = false;
-      }).catch(async () => {
-        await nextTick();
-        restoringPersistence = false;
-      });
+    const model = useResponsiveGridLayoutModel({
+      props,
+      slots,
+      emit
     });
-
-    onBeforeUnmount(() => {
-      layoutExecutor.dispose?.();
-      persistenceController?.stop();
-    });
+    const { state } = model;
 
     return () => {
       /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -456,6 +117,7 @@ const ResponsiveVueGridLayout = defineComponent({
         containerPadding,
         persistence,
         layoutEngine,
+        editor,
         ...other
       } = props;
       /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -469,10 +131,11 @@ const ResponsiveVueGridLayout = defineComponent({
             containerPadding,
             state.breakpoint
           ) || [0, 0]}
-          onLayoutChange={onLayoutChange}
+          onLayoutChange={model.onLayoutChange}
           modelValue={state.layout}
           cols={state.cols}
           layoutEngine={layoutEngine}
+          editor={model.getInnerEditorProp()}
         >{child}</VueGridLayout>
       );
     }
