@@ -5,6 +5,9 @@ import { cloneLayoutsMap } from "../persistence";
 import type {
   GridEditorHistoryController,
   GridEditorHistoryEntry,
+  GridEditorHistoryMark,
+  GridEditorHistoryPushOptions,
+  GridEditorHistoryReplaceOptions,
   GridEditorHistorySnapshot
 } from "./types";
 
@@ -74,29 +77,38 @@ export const createGridEditorHistory = (
       nextTime - previousTime <= mergeWindowMs;
   };
 
+  const pushEntry = (
+    entry: GridEditorHistoryEntry,
+    pushOptions: GridEditorHistoryPushOptions = {}
+  ) => {
+    if (deepEqual(entry.before, entry.after)) return;
+    const nextEntry = {
+      ...entry,
+      before: cloneSnapshot(entry.before),
+      after: cloneSnapshot(entry.after)
+    };
+    const previous = past[past.length - 1];
+    if (shouldMerge(previous, nextEntry)) {
+      past[past.length - 1] = {
+        ...previous,
+        after: cloneSnapshot(nextEntry.after),
+        createdAt: nextEntry.createdAt
+      };
+    } else {
+      past.push(nextEntry);
+    }
+    if (!pushOptions.preserveRedoStack) {
+      future = [];
+    }
+    trim();
+    updateFlags();
+  };
+
   return {
     canUndo,
     canRedo,
-    push(entry) {
-      if (deepEqual(entry.before, entry.after)) return;
-      const nextEntry = {
-        ...entry,
-        before: cloneSnapshot(entry.before),
-        after: cloneSnapshot(entry.after)
-      };
-      const previous = past[past.length - 1];
-      if (shouldMerge(previous, nextEntry)) {
-        past[past.length - 1] = {
-          ...previous,
-          after: cloneSnapshot(nextEntry.after),
-          createdAt: nextEntry.createdAt
-        };
-      } else {
-        past.push(nextEntry);
-      }
-      future = [];
-      trim();
-      updateFlags();
+    push(entry, pushOptions: GridEditorHistoryPushOptions = {}) {
+      pushEntry(entry, pushOptions);
     },
     undo() {
       const entry = past.pop();
@@ -113,14 +125,35 @@ export const createGridEditorHistory = (
       updateFlags();
       return entry;
     },
-    replacePresent() {
-      future = [];
+    replacePresent(_snapshot, replaceOptions: GridEditorHistoryReplaceOptions = {}) {
+      if (!replaceOptions.preserveRedoStack) {
+        future = [];
+      }
       updateFlags();
     },
     clear() {
       past = [];
       future = [];
       updateFlags();
+    },
+    mark(snapshot, revision) {
+      return {
+        id: `editor-history-mark:${Date.now()}:${Math.random().toString(36).slice(2)}`,
+        snapshot: cloneSnapshot(snapshot),
+        revision
+      };
+    },
+    bailToMark(mark: GridEditorHistoryMark) {
+      updateFlags();
+      return cloneSnapshot(mark.snapshot);
+    },
+    squashToMark(mark: GridEditorHistoryMark, entry, pushOptions: GridEditorHistoryPushOptions = {}) {
+      const squashed = {
+        ...entry,
+        before: cloneSnapshot(mark.snapshot),
+        after: cloneSnapshot(entry.after)
+      };
+      pushEntry(squashed, pushOptions);
     }
   };
 };
@@ -137,5 +170,10 @@ export const createGridEditorHistoryEntry = (
   before: input.before,
   after: input.after,
   createdAt: input.createdAt || new Date().toISOString(),
-  mergeKey: input.mergeKey
+  mergeKey: input.mergeKey,
+  source: input.source,
+  origin: input.origin,
+  targetIds: input.targetIds,
+  affectedIds: input.affectedIds,
+  historyMode: input.historyMode
 });

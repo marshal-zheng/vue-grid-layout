@@ -24,6 +24,7 @@ const EQUAL_SPACING_TOLERANCE = 0.01;
 const DEFAULT_DISPLAY_LIMITS: Record<GridEditorGuideInteraction, number> = {
   drag: 3,
   drop: 3,
+  placement: 3,
   resize: 2,
   keyboard: 3,
   api: 3

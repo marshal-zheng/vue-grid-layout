@@ -24,6 +24,7 @@ const html = `<!doctype html>
   <body>
     <div id="plain" class="test-host"></div>
     <div id="editor" class="test-host"></div>
+    <div id="precision-editor" class="test-host"></div>
     <div id="responsive" class="test-host"></div>
     <script src="/example/vue-3.2.36.js"></script>
     <script src="/build/web/vue-grid-layout.min.js"></script>
@@ -64,9 +65,13 @@ const html = `<!doctype html>
 	            c: { rowId: 'row1' }
 	          }
 	        });
-        var messages = [];
-        var failNextSave = false;
-        var memory = VGL.memoryPersistenceAdapter();
+	        var messages = [];
+	        var failNextSave = false;
+	        var guardMode = null;
+	        var guardRelease = null;
+	        var guardPromise = null;
+	        var guardRecords = [];
+	        var memory = VGL.memoryPersistenceAdapter();
         var persistence = VGL.useGridLayoutPersistence({
           key: 'editor-browser',
           kind: 'layout',
@@ -105,12 +110,31 @@ const html = `<!doctype html>
             preventCollision: false,
             diagnostics: { debug: true }
           },
-          keyboard: {
-            ariaMessage: function (message) { messages.push(message.message); }
-          },
-          onEvent: function (event) {
-            if (event.type === 'command-blocked' && event.result.blocked) {
-              messages.push(event.result.blocked.reason);
+	          keyboard: {
+	            ariaMessage: function (message) { messages.push(message.message); }
+	          },
+	          beforeCommand: function (context) {
+	            if (guardMode && context.command.type === 'move') {
+	              guardRecords.push({
+	                type: context.command.type,
+	                affectedIds: context.preview ? context.preview.affectedIds.slice() : [],
+	                layoutPatches: context.preview ? context.preview.layoutPatches.length : 0,
+	                source: context.source
+	              });
+	              return new Promise(function (resolve) {
+	                guardRelease = function () {
+	                  var mode = guardMode;
+	                  guardMode = null;
+	                  guardRelease = null;
+	                  resolve(mode === 'allow' ? { status: 'allow' } : { status: 'cancel' });
+	                };
+	              });
+	            }
+	            return { status: 'allow' };
+	          },
+	          onEvent: function (event) {
+	            if (event.type === 'command-blocked' && event.result.blocked) {
+	              messages.push(event.result.blocked.reason);
             }
           }
         });
@@ -144,6 +168,36 @@ const html = `<!doctype html>
           },
           template: '<div><input id="ignored-input" value="text"><SingleGrid class="editor-grid" :model-value="layout" @update:model-value="onEditorModelUpdate" :width="900" :cols="12" :rowHeight="30" :editor="editorProp" :isDroppable="true" :droppingItem="{ i: \\'drop-a\\', w: 1, h: 1 }"><div v-for="item in layout" :key="item.i">{{ item.i }}</div></SingleGrid></div>'
         }).mount('#editor');
+
+        var precisionLayout = ref([
+          { i: 'p-a', x: 1, y: 1, w: 2, h: 2 }
+        ]);
+        var precisionMode = ref('edit');
+        var precisionEditor = VGL.createGridEditorController({
+          layout: precisionLayout,
+          mode: precisionMode
+        });
+        var precisionEditorProp = {
+          controller: precisionEditor,
+          guides: {
+            enabled: true,
+            snap: true,
+            showGrid: 'interaction'
+          }
+        };
+        createApp({
+          components: { SingleGrid: SingleGrid },
+          setup: function () {
+            return {
+              layout: precisionLayout,
+              editorProp: precisionEditorProp,
+              onModelUpdate: function (nextLayout) {
+                precisionLayout.value = nextLayout;
+              }
+            };
+          },
+          template: '<SingleGrid class="precision-editor-grid" :model-value="layout" @update:model-value="onModelUpdate" :width="901" :cols="7" :row-height="20" :margin="[5, 5]" :container-padding="[10, 10]" height-mode="fit" :container-height="253" render-precision="subpixel" :editor="editorProp" :layout-engine="false"><div v-for="item in layout" :key="item.i">{{ item.i }}</div></SingleGrid>'
+        }).mount('#precision-editor');
 
         var responsiveLayouts = ref({
           lg: [
@@ -213,6 +267,37 @@ const html = `<!doctype html>
           duplicate: function () { return editor.execute({ type: 'duplicate', source: 'toolbar' }); },
           copy: function () { return editor.execute({ type: 'copy', source: 'toolbar' }); },
           paste: function () { return editor.execute({ type: 'paste', source: 'toolbar', payload: { strategy: 'first-fit', cols: 12 } }); },
+          beginClipboardPlacement: function (cursor, options) {
+            return editor.beginPlacement({
+              source: 'paste',
+              commandType: 'paste',
+              strategy: 'cursor',
+              collisionPolicy: options && options.collisionPolicy,
+              compactType: options && options.compactType,
+              allowOverlap: options && options.allowOverlap,
+              preventCollision: options && options.preventCollision,
+              placementIntent: 'here',
+              placementAnchor: 'top-left',
+              cursor: cursor || { x: 6, y: 0, source: 'api' },
+              cols: 12
+            });
+          },
+          placementProbe: function () {
+            var ghost = document.querySelectorAll('#editor .vue-grid-editor-placement-ghost');
+            var affected = document.querySelectorAll('#editor .vue-grid-editor-placement-affected');
+            return {
+              active: document.querySelector('#editor .vue-grid-layout').classList.contains('editor-placement-active'),
+              ghost: ghost.length,
+              affected: affected.length,
+              reflowed: document.querySelectorAll('#editor .editor-placement-reflowed').length,
+              itemCount: document.querySelectorAll('#editor .vue-grid-item:not(.vue-grid-placeholder)').length,
+              layoutLength: layout.value.length,
+              session: editor.placementSession.value && {
+                phase: editor.placementSession.value.phase,
+                ghostCount: editor.placementSession.value.ghostItems.length
+              }
+            };
+          },
           deleteSelected: function () { return editor.execute({ type: 'delete', source: 'toolbar' }); },
           deleteGenerated: function () {
             var generated = layout.value
@@ -225,8 +310,30 @@ const html = `<!doctype html>
           discard: function () { return editor.discard(); },
           undo: function () { return editor.undo(); },
           redo: function () { return editor.redo(); },
-          moveSelectionRight: function () { return editor.execute({ type: 'move', source: 'keyboard', payload: { dx: 1, dy: 0 } }); },
-          computeGuides: function (options) {
+	          moveSelectionRight: function () { return editor.execute({ type: 'move', source: 'keyboard', payload: { dx: 1, dy: 0 } }); },
+	          startGuardedMove: function (mode) {
+	            guardMode = mode;
+	            guardRecords = [];
+	            guardPromise = editor.execute({ type: 'move', targetIds: ['a'], source: 'api', payload: { dx: 1, dy: 0 } });
+	            return Promise.resolve().then(function () {
+	              return {
+	                pending: !!guardRelease,
+	                records: guardRecords.slice(),
+	                layout: layout.value.map(function (item) { return Object.assign({}, item); })
+	              };
+	            });
+	          },
+	          finishGuardedMove: function () {
+	            if (guardRelease) guardRelease();
+	            return guardPromise.then(function (result) {
+	              return {
+	                result: result,
+	                records: guardRecords.slice(),
+	                layout: layout.value.map(function (item) { return Object.assign({}, item); })
+	              };
+	            });
+	          },
+	          computeGuides: function (options) {
             var current = layout.value;
             editor.guides.value = VGL.computeGridEditorGuides(
               current,
@@ -306,6 +413,57 @@ const html = `<!doctype html>
               placeholderZ: placeholder ? Number(getComputedStyle(placeholder).zIndex) : null,
               guideZ: guide ? Number(getComputedStyle(guide).zIndex) : null,
               hudZ: hud ? Number(getComputedStyle(hud).zIndex) : null
+            };
+          },
+          showPrecisionAnchors: function () {
+            precisionEditor.guides.value = {
+              activeId: 'p-a',
+              interaction: 'drag',
+              guides: [],
+              displayGuides: [],
+              debugGuides: [],
+              snappedGuideIds: [],
+              anchorEdges: [{
+                itemId: 'p-a',
+                sides: ['left', 'right', 'top', 'bottom', 'center-x', 'center-y'],
+                role: 'active'
+              }],
+              measurementHud: {
+                itemId: 'p-a',
+                position: { x: 1, y: 1 },
+                size: { w: 2, h: 2 },
+                interaction: 'drag'
+              }
+            };
+          },
+          precisionOverlayProbe: function () {
+            var root = document.querySelector('#precision-editor .vue-grid-layout');
+            var item = document.querySelector('#precision-editor .vue-grid-item');
+            if (!root || !item) return null;
+            var rootRect = root.getBoundingClientRect();
+            var itemRect = item.getBoundingClientRect();
+            function relRect(element) {
+              if (!element) return null;
+              var rect = element.getBoundingClientRect();
+              return {
+                left: rect.left - rootRect.left,
+                top: rect.top - rootRect.top,
+                width: rect.width,
+                height: rect.height
+              };
+            }
+            return {
+              item: {
+                left: itemRect.left - rootRect.left,
+                top: itemRect.top - rootRect.top,
+                width: itemRect.width,
+                height: itemRect.height
+              },
+              left: relRect(document.querySelector('#precision-editor [data-anchor-side="left"]')),
+              right: relRect(document.querySelector('#precision-editor [data-anchor-side="right"]')),
+              top: relRect(document.querySelector('#precision-editor [data-anchor-side="top"]')),
+              bottom: relRect(document.querySelector('#precision-editor [data-anchor-side="bottom"]')),
+              hud: relRect(document.querySelector('#precision-editor .vue-grid-editor-measurement-hud'))
             };
           },
           dragExternalOver: function () {
@@ -437,19 +595,63 @@ async function main() {
       debugLayer: false
     });
 
+    await page.evaluate(() => window.__editorBrowserTest.showPrecisionAnchors());
+    await page.waitForSelector('#precision-editor [data-anchor-side="left"]');
+    await delay(120);
+    const precisionOverlay = await page.evaluate(() => window.__editorBrowserTest.precisionOverlayProbe());
+    assert.ok(Math.abs(precisionOverlay.left.left - precisionOverlay.item.left) <= 1, JSON.stringify(precisionOverlay));
+    assert.ok(Math.abs(precisionOverlay.left.top - precisionOverlay.item.top) <= 1, JSON.stringify(precisionOverlay));
+    assert.ok(Math.abs(precisionOverlay.left.height - precisionOverlay.item.height) <= 1, JSON.stringify(precisionOverlay));
+    assert.ok(Math.abs(precisionOverlay.top.left - precisionOverlay.item.left) <= 1, JSON.stringify(precisionOverlay));
+    assert.ok(Math.abs(precisionOverlay.top.top - precisionOverlay.item.top) <= 1, JSON.stringify(precisionOverlay));
+    assert.ok(Math.abs(precisionOverlay.top.width - precisionOverlay.item.width) <= 1, JSON.stringify(precisionOverlay));
+    assert.ok(Math.abs(precisionOverlay.right.left - (precisionOverlay.item.left + precisionOverlay.item.width - 2)) <= 1, JSON.stringify(precisionOverlay));
+    assert.ok(Math.abs(precisionOverlay.bottom.top - (precisionOverlay.item.top + precisionOverlay.item.height - 2)) <= 1, JSON.stringify(precisionOverlay));
+
+    const layoutBeforePlainClick = await page.evaluate(() => window.__editorBrowserTest.layout());
     await page.click('#editor .vue-grid-item');
     await page.waitForSelector('#editor .vue-grid-item.editor-selected');
     assert.deepEqual(await page.evaluate(() => Array.from(window.__editorBrowserTest.editor.selection.value.selectedIds)), ['a']);
+    assert.deepEqual(await page.evaluate(() => window.__editorBrowserTest.layout()), layoutBeforePlainClick);
+    assert.deepEqual(await page.evaluate(() => window.__editorBrowserTest.guideDomCounts()), {
+      smart: 0,
+      debug: 0,
+      labels: 0,
+      snapped: 0,
+      chips: 0,
+      hud: 0,
+      grid: false,
+      debugLayer: false
+    });
 
     const toggledB = await page.evaluate(async () => {
       const result = await window.__editorBrowserTest.editor.execute({ type: 'select', targetIds: ['b'], payload: { id: 'b', toggle: true }, source: 'pointer' });
       return { result, ids: Array.from(window.__editorBrowserTest.editor.selection.value.selectedIds) };
     });
-    assert.equal(toggledB.result.status, 'changed');
-    assert.deepEqual(toggledB.ids, ['a', 'b']);
+	    assert.equal(toggledB.result.status, 'changed');
+	    assert.deepEqual(toggledB.ids, ['a', 'b']);
 
-    await page.evaluate(() => window.__editorBrowserTest.resetLayout());
-    await page.waitForFunction(() => window.__editorBrowserTest.layout()[0].x === 0);
+	    await page.evaluate(() => window.__editorBrowserTest.resetLayout());
+	    const guardedAllowStart = await page.evaluate(() => window.__editorBrowserTest.startGuardedMove('allow'));
+	    assert.equal(guardedAllowStart.pending, true);
+	    assert.equal(guardedAllowStart.records[0].type, 'move');
+	    assert.ok(guardedAllowStart.records[0].affectedIds.includes('a'));
+	    assert.ok(guardedAllowStart.records[0].layoutPatches > 0);
+	    assert.equal(guardedAllowStart.layout.find(item => item.i === 'a').x, 0);
+	    const guardedAllowFinish = await page.evaluate(() => window.__editorBrowserTest.finishGuardedMove());
+	    assert.equal(guardedAllowFinish.result.status, 'changed');
+	    assert.equal(guardedAllowFinish.layout.find(item => item.i === 'a').x, 1);
+
+	    await page.evaluate(() => window.__editorBrowserTest.resetLayout());
+	    const guardedCancelStart = await page.evaluate(() => window.__editorBrowserTest.startGuardedMove('cancel'));
+	    assert.equal(guardedCancelStart.pending, true);
+	    assert.ok(guardedCancelStart.records[0].affectedIds.includes('a'));
+	    const guardedCancelFinish = await page.evaluate(() => window.__editorBrowserTest.finishGuardedMove());
+	    assert.equal(guardedCancelFinish.result.status, 'cancelled');
+	    assert.equal(guardedCancelFinish.layout.find(item => item.i === 'a').x, 0);
+
+	    await page.evaluate(() => window.__editorBrowserTest.resetLayout());
+	    await page.waitForFunction(() => window.__editorBrowserTest.layout()[0].x === 0);
     await page.evaluate(() => window.__editorBrowserTest.editor.execute({ type: 'lock', targetIds: ['b'] }));
     await clickItem('a');
     await modifiedClickItem('b');
@@ -499,6 +701,60 @@ async function main() {
     await page.evaluate(() => window.__editorBrowserTest.copy());
     await page.evaluate(() => window.__editorBrowserTest.paste());
     await page.waitForFunction(() => window.__editorBrowserTest.layout().length === 4);
+    await page.evaluate(() => window.__editorBrowserTest.deleteGenerated());
+    await page.waitForFunction(() => window.__editorBrowserTest.layout().length === 3);
+
+    await page.evaluate(() => window.__editorBrowserTest.selectA());
+    await page.evaluate(() => window.__editorBrowserTest.copy());
+    const placementStart = await page.evaluate(() => window.__editorBrowserTest.beginClipboardPlacement({ x: 6, y: 0, source: 'api' }));
+    assert.ok(['started', 'blocked'].includes(placementStart.status));
+    await page.waitForFunction(() => window.__editorBrowserTest.placementProbe().ghost === 1);
+    let placementProbe = await page.evaluate(() => window.__editorBrowserTest.placementProbe());
+    assert.equal(placementProbe.active, true);
+    assert.equal(placementProbe.itemCount, 3);
+    assert.equal(placementProbe.layoutLength, 3);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => window.__editorBrowserTest.placementProbe().ghost === 0);
+    assert.equal((await page.evaluate(() => window.__editorBrowserTest.layout())).length, 3);
+
+    await page.evaluate(() => window.__editorBrowserTest.beginClipboardPlacement(
+      { x: 2, y: 0, source: 'api' },
+      { collisionPolicy: 'layout', compactType: 'vertical', allowOverlap: false, preventCollision: false }
+    ));
+    await page.waitForFunction(() => window.__editorBrowserTest.placementProbe().ghost === 1);
+    placementProbe = await page.evaluate(() => window.__editorBrowserTest.placementProbe());
+    assert.equal(placementProbe.active, true);
+    assert.equal(placementProbe.layoutLength, 3);
+    assert.ok(placementProbe.reflowed >= 1);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => window.__editorBrowserTest.placementProbe().ghost === 0);
+    assert.equal((await page.evaluate(() => window.__editorBrowserTest.placementProbe())).reflowed, 0);
+
+    await page.evaluate(() => window.__editorBrowserTest.beginClipboardPlacement({ x: 6, y: 0, source: 'api' }));
+    await page.waitForFunction(() => window.__editorBrowserTest.placementProbe().ghost === 1);
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.__editorBrowserTest.layout().length === 4 && window.__editorBrowserTest.placementProbe().ghost === 0);
+    await page.evaluate(() => window.__editorBrowserTest.deleteGenerated());
+    await page.waitForFunction(() => window.__editorBrowserTest.layout().length === 3);
+
+    await page.evaluate(() => window.__editorBrowserTest.beginClipboardPlacement({ x: 7, y: 0, source: 'api' }));
+    await page.waitForFunction(() => window.__editorBrowserTest.placementProbe().ghost === 1);
+    const gridPoint = await page.$eval('#editor .vue-grid-layout', el => {
+      const rect = el.getBoundingClientRect();
+      return { x: rect.left + 650, y: rect.top + 25 };
+    });
+    await page.mouse.click(gridPoint.x, gridPoint.y);
+    await page.waitForFunction(() => window.__editorBrowserTest.layout().length === 4 && window.__editorBrowserTest.placementProbe().ghost === 0);
+    await page.evaluate(() => window.__editorBrowserTest.deleteGenerated());
+    await page.waitForFunction(() => window.__editorBrowserTest.layout().length === 3);
+
+    await page.evaluate(() => window.__editorBrowserTest.selectA());
+    await page.evaluate(() => window.__editorBrowserTest.copy());
+    await page.keyboard.down(primaryModifier);
+    await page.keyboard.press('v');
+    await page.keyboard.up(primaryModifier);
+    await page.waitForFunction(() => window.__editorBrowserTest.layout().length === 4);
+    assert.equal((await page.evaluate(() => window.__editorBrowserTest.placementProbe())).ghost, 0);
     await page.evaluate(() => window.__editorBrowserTest.deleteGenerated());
     await page.waitForFunction(() => window.__editorBrowserTest.layout().length === 3);
 
@@ -581,12 +837,12 @@ async function main() {
 
     await page.evaluate(() => window.__editorBrowserTest.selectB());
     await page.keyboard.press('Delete');
-    await page.waitForFunction(() => window.__editorBrowserTest.layout().length === 3);
+    await page.waitForFunction(() => window.__editorBrowserTest.layout().length === 2);
     await page.keyboard.down(primaryModifier);
     await page.keyboard.press('z');
     await page.keyboard.up(primaryModifier);
     await page.waitForFunction(() =>
-      window.__editorBrowserTest.layout().length === 4 &&
+      window.__editorBrowserTest.layout().length === 3 &&
       window.__editorBrowserTest.layout().some(item => item.i === 'b')
     );
     await page.keyboard.down(primaryModifier);
@@ -595,14 +851,14 @@ async function main() {
     if (process.platform === 'darwin') await page.keyboard.up('Shift');
     await page.keyboard.up(primaryModifier);
     await page.waitForFunction(() =>
-      window.__editorBrowserTest.layout().length === 3 &&
+      window.__editorBrowserTest.layout().length === 2 &&
       !window.__editorBrowserTest.layout().some(item => item.i === 'b')
     );
 
     await page.evaluate(() => window.__editorBrowserTest.selectA());
     await page.focus('#ignored-input');
     await page.keyboard.press('Backspace');
-    assert.equal((await page.evaluate(() => window.__editorBrowserTest.layout())).length, 3);
+    assert.equal((await page.evaluate(() => window.__editorBrowserTest.layout())).length, 2);
 
     await page.evaluate(() => document.getElementById('ignored-input').blur());
     await page.mouse.click(5, 5);

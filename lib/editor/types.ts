@@ -30,6 +30,7 @@ export type GridEditorDerivedState =
   | "editingDirty"
   | "dragging"
   | "resizing"
+  | "placing"
   | "keyboardEditing"
   | "savePending"
   | "saveFailed"
@@ -103,6 +104,27 @@ export type GridEditorMetadataPatch =
       previous?: GridEditorItemMeta;
     };
 
+export type GridEditorHistoryMode =
+  | "record"
+  | "ignore"
+  | "record-preserveRedoStack"
+  | "replace"
+  | "clear";
+
+export type GridEditorHistoryPolicy = {
+  mode?: GridEditorHistoryMode;
+  mergeKey?: string;
+  mergeWindowMs?: number;
+  preserveRedoStack?: boolean;
+  skip?: boolean;
+  reason?: string;
+};
+
+export type GridEditorExternalApplyOptions = {
+  origin?: string;
+  history?: GridEditorHistoryMode | GridEditorHistoryPolicy;
+};
+
 export type GridEditorCommandType =
   | "select"
   | "clearSelection"
@@ -137,7 +159,11 @@ export type GridEditorCommandSource =
   | "toolbar"
   | "context-menu"
   | "api"
-  | "persistence";
+  | "persistence"
+  | "drop"
+  | "external"
+  | "remote"
+  | "system";
 
 export type GridEditorCommand = {
   id?: string;
@@ -145,11 +171,8 @@ export type GridEditorCommand = {
   targetIds?: string[];
   payload?: unknown;
   source?: GridEditorCommandSource;
-  history?: {
-    mergeKey?: string;
-    mergeWindowMs?: number;
-    skip?: boolean;
-  };
+  origin?: string;
+  history?: GridEditorHistoryMode | GridEditorHistoryPolicy;
 };
 
 export type GridEditorCommandStatus =
@@ -183,10 +206,58 @@ export type GridEditorBlockedReason =
   | "before-command-blocked"
   | "before-command-cancelled"
   | "before-command-timeout"
+  | "command-pending"
+  | "guard-aborted"
+  | "stale-command"
   | "multi-resize-unsupported"
   | "persistence-error"
   | "conflict"
   | "invalid-input";
+
+export type GridEditorTransactionSummary = {
+  layoutSize?: number;
+  layoutCount?: number;
+  metadataCount?: number;
+  sectionRowCount?: number;
+  selectionCount?: number;
+  focusId?: string | null;
+};
+
+export type GridEditorSectionRowPatch =
+  | {
+      type: "set";
+      id: string;
+      previous?: GridEditorSectionRow;
+      next: GridEditorSectionRow;
+    }
+  | {
+      type: "remove";
+      id: string;
+      previous?: GridEditorSectionRow;
+    };
+
+export type GridEditorTransactionPreview = {
+  layoutPatches: LayoutPatch[];
+  metadataPatches: GridEditorMetadataPatch[];
+  sectionRowPatches?: GridEditorSectionRowPatch[];
+  affectedIds: string[];
+  beforeSummary: GridEditorTransactionSummary;
+  afterSummary: GridEditorTransactionSummary;
+  risk?: "normal" | "destructive" | "persistence" | "external";
+};
+
+export type GridEditorTransaction = {
+  id: string;
+  commandId: string;
+  command: GridEditorCommand;
+  source: GridEditorCommandSource;
+  origin?: string;
+  scope: string;
+  before: GridEditorHistorySnapshot;
+  after: GridEditorHistorySnapshot;
+  preview: GridEditorTransactionPreview;
+  history: GridEditorHistoryPolicy;
+};
 
 export type GridEditorCommandResult = {
   id: string;
@@ -212,6 +283,12 @@ export type GridEditorCommandResult = {
     intelligence?: GridEditorIntelligenceDiagnostics;
     computed?: GridEditorCommandComputedDiagnostics;
     messages?: GridEditorMessage[];
+    pendingScope?: string;
+    stateRevision?: number;
+    stale?: boolean;
+    historyMode?: GridEditorHistoryMode;
+    source?: GridEditorCommandSource;
+    origin?: string;
   };
   undo?: GridEditorHistoryEntry;
   error?: {
@@ -239,12 +316,28 @@ export type GridEditorBeforeCommandResult =
 
 export type GridEditorBeforeCommandContext = {
   command: GridEditorCommand;
+  source: GridEditorCommandSource;
+  origin?: string;
   targetIds: string[];
   layout: Layout;
   layouts?: LayoutsMap;
   editorMetaById: GridEditorMetaById;
+  sectionRows: GridEditorSectionRowState;
   selection: GridEditorSelectionState;
   mode: GridEditorMode;
+  history: {
+    canUndo: boolean;
+    canRedo: boolean;
+  };
+  preview?: GridEditorTransactionPreview;
+  placement?: {
+    sessionId?: string;
+    source?: string;
+    summary?: unknown;
+    affectedIds?: string[];
+    diagnostics?: unknown[];
+  };
+  signal?: AbortSignal;
 };
 
 export type GridEditorBeforeCommand = (
@@ -312,7 +405,7 @@ export type GridEditorGuide = {
   display?: GridEditorGuideDisplay;
 };
 
-export type GridEditorGuideInteraction = "drag" | "resize" | "drop" | "keyboard" | "api";
+export type GridEditorGuideInteraction = "drag" | "resize" | "drop" | "placement" | "keyboard" | "api";
 
 export type GridEditorIntelligenceInteraction =
   | GridEditorGuideInteraction
@@ -652,6 +745,7 @@ export type GridEditorCommandComputedDiagnostics = {
     source?: "metadata" | "inferred" | "none";
   };
   fallback?: string;
+  placement?: import("./placement").GridEditorPlacementSummary;
 };
 
 export type GridEditorGeometryCommandContext = {
@@ -758,6 +852,8 @@ export type GridEditorCommandAvailability = {
   reason?: GridEditorBlockedReason | "selection-count" | "unsupported-scope";
   requiredSelectionCount?: number;
   blockedIds?: string[];
+  labelKey?: string;
+  shortcuts?: string[];
   messageKey?: string;
 };
 
@@ -824,13 +920,38 @@ export type GridEditorGuidesOptions = {
   blocked?: { reason?: GridEditorBlockedReason; message?: string; itemIds?: string[] };
 };
 
-export type GridEditorClipboardPayload = {
+export type GridEditorClipboardSourceContext = {
+  cols?: number;
+  breakpoint?: string;
+  layoutId?: string;
+  viewFormat?: string;
+};
+
+export type GridEditorClipboardGeometry = Pick<LayoutItem, "x" | "y" | "w" | "h">;
+
+export type GridEditorClipboardOriginalGeometryById = Record<string, GridEditorClipboardGeometry>;
+
+export type GridEditorClipboardPayloadV1 = {
   version: 1;
   sourceId: string;
   copiedAt: string;
   items: Layout;
   editorMetaById: GridEditorMetaById;
 };
+
+export type GridEditorClipboardPayloadV2 = {
+  version: 2;
+  sourceId: string;
+  copiedAt: string;
+  items: Layout;
+  editorMetaById: GridEditorMetaById;
+  source?: GridEditorClipboardSourceContext;
+  originalGeometryById?: GridEditorClipboardOriginalGeometryById;
+};
+
+export type GridEditorClipboardPayload =
+  | GridEditorClipboardPayloadV1
+  | GridEditorClipboardPayloadV2;
 
 export type GridEditorClipboardAdapter = {
   read: () => MaybePromise<GridEditorClipboardPayload | null>;
@@ -869,16 +990,45 @@ export type GridEditorHistoryEntry = {
   after: GridEditorHistorySnapshot;
   createdAt: string;
   mergeKey?: string;
+  source?: GridEditorCommandSource;
+  origin?: string;
+  targetIds?: string[];
+  affectedIds?: string[];
+  historyMode?: GridEditorHistoryMode;
+};
+
+export type GridEditorHistoryPushOptions = {
+  preserveRedoStack?: boolean;
+};
+
+export type GridEditorHistoryReplaceOptions = {
+  preserveRedoStack?: boolean;
+};
+
+export type GridEditorHistoryMark = {
+  id: string;
+  snapshot: GridEditorHistorySnapshot;
+  revision: number;
 };
 
 export type GridEditorHistoryController = {
   canUndo: Ref<boolean>;
   canRedo: Ref<boolean>;
-  push: (entry: GridEditorHistoryEntry) => void;
+  push: (entry: GridEditorHistoryEntry, options?: GridEditorHistoryPushOptions) => void;
   undo: () => GridEditorHistoryEntry | null;
   redo: () => GridEditorHistoryEntry | null;
-  replacePresent: (snapshot: GridEditorHistorySnapshot | null) => void;
+  replacePresent: (
+    snapshot: GridEditorHistorySnapshot | null,
+    options?: GridEditorHistoryReplaceOptions
+  ) => void;
   clear: (snapshot?: GridEditorHistorySnapshot | null) => void;
+  mark: (snapshot: GridEditorHistorySnapshot, revision: number) => GridEditorHistoryMark;
+  bailToMark: (mark: GridEditorHistoryMark) => GridEditorHistorySnapshot;
+  squashToMark: (
+    mark: GridEditorHistoryMark,
+    entry: GridEditorHistoryEntry,
+    options?: GridEditorHistoryPushOptions
+  ) => void;
 };
 
 export type GridEditorPersistenceEnvelope = {
@@ -906,10 +1056,13 @@ export type GridEditorKeyboardOptions = {
   enabled?: boolean;
   target?: unknown;
   platform?: "auto" | "mac" | "standard";
+  pasteMode?: "immediate" | "interactive";
   moveStep?: number;
   fastMoveStep?: number;
   resizeStep?: number;
   fastResizeStep?: number;
+  placementNudgeStep?: number;
+  placementFastNudgeStep?: number;
   ignoredTargets?: Array<string | ((target: unknown) => boolean)>;
   ariaMessage?: (message: GridEditorMessage) => void;
 };
@@ -918,7 +1071,8 @@ export type GridEditorPasteStrategy =
   | "offset"
   | "cursor"
   | "nearest-fit"
-  | "first-fit";
+  | "first-fit"
+  | "insert-top-shift";
 
 export type GridEditorCommandPolicy = "all-or-nothing" | "skip-blocked";
 
@@ -926,7 +1080,7 @@ export type GridEditorLayoutOperationRunner = (input: {
   commandId: string;
   layout: Layout;
   operation: LayoutOperation;
-  phase: "commit";
+  phase: "preview" | "commit";
   source: GridEditorCommandSource;
 }) => MaybePromise<LayoutOperationResult>;
 
@@ -977,23 +1131,41 @@ export type GridEditorController = {
   selection: Ref<GridEditorSelectionState>;
   editorMetaById: Ref<GridEditorMetaById>;
   sectionRows: Ref<GridEditorSectionRowState>;
+  placementSession: Ref<import("./placementSession").GridEditorPlacementSession | null>;
   dirty: ComputedRef<boolean>;
   conflict: Ref<GridEditorConflict | null>;
   guides: Ref<GridEditorGuideState>;
   lastResult: Ref<GridEditorCommandResult | null>;
   execute: (command: GridEditorCommand) => Promise<GridEditorCommandResult>;
   canExecute: (command: GridEditorCommand) => GridEditorCommandResult;
+  beginPlacement: (
+    input: import("./placementSession").GridEditorBeginPlacementInput
+  ) => Promise<import("./placementSession").GridEditorPlacementSessionResult>;
+  updatePlacement: (
+    input: import("./placementSession").GridEditorUpdatePlacementInput
+  ) => import("./placementSession").GridEditorPlacementSessionResult;
+  commitPlacement: (
+    input?: import("./placementSession").GridEditorCommitPlacementInput
+  ) => Promise<GridEditorCommandResult>;
+  cancelPlacement: (
+    reason?: string
+  ) => import("./placementSession").GridEditorPlacementSessionResult;
   getToolbarState: () => GridEditorToolbarState;
   undo: () => Promise<GridEditorCommandResult>;
   redo: () => Promise<GridEditorCommandResult>;
   save: () => Promise<GridEditorCommandResult>;
   discard: () => Promise<GridEditorCommandResult>;
   reset: () => Promise<GridEditorCommandResult>;
-  setExternalLayout: (layout: Layout, reason?: string) => void;
+  setExternalLayout: (
+    layout: Layout,
+    reason?: string,
+    options?: GridEditorExternalApplyOptions
+  ) => void;
   setExternalLayouts: (
     layouts: LayoutsMap,
     breakpoint: string,
-    reason?: string
+    reason?: string,
+    options?: GridEditorExternalApplyOptions
   ) => void;
   stop: () => void;
 };
@@ -1033,6 +1205,24 @@ export type GridEditorEvent =
   | {
       type: "command-error";
       command: GridEditorCommand;
+      result: GridEditorCommandResult;
+    }
+  | {
+      type: "placement-start";
+      session: import("./placementSession").GridEditorPlacementSession;
+    }
+  | {
+      type: "placement-update";
+      session: import("./placementSession").GridEditorPlacementSession;
+    }
+  | {
+      type: "placement-cancel";
+      sessionId: string;
+      reason: string;
+    }
+  | {
+      type: "placement-commit";
+      sessionId: string;
       result: GridEditorCommandResult;
     }
   | {

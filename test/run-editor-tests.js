@@ -26,6 +26,8 @@ fs.mkdirSync(tmp, { recursive: true });
 run(process.execPath, ['script.js', '--action=build']);
 run(path.join(bin, 'babel'), ['--out-dir', path.join(tmp, 'lib'), '--extensions', '.ts,.tsx', './lib']);
 run(path.join(bin, 'babel'), ['--out-dir', path.join(tmp, 'test'), '--extensions', '.ts,.tsx', './test']);
+run(process.execPath, [path.join(tmp, 'test', 'interaction-state-machine-core.test.js')]);
+run(process.execPath, [path.join(tmp, 'test', 'grid-height-runtime.test.js')]);
 run(process.execPath, [path.join(tmp, 'test', 'grid-layout-internal-core.test.js')]);
 run(process.execPath, [path.join(tmp, 'test', 'editor-core.test.js')]);
 run(process.execPath, [path.join(root, 'test', 'grid-layout-contract-browser.test.js')]);

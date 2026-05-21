@@ -6,6 +6,7 @@ import type {
   GridEditorToolbarState
 } from "./types";
 import { normalizeGridEditorSectionRows } from "./sectionRows";
+import { getGridEditorCommandDescriptor } from "./commandRegistry";
 
 const toolbarCommands: GridEditorCommand[] = [
   { type: "select" },
@@ -38,8 +39,9 @@ const availabilityFor = (
   controller: GridEditorController,
   command: GridEditorCommand
 ): GridEditorCommandAvailability => {
+  const descriptor = getGridEditorCommandDescriptor(command.type);
   const result = controller.canExecute({
-    source: "toolbar",
+    source: descriptor?.defaultSource || "toolbar",
     ...command
   });
   return {
@@ -53,6 +55,8 @@ const availabilityFor = (
       ? requiredSelectionCount(command.type)
       : undefined,
     blockedIds: result.blocked?.itemIds || result.blocked?.skippedIds,
+    labelKey: descriptor?.labelKey,
+    shortcuts: descriptor?.shortcuts,
     messageKey: result.blocked?.reason
       ? `grid-editor.toolbar.${command.type}.${result.blocked.reason}`
       : undefined

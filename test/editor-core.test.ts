@@ -6,12 +6,22 @@ import {
   computeGridEditorIntelligence,
   computeGridEditorGuides,
   createGridEditorController,
+  createGridEditorHistory,
+  createGridEditorClipboardPayload,
+  createGridEditorPlacementSession,
   createGridEditorPersistenceEnvelope,
+  createGridEditorTransactionPreview,
   emptyGridEditorSectionRows,
   filterGridEditorDisplayGuides,
+  getGridEditorCommandDescriptor,
+  getGridEditorCommandDescriptors,
   getGridEditorKeyboardCommand,
   internalGridEditorClipboard,
   normalizeGridEditorSectionRows,
+  normalizeGridEditorClipboardItemsForTarget,
+  parseGridEditorClipboardPayload,
+  placeGridEditorNewItems,
+  updateGridEditorPlacementSession,
   readGridEditorPersistenceEnvelope,
   sanitizeEditorMetaById,
   resolveGridEditorSnap,
@@ -327,17 +337,319 @@ async function testMetadataClipboardAndPaste() {
   const editor = createGridEditorController({
     layout,
     defaultMode: 'edit',
-    clipboard: internalGridEditorClipboard
+    clipboard: internalGridEditorClipboard,
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
   })
   await editor.execute({ type: 'select', payload: { ids: ['a'] } })
   const copied = await editor.execute({ type: 'copy' })
   assert.equal(copied.status, 'changed')
+  const copiedPayload = await internalGridEditorClipboard.read()
+  assert.equal(copiedPayload?.version, 2)
+  assert.equal(copiedPayload?.version === 2 ? copiedPayload.source?.cols : undefined, 12)
   const pasted = await editor.execute({ type: 'paste', payload: { cols: 12, strategy: 'first-fit' } })
   assert.equal(pasted.status, 'changed')
   assert.ok(layout.value.some(item => item.i === 'a-copy'))
 
+  const legacyPayload = parseGridEditorClipboardPayload({
+    version: 1,
+    sourceId: 'legacy',
+    copiedAt: '2026-05-20T00:00:00.000Z',
+    items: [{ i: 'legacy', x: 0, y: 0, w: 2, h: 1 }],
+    editorMetaById: {}
+  })
+  assert.equal(legacyPayload?.version, 1)
+
+  const responsivePayload = createGridEditorClipboardPayload({
+    sourceId: 'responsive-copy',
+    items: [
+      { i: 'wide', x: 6, y: 0, w: 6, h: 2 },
+      { i: 'side', x: 12, y: 0, w: 4, h: 1 }
+    ],
+    editorMetaById: {},
+    source: { cols: 24, breakpoint: 'desktop' }
+  })
+  const normalizedResponsive = normalizeGridEditorClipboardItemsForTarget(responsivePayload, { cols: 12 })
+  assert.equal(responsivePayload.version, 2)
+  assert.equal(normalizedResponsive.scaled, true)
+  assert.equal(normalizedResponsive.items.find(item => item.i === 'wide')?.x, 0)
+  assert.equal(normalizedResponsive.items.find(item => item.i === 'wide')?.w, 3)
+  assert.equal(normalizedResponsive.items.find(item => item.i === 'side')?.x, 3)
+  assert.equal(normalizedResponsive.items.find(item => item.i === 'side')?.w, 2)
+
+  const responsivePasteLayout = ref<Layout>([])
+  const responsiveEditor = createGridEditorController({
+    layout: responsivePasteLayout,
+    defaultMode: 'edit',
+    clipboard: internalGridEditorClipboard
+  })
+  await internalGridEditorClipboard.write(responsivePayload)
+  const responsivePaste = await responsiveEditor.execute({
+    type: 'paste',
+    payload: { cols: 12, strategy: 'first-fit' }
+  })
+  assert.equal(responsivePaste.status, 'changed')
+  assert.equal(responsivePasteLayout.value.find(item => item.i === 'wide-copy')?.w, 3)
+
   const system = systemClipboardAdapter()
   await assert.rejects(async () => system.read(), /System clipboard|Failed to read/)
+}
+
+async function testPlacementPolicies() {
+  const emptyFirst = placeGridEditorNewItems([], [
+    { i: 'new', x: 6, y: 6, w: 2, h: 2 }
+  ], 'first-fit', { cols: 6, maxRows: 6 })
+  assert.equal(emptyFirst.failed, false)
+  assert.equal(emptyFirst.layout.find(item => item.i === 'new')?.x, 0)
+  assert.equal(emptyFirst.layout.find(item => item.i === 'new')?.y, 0)
+  assert.equal(emptyFirst.summary.strategy, 'first-fit')
+
+  const firstRowGap = placeGridEditorNewItems([
+    { i: 'a', x: 0, y: 0, w: 2, h: 1 },
+    { i: 'b', x: 4, y: 0, w: 2, h: 1 }
+  ], [{ i: 'new', x: 0, y: 0, w: 2, h: 1 }], 'first-fit', { cols: 6, maxRows: 4 })
+  assert.equal(firstRowGap.layout.find(item => item.i === 'new')?.x, 2)
+  assert.equal(firstRowGap.layout.find(item => item.i === 'new')?.y, 0)
+
+  const nextRow = placeGridEditorNewItems([
+    { i: 'a', x: 0, y: 0, w: 2, h: 1 },
+    { i: 'b', x: 2, y: 0, w: 2, h: 1 },
+    { i: 'c', x: 4, y: 0, w: 2, h: 1 }
+  ], [{ i: 'new', x: 0, y: 0, w: 2, h: 1 }], 'first-fit', { cols: 6, maxRows: 4 })
+  assert.equal(nextRow.layout.find(item => item.i === 'new')?.x, 0)
+  assert.equal(nextRow.layout.find(item => item.i === 'new')?.y, 1)
+
+  const occupiedByNonRendered = placeGridEditorNewItems([
+    { i: 'hidden', x: 0, y: 0, w: 2, h: 1 },
+    { i: 'static', x: 2, y: 0, w: 2, h: 1, static: true },
+    { i: 'locked', x: 4, y: 0, w: 2, h: 1, isDraggable: false }
+  ], [{ i: 'new', x: 0, y: 0, w: 2, h: 1 }], 'first-fit', { cols: 6, maxRows: 4 })
+  assert.equal(occupiedByNonRendered.layout.find(item => item.i === 'new')?.x, 0)
+  assert.equal(occupiedByNonRendered.layout.find(item => item.i === 'new')?.y, 1)
+
+  const explicitCursor = placeGridEditorNewItems([
+    { i: 'revenue', x: 0, y: 0, w: 4, h: 3 },
+    { i: 'pipeline', x: 4, y: 0, w: 4, h: 3 },
+    { i: 'health', x: 8, y: 0, w: 4, h: 3 },
+    { i: 'incidents', x: 0, y: 3, w: 5, h: 3 },
+    { i: 'region', x: 5, y: 3, w: 7, h: 3 }
+  ], [{ i: 'incident-copy', x: 0, y: 0, w: 5, h: 3 }], 'cursor', {
+    cols: 12,
+    maxRows: Infinity,
+    cursor: { x: 8, y: 3 },
+    placementIntent: 'here',
+    placementAnchor: 'top-left'
+  })
+  assert.equal(explicitCursor.failed, false)
+  assert.equal(explicitCursor.layout.find(item => item.i === 'incident-copy')?.x, 7)
+  assert.equal(explicitCursor.layout.find(item => item.i === 'incident-copy')?.y, 6)
+  assert.equal(explicitCursor.summary.diagnostics.some(item => item.code === 'grid-editor.placement.cursor-anchor'), true)
+
+  const layoutPush = placeGridEditorNewItems([
+    { i: 'a', x: 0, y: 0, w: 2, h: 2 },
+    { i: 'b', x: 2, y: 0, w: 2, h: 2 }
+  ], [{ i: 'new', x: 0, y: 0, w: 2, h: 2 }], 'cursor', {
+    cols: 4,
+    maxRows: 8,
+    cursor: { x: 0, y: 0 },
+    placementIntent: 'here',
+    placementAnchor: 'top-left',
+    collisionPolicy: 'layout',
+    compactType: 'vertical',
+    allowOverlap: false,
+    preventCollision: false
+  })
+  assert.equal(layoutPush.failed, false)
+  assert.equal(layoutPush.layout.find(item => item.i === 'new')?.x, 0)
+  assert.equal(layoutPush.layout.find(item => item.i === 'new')?.y, 0)
+  assert.equal(layoutPush.layout.find(item => item.i === 'a')?.y, 2)
+  assert.deepEqual(layoutPush.summary.shiftedIds, ['a'])
+  assert.equal(layoutPush.summary.collisionPolicy, 'layout')
+
+  const layoutPushGroup = placeGridEditorNewItems([
+    { i: 'a', x: 0, y: 0, w: 2, h: 1 },
+    { i: 'b', x: 2, y: 0, w: 2, h: 1 }
+  ], [
+    { i: 'g1', x: 8, y: 5, w: 2, h: 1 },
+    { i: 'g2', x: 10, y: 5, w: 2, h: 1 }
+  ], 'cursor', {
+    cols: 4,
+    maxRows: 8,
+    cursor: { x: 0, y: 0 },
+    placementIntent: 'here',
+    placementAnchor: 'top-left',
+    collisionPolicy: 'layout',
+    compactType: 'vertical',
+    allowOverlap: false,
+    preventCollision: false
+  })
+  assert.equal(layoutPushGroup.failed, false)
+  assert.equal(layoutPushGroup.layout.find(item => item.i === 'g1')?.x, 0)
+  assert.equal(layoutPushGroup.layout.find(item => item.i === 'g2')?.x, 2)
+  assert.equal(layoutPushGroup.layout.find(item => item.i === 'a')?.y, 1)
+  assert.equal(layoutPushGroup.layout.find(item => item.i === 'b')?.y, 1)
+  assert.deepEqual(layoutPushGroup.summary.shiftedIds, ['a', 'b'])
+
+  const layoutPushGroupCollision = placeGridEditorNewItems([], [
+    { i: 'g1', x: 0, y: 0, w: 2, h: 1 },
+    { i: 'g2', x: 1, y: 0, w: 2, h: 1 }
+  ], 'cursor', {
+    cols: 4,
+    maxRows: 8,
+    cursor: { x: 0, y: 0 },
+    placementIntent: 'here',
+    placementAnchor: 'top-left',
+    collisionPolicy: 'layout',
+    compactType: 'vertical',
+    allowOverlap: false,
+    preventCollision: false
+  })
+  assert.equal(layoutPushGroupCollision.failed, true)
+  assert.equal(layoutPushGroupCollision.blocked?.reason, 'collision')
+
+  const layoutPrevented = placeGridEditorNewItems([
+    { i: 'a', x: 0, y: 0, w: 2, h: 2 }
+  ], [{ i: 'new', x: 0, y: 0, w: 2, h: 2 }], 'cursor', {
+    cols: 4,
+    maxRows: 8,
+    cursor: { x: 0, y: 0 },
+    placementIntent: 'here',
+    placementAnchor: 'top-left',
+    collisionPolicy: 'layout',
+    compactType: 'vertical',
+    allowOverlap: false,
+    preventCollision: true
+  })
+  assert.equal(layoutPrevented.failed, true)
+  assert.equal(layoutPrevented.blocked?.reason, 'collision')
+  assert.equal(layoutPrevented.layout.find(item => item.i === 'new')?.x, 0)
+
+  const layoutOverlap = placeGridEditorNewItems([
+    { i: 'a', x: 0, y: 0, w: 2, h: 2 }
+  ], [{ i: 'new', x: 0, y: 0, w: 2, h: 2 }], 'cursor', {
+    cols: 4,
+    maxRows: 8,
+    cursor: { x: 0, y: 0 },
+    placementIntent: 'here',
+    placementAnchor: 'top-left',
+    collisionPolicy: 'layout',
+    compactType: 'vertical',
+    allowOverlap: true,
+    preventCollision: false
+  })
+  assert.equal(layoutOverlap.failed, false)
+  assert.equal(layoutOverlap.layout.find(item => item.i === 'new')?.y, 0)
+  assert.equal(layoutOverlap.layout.find(item => item.i === 'a')?.y, 0)
+  assert.deepEqual(layoutOverlap.summary.shiftedIds, [])
+
+  const largerItem = placeGridEditorNewItems([
+    { i: 'a', x: 0, y: 0, w: 1, h: 2 },
+    { i: 'b', x: 3, y: 0, w: 1, h: 2 }
+  ], [{ i: 'wide', x: 0, y: 0, w: 2, h: 2 }], 'first-fit', { cols: 4, maxRows: 4 })
+  assert.equal(largerItem.layout.find(item => item.i === 'wide')?.x, 1)
+  assert.equal(largerItem.layout.find(item => item.i === 'wide')?.y, 0)
+
+  const firstFitBlocked = placeGridEditorNewItems([
+    { i: 'a', x: 0, y: 0, w: 1, h: 1 },
+    { i: 'b', x: 1, y: 0, w: 1, h: 1 }
+  ], [{ i: 'new', x: 0, y: 0, w: 1, h: 1 }], 'first-fit', { cols: 2, maxRows: 1 })
+  assert.equal(firstFitBlocked.failed, true)
+  assert.equal(firstFitBlocked.layout.length, 2)
+  assert.equal(firstFitBlocked.blocked?.reason, 'maxRows')
+
+  const topEmpty = placeGridEditorNewItems([], [
+    { i: 'new', x: 4, y: 8, w: 2, h: 2 }
+  ], 'insert-top-shift', { cols: 6, maxRows: 8 })
+  assert.equal(topEmpty.failed, false)
+  assert.equal(topEmpty.layout.find(item => item.i === 'new')?.x, 0)
+  assert.equal(topEmpty.layout.find(item => item.i === 'new')?.y, 0)
+  assert.deepEqual(topEmpty.summary.shiftedIds, [])
+
+  const shifted = placeGridEditorNewItems([
+    { i: 'a', x: 0, y: 0, w: 2, h: 2 },
+    { i: 'b', x: 3, y: 3, w: 2, h: 1, static: true }
+  ], [{ i: 'new', x: 8, y: 8, w: 3, h: 3 }], 'insert-top-shift', { cols: 6, maxRows: 10 })
+  assert.equal(shifted.failed, false)
+  assert.equal(shifted.layout.find(item => item.i === 'new')?.x, 0)
+  assert.equal(shifted.layout.find(item => item.i === 'a')?.y, 3)
+  assert.equal(shifted.layout.find(item => item.i === 'b')?.y, 6)
+  assert.deepEqual(shifted.summary.shiftedIds.sort(), ['a', 'b'])
+  assert.deepEqual(shifted.summary.delta, { dx: 0, dy: 3 })
+
+  const group = placeGridEditorNewItems([
+    { i: 'a', x: 0, y: 0, w: 2, h: 1 }
+  ], [
+    { i: 'g1', x: 4, y: 5, w: 2, h: 1 },
+    { i: 'g2', x: 6, y: 5, w: 2, h: 2 }
+  ], 'insert-top-shift', { cols: 6, maxRows: 8 })
+  assert.equal(group.failed, false)
+  assert.equal(group.layout.find(item => item.i === 'g1')?.x, 0)
+  assert.equal(group.layout.find(item => item.i === 'g2')?.x, 2)
+  assert.equal(group.layout.find(item => item.i === 'a')?.y, 2)
+
+  const shiftBlocked = placeGridEditorNewItems([
+    { i: 'a', x: 0, y: 2, w: 2, h: 2 }
+  ], [{ i: 'new', x: 0, y: 0, w: 2, h: 2 }], 'insert-top-shift', { cols: 6, maxRows: 3 })
+  assert.equal(shiftBlocked.failed, true)
+  assert.equal(shiftBlocked.blocked?.reason, 'maxRows')
+  assert.equal(shiftBlocked.layout.find(item => item.i === 'a')?.y, 2)
+
+  const groupCollision = placeGridEditorNewItems([], [
+    { i: 'g1', x: 0, y: 0, w: 2, h: 2 },
+    { i: 'g2', x: 1, y: 0, w: 2, h: 2 }
+  ], 'insert-top-shift', { cols: 6, maxRows: 6 })
+  assert.equal(groupCollision.failed, true)
+  assert.equal(groupCollision.blocked?.reason, 'collision')
+
+  const layout = ref<Layout>([
+    { i: 'a', x: 0, y: 0, w: 2, h: 2 },
+    { i: 'locked', x: 3, y: 0, w: 2, h: 2, static: true }
+  ])
+  const editor = createGridEditorController({
+    layout,
+    defaultMode: 'edit',
+    layoutEngineOptions: {
+      cols: 6,
+      maxRows: 8,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
+  })
+  const add = await editor.execute({
+    type: 'add',
+    payload: {
+      item: { i: 'top', w: 2, h: 2 },
+      strategy: 'insert-top-shift',
+      cols: 6,
+      maxRows: 8
+    }
+  })
+  assert.equal(add.status, 'changed')
+  assert.equal(layout.value.find(item => item.i === 'top')?.y, 0)
+  assert.equal(layout.value.find(item => item.i === 'locked')?.y, 2)
+  assert.ok(add.affectedIds.includes('top'))
+  assert.ok(add.affectedIds.includes('locked'))
+  assert.ok(add.layoutPatches.some(patch => patch.type === 'move' && patch.id === 'locked'))
+  assert.deepEqual(add.diagnostics?.computed?.placement?.shiftedIds.sort(), ['a', 'locked'])
+
+  const beforeBlocked = layout.value.map(item => ({ ...item }))
+  const blocked = await editor.execute({
+    type: 'add',
+    payload: {
+      item: { i: 'too-tall', w: 2, h: 7 },
+      strategy: 'insert-top-shift',
+      cols: 6,
+      maxRows: 8
+    }
+  })
+  assert.equal(blocked.status, 'blocked')
+  assert.deepEqual(layout.value, beforeBlocked)
 }
 
 async function testKeyboardShortcuts() {
@@ -808,15 +1120,457 @@ async function testL3IntelligenceSnapCommandsAndSectionRows() {
   assert.equal(restored.envelope?.sectionRows?.items.row1.locked, true)
 }
 
+async function testCommandKernelContracts() {
+  const moveDescriptor = getGridEditorCommandDescriptor('move')
+  assert.equal(moveDescriptor?.defaultHistory.mode, 'record')
+  assert.equal(moveDescriptor?.mutualExclusionScope, 'layout')
+  assert.ok(getGridEditorCommandDescriptors().some(descriptor => descriptor.type === 'delete'))
+
+  const layout = ref(baseLayout())
+  let releaseGuard: (value?: unknown) => void = () => undefined
+  const editor = createGridEditorController({
+    layout,
+    defaultMode: 'edit',
+    beforeCommand: context => {
+      if (context.command.type !== 'move') return { status: 'allow' }
+      assert.equal(context.source, 'api')
+      assert.equal(context.history.canUndo, false)
+      assert.ok(context.preview)
+      assert.ok(context.preview?.layoutPatches.some(patch => patch.type === 'move'))
+      return new Promise(resolve => {
+        releaseGuard = () => resolve({ status: 'allow' })
+      })
+    }
+  })
+
+  const pending = editor.execute({ type: 'move', targetIds: ['a'], payload: { dx: 1 } })
+  const blocked = await editor.execute({ type: 'move', targetIds: ['a'], payload: { dx: 1 } })
+  assert.equal(blocked.status, 'blocked')
+  assert.equal(blocked.blocked?.reason, 'command-pending')
+  releaseGuard()
+  const moved = await pending
+  assert.equal(moved.status, 'changed')
+  assert.equal(moved.diagnostics?.historyMode, 'record')
+  assert.equal(layout.value.find(item => item.i === 'a')?.x, 1)
+
+  const select = await editor.execute({ type: 'select', payload: { ids: ['a'] } })
+  assert.equal(select.status, 'changed')
+  assert.equal(select.diagnostics?.historyMode, 'ignore')
+  const undo = await editor.undo()
+  assert.equal(undo.status, 'changed')
+  assert.equal(layout.value.find(item => item.i === 'a')?.x, 0)
+  assert.deepEqual(editor.selection.value.selectedIds, [])
+
+  const invalid = editor.canExecute({ type: 'move', targetIds: ['a'] })
+  assert.equal(invalid.status, 'blocked')
+  assert.equal(invalid.blocked?.reason, 'invalid-input')
+}
+
+async function testGuardStaleEventIsolationAndExternalRedo() {
+  const layout = ref(baseLayout())
+  let eventThrows = true
+  const editor = createGridEditorController({
+    layout,
+    defaultMode: 'edit',
+    onEvent: event => {
+      if (eventThrows && event.type === 'command-commit') {
+        throw new Error('listener failed')
+      }
+    }
+  })
+  const moved = await editor.execute({ type: 'move', targetIds: ['a'], payload: { dx: 1 } })
+  assert.equal(moved.status, 'changed')
+  eventThrows = false
+  const undone = await editor.undo()
+  assert.equal(undone.status, 'changed')
+  editor.setExternalLayout([
+    { i: 'a', x: 5, y: 0, w: 2, h: 2 },
+    { i: 'b', x: 2, y: 0, w: 2, h: 2 }
+  ], 'remote-sync', { origin: 'remote-sync' })
+  const redone = await editor.redo()
+  assert.equal(redone.status, 'changed')
+  assert.equal(layout.value.find(item => item.i === 'a')?.x, 1)
+
+  const staleLayout = ref(baseLayout())
+  let releaseGuard: (value?: unknown) => void = () => undefined
+  const staleEditor = createGridEditorController({
+    layout: staleLayout,
+    defaultMode: 'edit',
+    beforeCommand: context => {
+      if (context.command.type !== 'move') return { status: 'allow' }
+      return new Promise(resolve => {
+        releaseGuard = () => resolve({ status: 'allow' })
+      })
+    }
+  })
+  const pending = staleEditor.execute({ type: 'move', targetIds: ['a'], payload: { dx: 1 } })
+  await staleEditor.execute({ type: 'select', payload: { ids: ['a'] } })
+  releaseGuard()
+  const stale = await pending
+  assert.equal(stale.status, 'blocked')
+  assert.equal(stale.blocked?.reason, 'stale-command')
+  assert.equal(stale.diagnostics?.stale, true)
+}
+
+async function testGuardResultVariantsAndAbort() {
+  const cancelledLayout = ref(baseLayout())
+  const cancelledEditor = createGridEditorController({
+    layout: cancelledLayout,
+    defaultMode: 'edit',
+    beforeCommand: () => ({ status: 'cancel', message: 'user cancelled' })
+  })
+  const cancelled = await cancelledEditor.execute({ type: 'move', targetIds: ['a'], payload: { dx: 1 } })
+  assert.equal(cancelled.status, 'cancelled')
+  assert.equal(cancelled.blocked?.reason, 'before-command-cancelled')
+  assert.equal(cancelledLayout.value[0].x, 0)
+
+  const timeoutLayout = ref(baseLayout())
+  const timeoutEditor = createGridEditorController({
+    layout: timeoutLayout,
+    defaultMode: 'edit',
+    guardTimeoutMs: 1,
+    beforeCommand: () => new Promise(() => undefined)
+  })
+  const timeout = await timeoutEditor.execute({ type: 'move', targetIds: ['a'], payload: { dx: 1 } })
+  assert.equal(timeout.status, 'timeout')
+  assert.equal(timeout.blocked?.reason, 'before-command-timeout')
+  assert.equal(timeout.diagnostics?.guardMs !== undefined, true)
+
+  const errorLayout = ref(baseLayout())
+  const errorEditor = createGridEditorController({
+    layout: errorLayout,
+    defaultMode: 'edit',
+    beforeCommand: () => ({ status: 'error', message: 'guard failed' })
+  })
+  const failed = await errorEditor.execute({ type: 'move', targetIds: ['a'], payload: { dx: 1 } })
+  assert.equal(failed.status, 'error')
+  assert.equal(failed.error?.message, 'guard failed')
+
+  const abortLayout = ref(baseLayout())
+  const abortEditor = createGridEditorController({
+    layout: abortLayout,
+    defaultMode: 'edit',
+    beforeCommand: () => new Promise(() => undefined)
+  })
+  const pendingAbort = abortEditor.execute({ type: 'move', targetIds: ['a'], payload: { dx: 1 } })
+  abortEditor.setExternalLayout([
+    { i: 'a', x: 4, y: 0, w: 2, h: 2 },
+    { i: 'b', x: 2, y: 0, w: 2, h: 2 },
+    { i: 'c', x: 4, y: 0, w: 2, h: 2, static: true }
+  ], 'external-replace')
+  const aborted = await pendingAbort
+  assert.equal(aborted.status, 'cancelled')
+  assert.equal(aborted.blocked?.reason, 'guard-aborted')
+
+  const externalRefLayout = ref(baseLayout())
+  const externalRefEditor = createGridEditorController({
+    layout: externalRefLayout,
+    defaultMode: 'edit',
+    beforeCommand: () => new Promise(() => undefined)
+  })
+  const pendingExternalRef = externalRefEditor.execute({ type: 'move', targetIds: ['a'], payload: { dx: 1 } })
+  externalRefLayout.value = [
+    { i: 'a', x: 7, y: 0, w: 2, h: 2 },
+    { i: 'b', x: 2, y: 0, w: 2, h: 2 },
+    { i: 'c', x: 4, y: 0, w: 2, h: 2, static: true }
+  ]
+  const externalAborted = await pendingExternalRef
+  assert.equal(externalAborted.status, 'cancelled')
+  assert.equal(externalAborted.blocked?.reason, 'guard-aborted')
+}
+
+async function testCommandPreviewCoverage() {
+  const layout = ref(baseLayout())
+  const sectionRows = ref<GridEditorSectionRowState>({
+    version: 1,
+    items: {
+      row1: { id: 'row1', kind: 'row', order: 1, itemIds: ['a', 'b'] }
+    },
+    itemMembership: {
+      a: { rowId: 'row1' },
+      b: { rowId: 'row1' }
+    }
+  })
+  const previews: Array<{ type: string; affectedIds: string[]; metadata: number; sectionRows: number; layout: number }> = []
+  const editor = createGridEditorController({
+    layout,
+    sectionRows,
+    defaultMode: 'edit',
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    },
+    beforeCommand: context => {
+      previews.push({
+        type: context.command.type,
+        affectedIds: context.preview?.affectedIds || [],
+        metadata: context.preview?.metadataPatches.length || 0,
+        sectionRows: context.preview?.sectionRowPatches?.length || 0,
+        layout: context.preview?.layoutPatches.length || 0
+      })
+      return { status: 'allow' }
+    }
+  })
+
+  await editor.execute({ type: 'lock', targetIds: ['a'] })
+  await editor.execute({ type: 'section-row-collapse', payload: { id: 'row1' } })
+  await editor.execute({ type: 'add', payload: { item: { i: 'd', x: 6, y: 0, w: 1, h: 1 }, strategy: 'first-fit' } })
+
+  const lockPreview = previews.find(preview => preview.type === 'lock')
+  assert.equal(lockPreview?.metadata, 1)
+  assert.ok(lockPreview?.affectedIds.includes('a'))
+
+  const sectionPreview = previews.find(preview => preview.type === 'section-row-collapse')
+  assert.equal(sectionPreview?.sectionRows, 1)
+  assert.ok(sectionPreview?.affectedIds.includes('row1'))
+
+  const addPreview = previews.find(preview => preview.type === 'add')
+  assert.ok((addPreview?.layout || 0) > 0)
+  assert.ok(addPreview?.affectedIds.includes('d'))
+}
+
+function testTransactionPreviewHelper() {
+  const history = createGridEditorHistory()
+  const before = {
+    kind: 'layout' as const,
+    layout: baseLayout(),
+    editorMetaById: {},
+    sectionRows: emptyGridEditorSectionRows(),
+    selection: {
+      selectedIds: [],
+      activeId: null,
+      anchorId: null,
+      mode: 'single' as const,
+      source: 'api' as const
+    },
+    focusId: null
+  }
+  const after = {
+    ...before,
+    layout: [{ ...before.layout[0], x: 1 }, before.layout[1]]
+  }
+  const preview = createGridEditorTransactionPreview(before, after)
+  assert.equal(preview.layoutPatches.length, 2)
+  assert.ok(preview.affectedIds.includes('a'))
+  const mark = history.mark(before, 1)
+  history.squashToMark(mark, {
+    id: 'entry',
+    commandId: 'command',
+    commandType: 'move',
+    before,
+    after,
+    createdAt: new Date().toISOString()
+  })
+  assert.equal(history.canUndo.value, true)
+}
+
+function testPlacementSessionCore() {
+  const base: Layout = [
+    { i: 'a', x: 0, y: 0, w: 2, h: 2 },
+    { i: 'b', x: 2, y: 0, w: 2, h: 2 }
+  ]
+  const session = createGridEditorPlacementSession({
+    source: 'template',
+    commandType: 'add',
+    items: [{ i: 'new', x: 0, y: 0, w: 2, h: 1 }],
+    strategy: 'insert-top-shift',
+    cols: 6
+  }, {
+    baseLayout: base,
+    baseRevision: 1,
+    now: () => 10
+  })
+  assert.equal(session.phase, 'preview')
+  assert.equal(session.ghostItems.length, 1)
+  assert.deepEqual(session.affectedOutlines.map(outline => outline.id).sort(), ['a', 'b'])
+  assert.equal(session.affectedOutlines[0].kind, 'shift')
+  assert.equal(base[0].y, 0)
+
+  const first = updateGridEditorPlacementSession(session, { cursor: { x: 1, y: 1, source: 'api' } }, { now: () => 11 })
+  const second = updateGridEditorPlacementSession(session, { cursor: { x: 1, y: 1, source: 'api' } }, { now: () => 12 })
+  assert.deepEqual(first.candidateLayout, second.candidateLayout)
+  assert.deepEqual(first.diagnostics.map(item => item.code), second.diagnostics.map(item => item.code))
+
+  const cursorBlocked = createGridEditorPlacementSession({
+    source: 'paste',
+    commandType: 'paste',
+    items: [{ i: 'cursor-new', x: 0, y: 0, w: 2, h: 2 }],
+    strategy: 'cursor',
+    placementIntent: 'here',
+    placementAnchor: 'top-left',
+    cursor: { x: 1, y: 1, source: 'api' },
+    cols: 6
+  }, {
+    baseLayout: base,
+    baseRevision: 2,
+    now: () => 20
+  })
+  assert.equal(cursorBlocked.phase, 'blocked')
+  assert.equal(cursorBlocked.ghostItems[0].item.x, 1)
+  assert.equal(cursorBlocked.ghostItems[0].item.y, 1)
+  assert.equal(cursorBlocked.ghostItems[0].state, 'blocked')
+  assert.equal(base[0].y, 0)
+}
+
+async function testControllerPlacementSessionLifecycle() {
+  const layout = ref<Layout>([
+    { i: 'a', x: 0, y: 0, w: 2, h: 2 }
+  ])
+  let readCount = 0
+  const guardPlacements: unknown[] = []
+  const editor = createGridEditorController({
+    layout,
+    defaultMode: 'edit',
+    clipboard: {
+      read: () => {
+        readCount += 1
+        return {
+          version: 1,
+          sourceId: 'test-copy',
+          copiedAt: '2026-05-20T00:00:00.000Z',
+          items: [{ i: 'widget', x: 0, y: 0, w: 2, h: 1 }],
+          editorMetaById: { widget: { label: 'Widget' } }
+        }
+      },
+      write: () => {}
+    },
+    beforeCommand: context => {
+      guardPlacements.push(context.placement)
+      return { status: 'allow' }
+    }
+  })
+
+  const started = await editor.beginPlacement({
+    source: 'paste',
+    commandType: 'paste',
+    strategy: 'cursor',
+    placementIntent: 'here',
+    placementAnchor: 'top-left',
+    cursor: { x: 3, y: 1, source: 'api' },
+    cols: 8
+  })
+  assert.equal(started.status, 'started')
+  assert.equal(readCount, 1)
+  assert.equal(layout.value.length, 1)
+  assert.equal(editor.placementSession.value?.ghostItems.length, 1)
+
+  const updated = editor.updatePlacement({ cursor: { x: 4, y: 2, source: 'api' } })
+  assert.equal(updated.status, 'updated')
+  assert.equal(layout.value.length, 1)
+  assert.equal(editor.placementSession.value?.ghostItems[0].item.x, 4)
+
+  const committed = await editor.commitPlacement({ source: 'api' })
+  assert.equal(committed.status, 'changed')
+  assert.equal(readCount, 1)
+  assert.equal(editor.placementSession.value, null)
+  assert.equal(layout.value.length, 2)
+  assert.equal(layout.value.find(item => item.i === 'widget-copy')?.x, 4)
+  assert.equal(editor.editorMetaById.value['widget-copy']?.label, 'Widget')
+  assert.ok(guardPlacements[0])
+  assert.equal(editor.selection.value.selectedIds[0], 'widget-copy')
+
+  const undone = await editor.undo()
+  assert.equal(undone.status, 'changed')
+  assert.equal(layout.value.length, 1)
+
+  const addStarted = await editor.beginPlacement({
+    source: 'palette',
+    commandType: 'add',
+    items: [{ i: 'palette', w: 1, h: 1 }],
+    strategy: 'first-fit',
+    cols: 8
+  })
+  assert.equal(addStarted.status, 'started')
+  const cancelled = editor.cancelPlacement('test-cancel')
+  assert.equal(cancelled.status, 'cancelled')
+  assert.equal(editor.placementSession.value, null)
+  const undoAfterCancel = await editor.undo()
+  assert.equal(undoAfterCancel.status, 'blocked')
+
+  const responsivePlacementLayout = ref<Layout>([])
+  const responsivePlacementEditor = createGridEditorController({
+    layout: responsivePlacementLayout,
+    defaultMode: 'edit',
+    clipboard: internalGridEditorClipboard
+  })
+  await internalGridEditorClipboard.write(createGridEditorClipboardPayload({
+    sourceId: 'responsive-placement-copy',
+    items: [{ i: 'wide-placement', x: 6, y: 0, w: 6, h: 2 }],
+    editorMetaById: { 'wide-placement': { label: 'Wide placement' } },
+    source: { cols: 24 }
+  }))
+  const responsiveStarted = await responsivePlacementEditor.beginPlacement({
+    source: 'paste',
+    commandType: 'paste',
+    strategy: 'cursor',
+    placementIntent: 'here',
+    placementAnchor: 'top-left',
+    cursor: { x: 2, y: 1, source: 'api' },
+    cols: 12
+  })
+  assert.equal(responsiveStarted.status, 'started')
+  assert.equal(responsivePlacementEditor.placementSession.value?.ghostItems[0].item.x, 2)
+  assert.equal(responsivePlacementEditor.placementSession.value?.ghostItems[0].item.w, 3)
+  assert.equal(responsivePlacementEditor.placementSession.value?.resolvedClipboardPayload?.responsive?.scaled, true)
+  const responsiveCommitted = await responsivePlacementEditor.commitPlacement({ source: 'api' })
+  assert.equal(responsiveCommitted.status, 'changed')
+  assert.equal(responsivePlacementLayout.value.find(item => item.i === 'wide-placement-copy')?.x, 2)
+  assert.equal(responsivePlacementLayout.value.find(item => item.i === 'wide-placement-copy')?.w, 3)
+
+  const pushLayout = ref<Layout>([
+    { i: 'existing', x: 0, y: 0, w: 2, h: 1 }
+  ])
+  const pushEditor = createGridEditorController({
+    layout: pushLayout,
+    defaultMode: 'edit',
+    layoutEngineOptions: {
+      cols: 4,
+      maxRows: 8,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
+  })
+  const pushStarted = await pushEditor.beginPlacement({
+    source: 'palette',
+    commandType: 'add',
+    items: [{ i: 'push-new', w: 2, h: 1 }],
+    strategy: 'cursor',
+    collisionPolicy: 'layout',
+    placementIntent: 'here',
+    placementAnchor: 'top-left',
+    cursor: { x: 0, y: 0, source: 'api' },
+    cols: 4
+  })
+  assert.equal(pushStarted.status, 'started')
+  assert.equal(pushEditor.placementSession.value?.ghostItems[0].item.y, 0)
+  assert.equal(pushEditor.placementSession.value?.affectedOutlines.find(item => item.id === 'existing')?.after.y, 1)
+  const pushCommitted = await pushEditor.commitPlacement({ source: 'api' })
+  assert.equal(pushCommitted.status, 'changed')
+  assert.equal(pushLayout.value.find(item => item.i === 'push-new')?.y, 0)
+  assert.equal(pushLayout.value.find(item => item.i === 'existing')?.y, 1)
+}
+
 async function run() {
   await testModeAndGuard()
   await testSelectionCapabilityAndHistory()
   await testGroupMoveCommands()
   await testMetadataClipboardAndPaste()
+  await testPlacementPolicies()
   await testKeyboardShortcuts()
   await testPersistenceBridgeAndGuides()
   await testPredictiveGuidesAndChips()
   await testL3IntelligenceSnapCommandsAndSectionRows()
+  await testCommandKernelContracts()
+  await testGuardStaleEventIsolationAndExternalRedo()
+  await testGuardResultVariantsAndAbort()
+  await testCommandPreviewCoverage()
+  testTransactionPreviewHelper()
+  testPlacementSessionCore()
+  await testControllerPlacementSessionLifecycle()
   console.log('editor-core tests passed')
 }
 

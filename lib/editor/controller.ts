@@ -3,8 +3,6 @@ import { deepEqual } from "fast-equals";
 import {
   cloneLayout,
   cloneLayoutItem,
-  findFirstFit,
-  findNearestFit,
   getAllCollisions,
   getLayoutItem,
   type Layout,
@@ -46,13 +44,16 @@ import {
   createGridEditorClipboardPayload,
   GridEditorClipboardError,
   internalGridEditorClipboard,
+  normalizeGridEditorClipboardItemsForTarget,
   systemClipboardAdapter
 } from "./clipboard";
 import {
   checkGridEditorCommand,
+  blockedGridEditorCommandResult,
   collectAffectedIds,
   collectEditorLayoutPatches,
   createGridEditorCommandResult,
+  defaultGridEditorHistoryMode,
   errorGridEditorCommandResult,
   isHistoryCommand,
   isLayoutCommand,
@@ -60,9 +61,16 @@ import {
   isPersistenceCommand,
   isSectionRowCommand,
   normalizeGridEditorCommand,
-  runGridEditorBeforeCommand,
-  shouldRecordGridEditorHistory
+  normalizeGridEditorHistoryPolicy,
+  shouldRecordGridEditorHistory,
+  type NormalizedGridEditorCommand
 } from "./commands";
+import {
+  createGridEditorCommandKernel
+} from "./commandKernel";
+import {
+  requireGridEditorCommandDescriptor
+} from "./commandRegistry";
 import {
   createGridEditorPersistenceBridge
 } from "./persistenceBridge";
@@ -72,8 +80,24 @@ import {
   applyGridEditorTidy
 } from "./geometryCommands";
 import {
+  placeGridEditorNewItems,
+  type GridEditorPlacementResult
+} from "./placement";
+import {
+  buildGridEditorPlacementCommitCommand,
+  cancelGridEditorPlacementSession,
+  createGridEditorPlacementSession,
+  updateGridEditorPlacementSession,
+  type GridEditorBeginPlacementInput,
+  type GridEditorPlacementSessionResult,
+  type GridEditorResolvedPastePayload
+} from "./placementSession";
+import {
   deriveGridEditorToolbarState
 } from "./toolbar";
+import {
+  createGridEditorTransactionPreview
+} from "./transactions";
 import {
   emptyGridEditorSectionRows,
   normalizeGridEditorSectionRows
@@ -91,13 +115,18 @@ import type {
   GridEditorGuideState,
   GridEditorHistoryController,
   GridEditorHistorySnapshot,
+  GridEditorHistoryPolicy,
   GridEditorMetaById,
   GridEditorMetadataPatch,
   GridEditorMode,
+  GridEditorPasteStrategy,
+  GridEditorTransaction,
+  GridEditorTransactionPreview,
   GridEditorTidyPayload,
   GridEditorSelectionState,
   GridEditorSectionRowCommandPayload,
   GridEditorSectionRowState,
+  GridEditorClipboardSourceContext,
   UseGridEditorOptions
 } from "./types";
 
@@ -178,6 +207,13 @@ const getPayloadRecord = (command: GridEditorCommand): Record<string, unknown> =
 
 const isCompactType = (value: unknown): value is CompactType =>
   value === "vertical" || value === "horizontal" || value === null;
+
+const isPasteStrategy = (value: unknown): value is GridEditorPasteStrategy =>
+  value === "offset" ||
+  value === "cursor" ||
+  value === "nearest-fit" ||
+  value === "first-fit" ||
+  value === "insert-top-shift";
 
 const mapLayoutBlockedReason = (
   reason: LayoutBlockedReason | undefined
@@ -267,6 +303,7 @@ export const createGridEditorController = (
   );
   const conflict = ref(null) as Ref<GridEditorController["conflict"]["value"]>;
   const guides = ref<GridEditorGuideState>({ ...EMPTY_GUIDES });
+  const placementSession = ref(null) as Ref<GridEditorController["placementSession"]["value"]>;
   const lastResult = ref<GridEditorCommandResult | null>(null);
   const interaction = ref<"dragging" | "resizing" | "keyboardEditing" | null>(null);
   const saveFailed = ref(false);
@@ -274,9 +311,35 @@ export const createGridEditorController = (
   const focusId = ref<string | null>(selection.value.activeId);
   const stopped = ref(false);
   const stopHandles: WatchStopHandle[] = [];
+  let stateRevision = 0;
+  let internalStateWriteDepth = 0;
+
+  const withInternalStateWrite = <T>(fn: () => T): T => {
+    internalStateWriteDepth += 1;
+    try {
+      return fn();
+    } finally {
+      internalStateWriteDepth -= 1;
+    }
+  };
 
   const emit = (event: GridEditorEvent) => {
-    options.onEvent?.(event);
+    try {
+      options.onEvent?.(event);
+    } catch (error) {
+      if (event.type !== "editor-error") {
+        try {
+          options.onEvent?.({
+            type: "editor-error",
+            code: "editor-event-listener-error",
+            message: "Grid editor event listener failed.",
+            details: error
+          });
+        } catch {
+          // Event listeners are observational; listener failures must not change command results.
+        }
+      }
+    }
   };
 
   const getLayout = (): Layout => kind === "responsive"
@@ -284,17 +347,20 @@ export const createGridEditorController = (
     : cloneLayout(layoutRef.value);
 
   const setLayout = (layout: Layout) => {
-    if (kind === "responsive") {
-      layoutsRef.value = {
-        ...layoutsRef.value,
-        [breakpointRef.value]: cloneLayout(layout)
-      };
-      if (options.layout) {
+    stateRevision += 1;
+    withInternalStateWrite(() => {
+      if (kind === "responsive") {
+        layoutsRef.value = {
+          ...layoutsRef.value,
+          [breakpointRef.value]: cloneLayout(layout)
+        };
+        if (options.layout) {
+          layoutRef.value = cloneLayout(layout);
+        }
+      } else {
         layoutRef.value = cloneLayout(layout);
       }
-    } else {
-      layoutRef.value = cloneLayout(layout);
-    }
+    });
   };
 
   const getLayouts = (): LayoutsMap => kind === "responsive"
@@ -302,11 +368,14 @@ export const createGridEditorController = (
     : { default: cloneLayout(layoutRef.value) };
 
   const setLayouts = (layouts: LayoutsMap, breakpoint: string = breakpointRef.value) => {
-    layoutsRef.value = cloneLayoutsMap(layouts);
-    breakpointRef.value = breakpoint;
-    if (options.layout) {
-      layoutRef.value = cloneLayout(layouts[breakpoint] || []);
-    }
+    stateRevision += 1;
+    withInternalStateWrite(() => {
+      layoutsRef.value = cloneLayoutsMap(layouts);
+      breakpointRef.value = breakpoint;
+      if (options.layout) {
+        layoutRef.value = cloneLayout(layouts[breakpoint] || []);
+      }
+    });
   };
 
     const createSnapshot = (): GridEditorHistorySnapshot => {
@@ -332,6 +401,7 @@ export const createGridEditorController = (
     };
 
   const applySnapshot = (snapshot: GridEditorHistorySnapshot) => {
+      stateRevision += 1;
       if (snapshot.kind === "responsive") {
         setLayouts(snapshot.layouts, snapshot.breakpoint);
       } else {
@@ -357,6 +427,7 @@ export const createGridEditorController = (
     if (savePending.value) return "savePending";
     if (saveFailed.value) return "saveFailed";
     if (interaction.value) return interaction.value;
+    if (placementSession.value) return "placing";
     if (mode.value === "view") return "viewing";
     return dirty.value ? "editingDirty" : "editingClean";
   });
@@ -368,12 +439,14 @@ export const createGridEditorController = (
     getEditorMetaById: () => editorMetaById.value,
     getSectionRows: () => sectionRows.value,
     setEditorMetaById: (meta, reason) => {
+      stateRevision += 1;
       editorMetaById.value = sanitizeEditorMetaById(meta, { layout: getLayout() });
       if (reason === "save-success" || reason === "load-success") {
         lastSavedSnapshot.value = createSnapshot();
       }
     },
     setSectionRows: (rows, reason) => {
+      stateRevision += 1;
       sectionRows.value = {
         version: 1,
         items: rows.items,
@@ -395,6 +468,7 @@ export const createGridEditorController = (
       });
     },
     onConflict: nextConflict => {
+      stateRevision += 1;
       conflict.value = nextConflict;
       emit({ type: "conflict", conflict: nextConflict });
     },
@@ -426,6 +500,7 @@ export const createGridEditorController = (
     }
 
     if (deepEqual(previous, normalized)) return previous;
+    stateRevision += 1;
     selection.value = normalized;
     focusId.value = normalized.activeId;
     emit({
@@ -437,25 +512,25 @@ export const createGridEditorController = (
     return normalized;
   };
 
-  const setFocus = (nextFocusId: string | null, reason: string) => {
-    const previous = focusId.value;
-    if (previous === nextFocusId) return;
-    focusId.value = nextFocusId;
-    emit({ type: "focus-change", from: previous, to: nextFocusId, reason });
-  };
-
   const finalize = (
     command: ReturnType<typeof normalizeGridEditorCommand>,
     result: GridEditorCommandResult,
     startedAt: number,
     guardMs = result.diagnostics?.guardMs || 0
   ): GridEditorCommandResult => {
+    const historyPolicy = normalizeGridEditorHistoryPolicy(
+      command.history,
+      defaultGridEditorHistoryMode(command.type)
+    );
     const finalResult = {
       ...result,
       diagnostics: {
         ...result.diagnostics,
         durationMs: now() - startedAt,
-        guardMs
+        guardMs,
+        historyMode: result.diagnostics?.historyMode || historyPolicy.mode,
+        source: result.diagnostics?.source || command.source,
+        origin: result.diagnostics?.origin || command.origin
       }
     };
     lastResult.value = finalResult;
@@ -475,20 +550,57 @@ export const createGridEditorController = (
   const commitHistory = (
     command: ReturnType<typeof normalizeGridEditorCommand>,
     before: GridEditorHistorySnapshot,
-    result: GridEditorCommandResult
+    result: GridEditorCommandResult,
+    afterSnapshot?: GridEditorHistorySnapshot
   ): GridEditorCommandResult => {
-    if (!history || !shouldRecordGridEditorHistory(command.type) || command.history?.skip) {
+    const historyPolicy = normalizeGridEditorHistoryPolicy(
+      command.history,
+      defaultGridEditorHistoryMode(command.type)
+    );
+    result.diagnostics = {
+      durationMs: result.diagnostics?.durationMs || 0,
+      ...result.diagnostics,
+      historyMode: historyPolicy.mode,
+      source: command.source,
+      origin: command.origin
+    };
+    if (!history) {
       return result;
     }
-    const after = createSnapshot();
+    if (historyPolicy.mode === "clear") {
+      history.clear(createSnapshot());
+      return result;
+    }
+    if (historyPolicy.mode === "replace") {
+      history.replacePresent(createSnapshot(), {
+        preserveRedoStack: historyPolicy.preserveRedoStack
+      });
+      return result;
+    }
+    if (
+      historyPolicy.mode === "ignore" ||
+      !shouldRecordGridEditorHistory(command.type)
+    ) {
+      return result;
+    }
+    const after = afterSnapshot || createSnapshot();
     const entry = createGridEditorHistoryEntry({
       commandId: command.id,
       commandType: command.type,
       before,
       after,
-      mergeKey: command.history?.mergeKey
+      mergeKey: historyPolicy.mergeKey,
+      source: command.source,
+      origin: command.origin,
+      targetIds: result.targetIds,
+      affectedIds: result.affectedIds,
+      historyMode: historyPolicy.mode
     });
-    history.push(entry);
+    history.push(entry, {
+      preserveRedoStack:
+        historyPolicy.preserveRedoStack ||
+        historyPolicy.mode === "record-preserveRedoStack"
+    });
     result.undo = entry;
 
     if (kind === "layout") {
@@ -497,28 +609,117 @@ export const createGridEditorController = (
     return result;
   };
 
-  const applyLayoutAndMetadata = (
-    layout: Layout,
-    metadataPatches: GridEditorMetadataPatch[]
+  const transactionScopeForCommand = (
+    command: ReturnType<typeof normalizeGridEditorCommand>
+  ): string => requireGridEditorCommandDescriptor(command.type).mutualExclusionScope || "global";
+
+  const createCommandTransaction = (
+    command: ReturnType<typeof normalizeGridEditorCommand>,
+    before: GridEditorHistorySnapshot,
+    after: GridEditorHistorySnapshot
+  ): GridEditorTransaction => {
+    const descriptor = requireGridEditorCommandDescriptor(command.type);
+    return {
+      id: `${command.id}:transaction`,
+      commandId: command.id,
+      command,
+      source: command.source || descriptor.defaultSource || "api",
+      origin: command.origin,
+      scope: transactionScopeForCommand(command),
+      before,
+      after,
+      preview: createGridEditorTransactionPreview(before, after, {
+        risk: descriptor.risk
+      }),
+      history: normalizeGridEditorHistoryPolicy(
+        command.history,
+        descriptor.defaultHistory.mode || defaultGridEditorHistoryMode(command.type)
+      )
+    };
+  };
+
+  const maybeEmitTransactionSelectionChange = (
+    before: GridEditorHistorySnapshot,
+    requestedAfter: GridEditorHistorySnapshot,
+    appliedAfter: GridEditorHistorySnapshot
   ) => {
-    setLayout(layout);
-    if (metadataPatches.length > 0) {
-      editorMetaById.value = applyEditorMetadataPatches(
-        editorMetaById.value,
-        metadataPatches
-      );
+    if (options.selectedIds) {
+      if (!deepEqual(before.selection, requestedAfter.selection)) {
+        emit({
+          type: "selection-change",
+          selection: cloneSelection(requestedAfter.selection),
+          previous: cloneSelection(before.selection),
+          requested: true
+        });
+      }
+      return;
     }
-    const cleanedMeta = removeOrphanEditorMeta(editorMetaById.value, layout);
-    if (!deepEqual(cleanedMeta, editorMetaById.value)) {
-      editorMetaById.value = cleanedMeta;
+
+    if (!deepEqual(before.selection, appliedAfter.selection)) {
+      emit({
+        type: "selection-change",
+        selection: cloneSelection(appliedAfter.selection),
+        previous: cloneSelection(before.selection)
+      });
     }
-    const nextSelection = sanitizeSelectionForLayout(
-      selection.value,
-      layout,
-      editorMetaById.value,
-      "api"
-    );
-    setSelection(nextSelection);
+    if (before.focusId !== appliedAfter.focusId) {
+      emit({
+        type: "focus-change",
+        from: before.focusId,
+        to: appliedAfter.focusId,
+        reason: "transaction"
+      });
+    }
+  };
+
+  const applyCommandTransaction = (
+    command: ReturnType<typeof normalizeGridEditorCommand>,
+    before: GridEditorHistorySnapshot,
+    requestedAfter: GridEditorHistorySnapshot,
+    input: Partial<GridEditorCommandResult> & {
+      status?: GridEditorCommandResult["status"];
+    } = {}
+  ): GridEditorCommandResult => {
+    const selectionControlled = Boolean(options.selectedIds);
+    const appliedAfter = selectionControlled
+      ? snapshotWithDraft(requestedAfter, {
+          selection: before.selection,
+          focusId: before.focusId
+        })
+      : requestedAfter;
+    const transaction = createCommandTransaction(command, before, appliedAfter);
+    const changed = !deepEqual(before, appliedAfter);
+    const status = input.status || (changed ? "changed" : "noop");
+    const result = createGridEditorCommandResult(command, status, {
+      ...input,
+      targetIds: input.targetIds || transaction.preview.affectedIds,
+      layoutPatches: input.layoutPatches || transaction.preview.layoutPatches,
+      metadataPatches: input.metadataPatches || transaction.preview.metadataPatches,
+      affectedIds: input.affectedIds || transaction.preview.affectedIds,
+      selection: input.selection || appliedAfter.selection,
+      diagnostics: {
+        durationMs: 0,
+        ...input.diagnostics
+      }
+    });
+
+    if (changed) {
+      try {
+        applySnapshot(transaction.after);
+        maybeEmitTransactionSelectionChange(before, requestedAfter, transaction.after);
+      } catch (error) {
+        try {
+          applySnapshot(transaction.before);
+        } catch {
+          // If rollback itself fails, preserve the original apply error for diagnostics.
+        }
+        return errorGridEditorCommandResult(command, "Editor transaction apply failed.", error);
+      }
+    } else if (selectionControlled) {
+      maybeEmitTransactionSelectionChange(before, requestedAfter, transaction.after);
+    }
+
+    return commitHistory(command, before, result, transaction.after);
   };
 
   const resolveLayoutEngineOptions = (
@@ -536,6 +737,28 @@ export const createGridEditorController = (
       allowOverlap: payload.allowOverlap === true,
       preventCollision: payload.preventCollision === true
     };
+  };
+
+  const resolveClipboardTargetCols = (
+    payload: Record<string, unknown>
+  ): number | undefined => {
+    const engineOptions = resolveLayoutEngineOptions(payload);
+    if (engineOptions) return engineOptions.cols;
+    return isFiniteGridNumber(payload.cols) && payload.cols > 0
+      ? Math.floor(payload.cols)
+      : undefined;
+  };
+
+  const clipboardSourceContext = (
+    payload: Record<string, unknown>
+  ) => {
+    const source: Record<string, unknown> = {};
+    const cols = resolveClipboardTargetCols(payload);
+    if (cols) source.cols = cols;
+    if (typeof payload.breakpoint === "string") source.breakpoint = payload.breakpoint;
+    if (typeof payload.layoutId === "string") source.layoutId = payload.layoutId;
+    if (typeof payload.viewFormat === "string") source.viewFormat = payload.viewFormat;
+    return Object.keys(source).length > 0 ? source as GridEditorClipboardSourceContext : undefined;
   };
 
   const runLayoutOperation = async (
@@ -603,70 +826,148 @@ export const createGridEditorController = (
     return options.clipboard;
   };
 
-  const placeNewItems = (
-  sourceLayout: Layout,
-  items: Layout,
-  strategy: string,
-  payload: Record<string, unknown>
-  ): { layout: Layout; failed: boolean } => {
-    const cols = isFiniteGridNumber(payload.cols) ? payload.cols : 12;
-    const maxRows = isFiniteGridNumber(payload.maxRows) ? payload.maxRows : Infinity;
-    const offset = isFiniteGridNumber(payload.offset) ? payload.offset : 1;
-    const target = payload.cursor && typeof payload.cursor === "object"
-      ? payload.cursor as { x?: unknown; y?: unknown }
-      : null;
-    const nextLayout = cloneLayout(sourceLayout);
-    let failed = false;
+  const placementDiagnostics = (
+    placement: GridEditorPlacementResult,
+    payload?: Record<string, unknown>
+  ): GridEditorCommandResult["diagnostics"] => {
+    const summary = {
+      ...placement.summary,
+      collisionPolicy: payload?.collisionPolicy === "layout" || payload?.collisionPolicy === "block"
+        ? payload.collisionPolicy
+        : placement.summary.collisionPolicy,
+      sessionId: typeof payload?.placementSessionId === "string"
+        ? payload.placementSessionId
+        : placement.summary.sessionId,
+      source: typeof payload?.placementSource === "string"
+        ? payload.placementSource
+        : placement.summary.source
+    };
+    return {
+      durationMs: 0,
+      computed: {
+        placement: summary
+      },
+      messages: placement.summary.diagnostics.map(diagnostic => ({
+        code: diagnostic.code,
+        level: diagnostic.level,
+        message: diagnostic.message,
+        itemIds: diagnostic.itemIds,
+        recoverable: diagnostic.level !== "error"
+        }))
+    };
+  };
 
-    items.forEach((item, index) => {
-      let x = isFiniteGridNumber(item.x) ? item.x : 0;
-      let y = isFiniteGridNumber(item.y) ? item.y : 0;
-
-      if (strategy === "offset") {
-        x += offset * (index + 1);
-        y += offset * (index + 1);
-      } else if (strategy === "nearest-fit" || strategy === "cursor") {
-        const fit = findNearestFit(
-          nextLayout,
-          item,
-          cols,
-          isFiniteGridNumber(target?.x) ? target.x : x,
-          isFiniteGridNumber(target?.y) ? target.y : y,
-          maxRows
-        );
-        if (fit) {
-          x = fit.x;
-          y = fit.y;
-        }
-      } else {
-        const fit = findFirstFit(nextLayout, item, cols, maxRows);
-        if (fit) {
-          x = fit.x;
-          y = fit.y;
-        }
+  const placementSessionDiagnostics = (
+    session: NonNullable<GridEditorController["placementSession"]["value"]>
+  ): GridEditorCommandResult["diagnostics"] => ({
+    durationMs: 0,
+    computed: {
+        placement: {
+          strategy: session.strategy,
+          placementSource: session.strategy,
+          collisionPolicy: session.collisionPolicy,
+          sessionId: session.id,
+          source: session.source,
+          insertedIds: session.ghostItems.map(item => item.id),
+        shiftedIds: session.affectedOutlines
+          .filter(item => item.kind === "shift")
+          .map(item => item.id),
+        before: session.affectedOutlines.map(item => ({
+          id: item.id,
+          ...item.before
+        })),
+        after: session.affectedOutlines.map(item => ({
+          id: item.id,
+          ...item.after
+        })),
+        diagnostics: session.diagnostics
       }
+    },
+    messages: session.diagnostics.map(diagnostic => ({
+      code: diagnostic.code,
+      level: diagnostic.level,
+      message: diagnostic.message,
+      itemIds: diagnostic.itemIds,
+      recoverable: diagnostic.level !== "error"
+    }))
+  });
 
-      const candidate = {
-        ...item,
-        x: Math.max(0, Math.floor(x)),
-        y: Math.max(0, Math.floor(y))
-      };
-      const outOfBounds = candidate.x + candidate.w > cols ||
-        (Number.isFinite(maxRows) && candidate.y + candidate.h > maxRows);
-      const hasCollision = getAllCollisions(nextLayout, candidate).length > 0;
-      if (outOfBounds || hasCollision) {
-        const fit = findFirstFit(nextLayout, item, cols, maxRows);
-        if (!fit) {
-          failed = true;
-          return;
-        }
-        nextLayout.push({ ...candidate, x: fit.x, y: fit.y });
-        return;
-      }
-      nextLayout.push(candidate);
-    });
+  const blockedPlacementResult = (
+    commandType: "add" | "paste",
+    reason: GridEditorBlockedReason,
+    message: string,
+    itemIds: string[] = [],
+    diagnostics?: GridEditorCommandResult["diagnostics"]
+  ): GridEditorPlacementSessionResult => ({
+    status: "blocked",
+    blocked: {
+      reason,
+      itemIds,
+      message
+    },
+    diagnostics: diagnostics || {
+      durationMs: 0,
+      messages: [{
+        code: `grid-editor.placement.${reason}`,
+        level: reason === "invalid-input" ? "error" : "warning",
+        message,
+        itemIds,
+        recoverable: reason !== "invalid-input"
+      }]
+    }
+  });
 
-    return { layout: nextLayout, failed };
+  const prepareAddPlacementInput = (
+    input: GridEditorBeginPlacementInput
+  ): GridEditorBeginPlacementInput => {
+    if (input.commandType && input.commandType !== "add") return input;
+    if (input.source === "paste") return input;
+    const rawItems = Array.isArray(input.items)
+      ? input.items
+      : input.item
+        ? [input.item]
+        : [];
+    if (rawItems.length === 0) return input;
+    const existingIds = new Set(getLayout().map(item => item.i));
+    const idGenerator = options.idGenerator || defaultIdGenerator;
+    const metaById = input.editorMetaById || {};
+    const nextMetaById: GridEditorMetaById = {};
+    const items = rawItems
+      .filter(item => item && typeof item === "object")
+      .map((item, index) => {
+        const sourceId = typeof item.i === "string" && item.i.length > 0
+          ? item.i
+          : `item-${index + 1}`;
+        const id = !existingIds.has(sourceId)
+          ? sourceId
+          : idGenerator(sourceId, existingIds);
+        existingIds.add(id);
+        if (metaById[sourceId]) nextMetaById[id] = { ...metaById[sourceId] };
+        return {
+          ...item,
+          i: id,
+          x: isFiniteGridNumber(item.x) ? item.x : 0,
+          y: isFiniteGridNumber(item.y) ? item.y : 0,
+          w: clampGridSize(item.w, 1),
+          h: clampGridSize(item.h, 1)
+        };
+      });
+    return {
+      ...input,
+      commandType: "add",
+      item: undefined,
+      items,
+      editorMetaById: sanitizeEditorMetaById(nextMetaById, { layout: items as Layout })
+    };
+  };
+
+  const clearPlacementSession = (reason: string) => {
+    const active = placementSession.value;
+    if (!active) return null;
+    placementSession.value = null;
+    guides.value = { ...EMPTY_GUIDES };
+    emit({ type: "placement-cancel", sessionId: active.id, reason });
+    return active;
   };
 
   const validateGeometryLayout = (
@@ -769,6 +1070,8 @@ export const createGridEditorController = (
     const metadataPatches: GridEditorMetadataPatch[] = [];
     let resultDiagnostics: GridEditorCommandResult["diagnostics"] | undefined;
     let nextLayout = cloneLayout(layout);
+    let nextSelection = cloneSelection(before.selection);
+    let nextFocusId = before.focusId;
     const sectionRowBlocked = isLayoutCommand(command.type)
       ? sectionRowBlockForIds(allowedIds, layout)
       : null;
@@ -792,6 +1095,105 @@ export const createGridEditorController = (
             recoverable: true
           }]
         }
+      });
+    }
+
+    const candidateLayout = readCandidateLayout(command);
+    if (candidateLayout && isLayoutCommand(command.type)) {
+      const candidateMetadataPatches = metadataPatches.slice();
+      if (command.type === "add") {
+        const candidateMeta = sanitizeEditorMetaById(payload.editorMetaById, {
+          layout: candidateLayout
+        });
+        Object.keys(candidateMeta).forEach(id => {
+          candidateMetadataPatches.push({ type: "set", id, next: candidateMeta[id] });
+        });
+      } else if (command.type === "paste") {
+        const resolvedPayload =
+          payload.resolvedClipboardPayload &&
+          typeof payload.resolvedClipboardPayload === "object"
+            ? payload.resolvedClipboardPayload as Partial<GridEditorResolvedPastePayload>
+            : null;
+        const candidateMeta = sanitizeEditorMetaById(resolvedPayload?.editorMetaById, {
+          layout: candidateLayout
+        });
+        Object.keys(candidateMeta).forEach(id => {
+          candidateMetadataPatches.push({ type: "set", id, next: candidateMeta[id] });
+        });
+      }
+      const layoutPatches = collectEditorLayoutPatches(layout, candidateLayout);
+      const insertedIds = layoutPatches.flatMap(patch =>
+        patch.type === "add" ? [patch.item.i] : []
+      );
+      const shiftedIds = layoutPatches.flatMap(patch =>
+        patch.type === "move" || patch.type === "resize" ? [patch.id] : []
+      );
+      const affectedIds = collectAffectedIds(layoutPatches, candidateMetadataPatches);
+      const candidateDiagnostics = typeof payload.placementSessionId === "string"
+        ? {
+            durationMs: 0,
+            computed: {
+              placement: {
+                strategy: isPasteStrategy(payload.strategy) ? payload.strategy : "first-fit",
+                placementSource: isPasteStrategy(payload.strategy) ? payload.strategy : "first-fit",
+                collisionPolicy: payload.collisionPolicy === "layout" || payload.collisionPolicy === "block"
+                  ? payload.collisionPolicy
+                  : undefined,
+                sessionId: payload.placementSessionId,
+                source: typeof payload.placementSource === "string"
+                  ? payload.placementSource
+                  : undefined,
+                insertedIds,
+                shiftedIds,
+                before: layout.map(item => ({
+                  id: item.i,
+                  x: item.x,
+                  y: item.y,
+                  w: item.w,
+                  h: item.h
+                })),
+                after: candidateLayout.map(item => ({
+                  id: item.i,
+                  x: item.x,
+                  y: item.y,
+                  w: item.w,
+                  h: item.h
+                })),
+                diagnostics: Array.isArray((payload.placementSummary as { diagnostics?: unknown } | undefined)?.diagnostics)
+                  ? (payload.placementSummary as { diagnostics: [] }).diagnostics
+                  : []
+              }
+            }
+          } satisfies GridEditorCommandResult["diagnostics"]
+        : resultDiagnostics;
+      const nextMeta = removeOrphanEditorMeta(
+        applyEditorMetadataPatches(before.editorMetaById, candidateMetadataPatches),
+        candidateLayout
+      );
+      const nextSelection = insertedIds.length > 0 && (command.type === "add" || command.type === "paste")
+        ? createGridEditorSelection(insertedIds, "api")
+        : sanitizeSelectionForLayout(
+            before.selection,
+            candidateLayout,
+            nextMeta,
+            "api"
+          );
+      return applyCommandTransaction(command, before, snapshotWithDraft(before, {
+        layout: candidateLayout,
+        editorMetaById: nextMeta,
+        selection: nextSelection,
+        focusId: nextSelection.activeId
+      }), {
+        status: affectedIds.length > 0 ? "changed" : "noop",
+        targetIds: allowedIds.length > 0 ? allowedIds : command.targetIds,
+        layoutPatches,
+        metadataPatches: candidateMetadataPatches,
+        affectedIds,
+        selection: nextSelection,
+        blocked: blockedIds.length > 0
+          ? { reason: "capability", skippedIds: blockedIds, itemIds: blockedIds }
+          : undefined,
+        diagnostics: candidateDiagnostics
       });
     }
 
@@ -943,23 +1345,35 @@ export const createGridEditorController = (
 
       const normalizedNextRows = normalizeGridEditorSectionRows(nextRows, nextLayout);
       const layoutPatches = collectEditorLayoutPatches(layout, nextLayout);
-      applyLayoutAndMetadata(nextLayout, metadataPatches);
-      sectionRows.value = {
+      const nextSectionRows: GridEditorSectionRowState = {
         version: 1,
         items: normalizedNextRows.items,
         itemMembership: normalizedNextRows.itemMembership
       };
-      if (!deepEqual(selection.value.selectedIds, nextSelectionIds) || focusId.value !== nextFocusId) {
-        setSelection(createGridEditorSelection(nextSelectionIds, "api"));
-        setFocus(nextFocusId, command.type);
-      }
+      const nextMeta = removeOrphanEditorMeta(
+        applyEditorMetadataPatches(before.editorMetaById, metadataPatches),
+        nextLayout
+      );
+      const nextSelection = sanitizeSelectionForLayout(
+        createGridEditorSelection(nextSelectionIds, "api"),
+        nextLayout,
+        nextMeta,
+        "api"
+      );
       const affectedIds = Array.from(new Set([...rowIds, ...affectedItemIds]));
-      return commitHistory(command, before, createGridEditorCommandResult(command, "changed", {
+      return applyCommandTransaction(command, before, snapshotWithDraft(before, {
+        layout: nextLayout,
+        editorMetaById: nextMeta,
+        sectionRows: nextSectionRows,
+        selection: nextSelection,
+        focusId: nextFocusId
+      }), {
+        status: "changed",
         targetIds: rowIds,
         layoutPatches,
         metadataPatches,
         affectedIds,
-        selection: selection.value,
+        selection: nextSelection,
         diagnostics: {
           durationMs: 0,
           computed: {
@@ -976,7 +1390,7 @@ export const createGridEditorController = (
             recoverable: true
           }]
         }
-      }));
+      });
     }
 
     if (command.type === "select") {
@@ -992,18 +1406,38 @@ export const createGridEditorController = (
         range: payload.range === true,
         source: command.source === "keyboard" ? "keyboard" : command.source === "pointer" ? "pointer" : "api"
       });
-      const applied = setSelection(nextSelection);
-      return createGridEditorCommandResult(command, deepEqual(previousSelection, applied) ? "noop" : "changed", {
-        targetIds: applied.selectedIds,
-        selection: applied
+      const normalizedSelection = sanitizeSelectionForLayout(
+        nextSelection,
+        layout,
+        before.editorMetaById,
+        nextSelection.source
+      );
+      const appliedSelection = options.selectedIds ? previousSelection : normalizedSelection;
+      return applyCommandTransaction(command, before, snapshotWithDraft(before, {
+        selection: normalizedSelection,
+        focusId: normalizedSelection.activeId
+      }), {
+        status: deepEqual(previousSelection, appliedSelection) ? "noop" : "changed",
+        targetIds: appliedSelection.selectedIds,
+        selection: appliedSelection
       });
     }
 
     if (command.type === "clearSelection") {
       const previousSelection = selection.value;
-      const applied = setSelection(clearEditorSelection("api"));
-      return createGridEditorCommandResult(command, deepEqual(previousSelection, applied) ? "noop" : "changed", {
-        selection: applied
+      const nextSelection = sanitizeSelectionForLayout(
+        clearEditorSelection("api"),
+        layout,
+        before.editorMetaById,
+        "api"
+      );
+      const appliedSelection = options.selectedIds ? previousSelection : nextSelection;
+      return applyCommandTransaction(command, before, snapshotWithDraft(before, {
+        selection: nextSelection,
+        focusId: nextSelection.activeId
+      }), {
+        status: deepEqual(previousSelection, appliedSelection) ? "noop" : "changed",
+        selection: appliedSelection
       });
     }
 
@@ -1080,25 +1514,37 @@ export const createGridEditorController = (
         }
 
         const layoutPatches = operationResult.patches;
-        if (operationResult.status === "changed" || operationResult.status === "fallback") {
-          applyLayoutAndMetadata(operationResult.layout, metadataPatches);
-        }
         const affectedIds = operationResult.affectedIds;
         const status = layoutPatches.length > 0 || operationResult.status === "changed" || operationResult.status === "fallback"
           ? "changed"
           : "noop";
-        const result = createGridEditorCommandResult(command, status, {
+        const nextMeta = removeOrphanEditorMeta(
+          applyEditorMetadataPatches(before.editorMetaById, metadataPatches),
+          operationResult.layout
+        );
+        const nextSelection = sanitizeSelectionForLayout(
+          before.selection,
+          operationResult.layout,
+          nextMeta,
+          "api"
+        );
+        return applyCommandTransaction(command, before, snapshotWithDraft(before, {
+          layout: operationResult.layout,
+          editorMetaById: nextMeta,
+          selection: nextSelection,
+          focusId: nextSelection.activeId
+        }), {
+          status,
           targetIds,
           layoutPatches,
           metadataPatches,
           affectedIds,
-          selection: selection.value,
+          selection: nextSelection,
           blocked: blockedIds.length > 0
             ? { reason: "capability", skippedIds: blockedIds, itemIds: blockedIds }
             : undefined,
           diagnostics: resultDiagnostics
         });
-        return commitHistory(command, before, result);
       }
 
       nextLayout = nextLayout.map(item => {
@@ -1209,15 +1655,25 @@ export const createGridEditorController = (
             h: clampGridSize(input.h, 1)
           } as LayoutItem;
         });
-      const placed = placeNewItems(nextLayout, items, String(payload.strategy || "first-fit"), payload);
+      const placed = placeGridEditorNewItems(nextLayout, items, String(payload.strategy || "first-fit"), payload);
+      resultDiagnostics = placementDiagnostics(placed, payload);
       if (placed.failed) {
         return createGridEditorCommandResult(command, "blocked", {
+          targetIds: placed.summary.insertedIds,
           blocked: {
-            reason: "bounds",
-            message: "One or more items could not fit in the current layout."
-          }
+            reason: placed.blocked?.reason || "bounds",
+            itemIds: placed.blocked?.itemIds,
+            message: placed.blocked?.message || "One or more items could not fit in the current layout."
+          },
+          diagnostics: resultDiagnostics
         });
       }
+      const payloadMeta = sanitizeEditorMetaById(payload.editorMetaById, { layout: items });
+      Object.keys(payloadMeta).forEach(id => {
+        if (items.some(item => item.i === id)) {
+          metadataPatches.push({ type: "set", id, next: payloadMeta[id] });
+        }
+      });
       nextLayout = placed.layout;
     } else if (command.type === "delete") {
       const deleted = new Set(allowedIds);
@@ -1227,7 +1683,7 @@ export const createGridEditorController = (
           metadataPatches.push({ type: "remove", id, previous: editorMetaById.value[id] });
         }
       });
-      setFocus(getNextFocusableId(nextLayout, allowedIds, editorMetaById.value), "delete");
+      nextFocusId = getNextFocusableId(nextLayout, allowedIds, editorMetaById.value);
     } else if (command.type === "duplicate") {
       const sourceItems = allowedIds
         .map(id => getLayoutItem(layout, id))
@@ -1241,24 +1697,27 @@ export const createGridEditorController = (
       Object.keys(mapped.metaById).forEach(id => {
         metadataPatches.push({ type: "set", id, next: mapped.metaById[id] });
       });
-      const placed = placeNewItems(
+      const placed = placeGridEditorNewItems(
         nextLayout,
         mapped.items,
         String(payload.strategy || options.pasteStrategy || "offset"),
         payload
       );
+      resultDiagnostics = placementDiagnostics(placed, payload);
       if (placed.failed) {
         return createGridEditorCommandResult(command, "blocked", {
           targetIds: allowedIds,
           blocked: {
-            reason: "bounds",
-            itemIds: allowedIds,
-            message: "Duplicated items could not fit in the current layout."
-          }
+            reason: placed.blocked?.reason || "bounds",
+            itemIds: placed.blocked?.itemIds || allowedIds,
+            message: placed.blocked?.message || "Duplicated items could not fit in the current layout."
+          },
+          diagnostics: resultDiagnostics
         });
       }
       nextLayout = placed.layout;
-      setSelection(createGridEditorSelection(mapped.items.map(item => item.i), "api"));
+      nextSelection = createGridEditorSelection(mapped.items.map(item => item.i), "api");
+      nextFocusId = nextSelection.activeId;
     } else if (command.type === "copy") {
       const items = allowedIds
         .map(id => getLayoutItem(layout, id))
@@ -1266,14 +1725,32 @@ export const createGridEditorController = (
       await writeClipboard(resolveClipboard(), createGridEditorClipboardPayload({
         sourceId: command.id,
         items,
-        editorMetaById: sanitizeEditorMetaById(editorMetaById.value, { layout: items })
+        editorMetaById: sanitizeEditorMetaById(editorMetaById.value, { layout: items }),
+        source: clipboardSourceContext(payload)
       }));
       return createGridEditorCommandResult(command, "changed", {
         targetIds: allowedIds,
         affectedIds: allowedIds
       });
     } else if (command.type === "paste") {
-      const clipboardPayload = await readClipboard(resolveClipboard());
+      const resolvedPayload =
+        payload.resolvedClipboardPayload &&
+        typeof payload.resolvedClipboardPayload === "object"
+          ? payload.resolvedClipboardPayload as Partial<GridEditorResolvedPastePayload>
+          : null;
+      const clipboardPayload = resolvedPayload
+        ? {
+            items: cloneLayout(Array.isArray(resolvedPayload.items) ? resolvedPayload.items : []),
+            editorMetaById: sanitizeEditorMetaById(resolvedPayload.editorMetaById),
+            sourceId: typeof resolvedPayload.sourceId === "string"
+              ? resolvedPayload.sourceId
+              : command.id,
+            copiedAt: new Date().toISOString(),
+            version: 2 as const,
+            source: resolvedPayload.source,
+            originalGeometryById: resolvedPayload.originalGeometryById
+          }
+        : await readClipboard(resolveClipboard());
       if (!clipboardPayload) {
         return createGridEditorCommandResult(command, "blocked", {
           blocked: {
@@ -1282,31 +1759,50 @@ export const createGridEditorController = (
           }
         });
       }
-      const mapped = mapIds(
-        clipboardPayload.items,
-        clipboardPayload.editorMetaById,
-        new Set(layout.map(item => item.i)),
-        options.idGenerator || defaultIdGenerator
-      );
+      const normalizedClipboard = resolvedPayload?.mapped === true
+        ? {
+            items: cloneLayout(clipboardPayload.items),
+            scaled: false
+          }
+        : normalizeGridEditorClipboardItemsForTarget(clipboardPayload, {
+            cols: resolveClipboardTargetCols(payload)
+          });
+      const mapped = resolvedPayload?.mapped === true
+        ? {
+            items: cloneLayout(normalizedClipboard.items),
+            metaById: sanitizeEditorMetaById(clipboardPayload.editorMetaById, {
+              layout: normalizedClipboard.items
+            })
+          }
+        : mapIds(
+            normalizedClipboard.items,
+            clipboardPayload.editorMetaById,
+            new Set(layout.map(item => item.i)),
+            options.idGenerator || defaultIdGenerator
+          );
       Object.keys(mapped.metaById).forEach(id => {
         metadataPatches.push({ type: "set", id, next: mapped.metaById[id] });
       });
-      const placed = placeNewItems(
+      const placed = placeGridEditorNewItems(
         nextLayout,
         mapped.items,
         String(payload.strategy || options.pasteStrategy || "offset"),
         payload
       );
+      resultDiagnostics = placementDiagnostics(placed, payload);
       if (placed.failed) {
         return createGridEditorCommandResult(command, "blocked", {
           blocked: {
-            reason: "bounds",
-            message: "Clipboard items could not fit in the current layout."
-          }
+            reason: placed.blocked?.reason || "bounds",
+            itemIds: placed.blocked?.itemIds,
+            message: placed.blocked?.message || "Clipboard items could not fit in the current layout."
+          },
+          diagnostics: resultDiagnostics
         });
       }
       nextLayout = placed.layout;
-      setSelection(createGridEditorSelection(mapped.items.map(item => item.i), "api"));
+      nextSelection = createGridEditorSelection(mapped.items.map(item => item.i), "api");
+      nextFocusId = nextSelection.activeId;
     } else if (isMetadataCommand(command.type)) {
       allowedIds.forEach(id => {
         const patch =
@@ -1320,117 +1816,622 @@ export const createGridEditorController = (
     }
 
     const layoutPatches = collectEditorLayoutPatches(layout, nextLayout);
-    if (layoutPatches.length > 0 || metadataPatches.length > 0) {
-      applyLayoutAndMetadata(nextLayout, metadataPatches);
-    }
+    const nextMeta = removeOrphanEditorMeta(
+      applyEditorMetadataPatches(before.editorMetaById, metadataPatches),
+      nextLayout
+    );
+    const sanitizedSelection = sanitizeSelectionForLayout(
+      nextSelection,
+      nextLayout,
+      nextMeta,
+      nextSelection.source
+    );
+    const resolvedFocusId = nextFocusId !== before.focusId
+      ? nextFocusId
+      : sanitizedSelection.activeId;
     const affectedIds = collectAffectedIds(layoutPatches, metadataPatches);
     const status = affectedIds.length > 0 ? "changed" : "noop";
-    const result = createGridEditorCommandResult(command, status, {
+    return applyCommandTransaction(command, before, snapshotWithDraft(before, {
+      layout: nextLayout,
+      editorMetaById: nextMeta,
+      selection: sanitizedSelection,
+      focusId: resolvedFocusId
+    }), {
+      status,
       targetIds: allowedIds.length > 0 ? allowedIds : command.targetIds,
       layoutPatches,
       metadataPatches,
       affectedIds,
-      selection: selection.value,
+      selection: options.selectedIds ? before.selection : sanitizedSelection,
       blocked: blockedIds.length > 0
         ? { reason: "capability", skippedIds: blockedIds, itemIds: blockedIds }
         : undefined,
       diagnostics: resultDiagnostics
     });
-    return commitHistory(command, before, result);
   };
 
-  const execute = async (
-    inputCommand: GridEditorCommand
-  ): Promise<GridEditorCommandResult> => {
-    const command = normalizeGridEditorCommand(inputCommand);
-    const startedAt = now();
-    if (command.source === "keyboard" && isLayoutCommand(command.type)) {
-      interaction.value = "keyboardEditing";
+  const snapshotWithLayout = (
+    snapshot: GridEditorHistorySnapshot,
+    layout: Layout
+  ): GridEditorHistorySnapshot => {
+    if (snapshot.kind === "responsive") {
+      return {
+        ...snapshot,
+        layouts: {
+          ...cloneLayoutsMap(snapshot.layouts),
+          [snapshot.breakpoint]: cloneLayout(layout)
+        }
+      };
     }
-    emit({ type: "command-start", command });
+    return {
+      ...snapshot,
+      layout: cloneLayout(layout)
+    };
+  };
 
-    const before = createSnapshot();
-    const check = checkGridEditorCommand(command, {
+  const snapshotWithDraft = (
+    snapshot: GridEditorHistorySnapshot,
+    input: {
+      layout?: Layout;
+      editorMetaById?: GridEditorMetaById;
+      sectionRows?: GridEditorSectionRowState;
+      selection?: GridEditorSelectionState;
+      focusId?: string | null;
+    }
+  ): GridEditorHistorySnapshot => {
+    const base = input.layout ? snapshotWithLayout(snapshot, input.layout) : snapshot;
+    return {
+      ...base,
+      editorMetaById: input.editorMetaById
+        ? cloneMeta(input.editorMetaById)
+        : cloneMeta(snapshot.editorMetaById),
+      sectionRows: input.sectionRows
+        ? cloneSectionRows(input.sectionRows)
+        : cloneSectionRows(snapshot.sectionRows),
+      selection: input.selection
+        ? cloneSelection(input.selection)
+        : cloneSelection(snapshot.selection),
+      focusId: input.focusId !== undefined ? input.focusId : snapshot.focusId
+    };
+  };
+
+  const readCandidateLayout = (command: GridEditorCommand): Layout | null => {
+    const payload = getPayloadRecord(command);
+    const candidate = payload.candidateLayout ||
+      payload.placementCandidateLayout ||
+      payload.afterLayout ||
+      payload.layout;
+    return Array.isArray(candidate)
+      ? cloneLayout(candidate.filter((item): item is LayoutItem =>
+          Boolean(item) && typeof item === "object" && typeof item.i === "string"
+        ))
+      : null;
+  };
+
+  const buildCommandPreview = (
+    command: NormalizedGridEditorCommand,
+    allowedIds: string[],
+    before: GridEditorHistorySnapshot
+  ): GridEditorTransactionPreview => {
+    const payload = getPayloadRecord(command);
+    let previewLayout = readCandidateLayout(command);
+    let previewMeta = cloneMeta(before.editorMetaById);
+    let previewRows = cloneSectionRows(before.sectionRows);
+    let previewSelection = cloneSelection(before.selection);
+    let previewFocusId = before.focusId;
+    const risk = command.type === "delete" || command.type === "section-row-delete"
+      ? "destructive"
+      : isPersistenceCommand(command.type)
+        ? "persistence"
+        : command.source === "external" || command.source === "remote"
+          ? "external"
+          : "normal";
+
+    if (!previewLayout && command.type === "delete") {
+      const deleted = new Set(allowedIds);
+      previewLayout = getLayout().filter(item => !deleted.has(item.i));
+      allowedIds.forEach(id => {
+        delete previewMeta[id];
+      });
+      previewSelection = createGridEditorSelection(
+        previewSelection.selectedIds.filter(id => !deleted.has(id)),
+        command.source === "keyboard" ? "keyboard" : command.source === "pointer" ? "pointer" : "api"
+      );
+      previewFocusId = getNextFocusableId(previewLayout, allowedIds, previewMeta);
+    }
+    if (!previewLayout && command.type === "move") {
+      const dx = isFiniteGridNumber(payload.dx) ? payload.dx : null;
+      const dy = isFiniteGridNumber(payload.dy) ? payload.dy : null;
+      const absoluteX = isFiniteGridNumber(payload.x);
+      const absoluteY = isFiniteGridNumber(payload.y);
+      if (dx !== null || dy !== null || absoluteX || absoluteY) {
+        previewLayout = getLayout().map(item => {
+          if (!allowedIds.includes(item.i)) return item;
+          return {
+            ...item,
+            x: absoluteX && allowedIds.length === 1
+              ? Math.max(0, Math.floor(payload.x as number))
+              : Math.max(0, Math.floor(item.x + (dx || 0))),
+            y: absoluteY && allowedIds.length === 1
+              ? Math.max(0, Math.floor(payload.y as number))
+              : Math.max(0, Math.floor(item.y + (dy || 0)))
+          };
+        });
+      }
+    }
+    if (!previewLayout && command.type === "resize") {
+      previewLayout = getLayout().map(item => {
+        if (item.i !== allowedIds[0]) return item;
+        return {
+          ...item,
+          x: isFiniteGridNumber(payload.x) ? Math.max(0, Math.floor(payload.x)) : item.x,
+          y: isFiniteGridNumber(payload.y) ? Math.max(0, Math.floor(payload.y)) : item.y,
+          w: isFiniteGridNumber(payload.w) ? clampGridSize(payload.w, item.w) : item.w,
+          h: isFiniteGridNumber(payload.h) ? clampGridSize(payload.h, item.h) : item.h
+        };
+      });
+    }
+
+    if (!previewLayout && command.type === "add") {
+      const rawItems = Array.isArray(payload.items)
+        ? payload.items
+        : payload.item
+          ? [payload.item]
+          : [];
+      const existingIds = new Set(getLayout().map(item => item.i));
+      const idGenerator = options.idGenerator || defaultIdGenerator;
+      const items = rawItems
+        .filter(item => item && typeof item === "object")
+        .map((item: unknown, index: number) => {
+          const input = item as Partial<LayoutItem>;
+          const id = typeof input.i === "string" && !existingIds.has(input.i)
+            ? input.i
+            : idGenerator(typeof input.i === "string" ? input.i : `item-${index + 1}`, existingIds);
+          existingIds.add(id);
+          return {
+            ...input,
+            i: id,
+            x: isFiniteGridNumber(input.x) ? input.x : 0,
+            y: isFiniteGridNumber(input.y) ? input.y : 0,
+            w: clampGridSize(input.w, 1),
+            h: clampGridSize(input.h, 1)
+          } as LayoutItem;
+        });
+      if (items.length > 0) {
+        const placed = placeGridEditorNewItems(
+          getLayout(),
+          items,
+          String(payload.strategy || "first-fit"),
+          payload
+        );
+        if (!placed.failed) {
+          previewLayout = placed.layout;
+          previewMeta = {
+            ...previewMeta,
+            ...sanitizeEditorMetaById(payload.editorMetaById, { layout: items })
+          };
+          previewSelection = createGridEditorSelection(items.map(item => item.i), "api");
+          previewFocusId = previewSelection.activeId;
+        }
+      }
+    }
+
+    if (!previewLayout && command.type === "paste") {
+      const resolvedPayload =
+        payload.resolvedClipboardPayload &&
+        typeof payload.resolvedClipboardPayload === "object"
+          ? payload.resolvedClipboardPayload as Partial<GridEditorResolvedPastePayload>
+          : null;
+      if (resolvedPayload?.items && Array.isArray(resolvedPayload.items)) {
+        const previewClipboardPayload = {
+          version: 2 as const,
+          sourceId: typeof resolvedPayload.sourceId === "string" ? resolvedPayload.sourceId : command.id,
+          copiedAt: new Date().toISOString(),
+          items: cloneLayout(resolvedPayload.items),
+          editorMetaById: sanitizeEditorMetaById(resolvedPayload.editorMetaById),
+          source: resolvedPayload.source,
+          originalGeometryById: resolvedPayload.originalGeometryById
+        };
+        const previewItems = resolvedPayload.mapped === true
+          ? cloneLayout(previewClipboardPayload.items)
+          : normalizeGridEditorClipboardItemsForTarget(previewClipboardPayload, {
+              cols: resolveClipboardTargetCols(payload)
+            }).items;
+        const mappedPaste = resolvedPayload.mapped === true
+          ? {
+              items: previewItems,
+              metaById: sanitizeEditorMetaById(resolvedPayload.editorMetaById, {
+                layout: previewItems
+              })
+            }
+          : mapIds(
+              previewItems,
+              sanitizeEditorMetaById(resolvedPayload.editorMetaById),
+              new Set(getLayout().map(item => item.i)),
+              options.idGenerator || defaultIdGenerator
+            );
+        const placed = placeGridEditorNewItems(
+          getLayout(),
+          mappedPaste.items,
+          String(payload.strategy || options.pasteStrategy || "offset"),
+          payload
+        );
+        if (!placed.failed) {
+          previewLayout = placed.layout;
+          previewMeta = { ...previewMeta, ...mappedPaste.metaById };
+          previewSelection = createGridEditorSelection(mappedPaste.items.map(item => item.i), "api");
+          previewFocusId = previewSelection.activeId;
+        }
+      }
+    }
+
+    if (!previewLayout && command.type === "duplicate") {
+      const sourceItems = allowedIds
+        .map(id => getLayoutItem(getLayout(), id))
+        .filter(Boolean) as LayoutItem[];
+      const mapped = mapIds(
+        sourceItems,
+        previewMeta,
+        new Set(getLayout().map(item => item.i)),
+        options.idGenerator || defaultIdGenerator
+      );
+      const placed = placeGridEditorNewItems(
+        getLayout(),
+        mapped.items,
+        String(payload.strategy || options.pasteStrategy || "offset"),
+        payload
+      );
+      if (!placed.failed) {
+        previewLayout = placed.layout;
+        previewMeta = { ...previewMeta, ...mapped.metaById };
+        previewSelection = createGridEditorSelection(mapped.items.map(item => item.i), "api");
+        previewFocusId = previewSelection.activeId;
+      }
+    }
+
+    if (!previewLayout && command.type === "align") {
+      const geometryResult = applyGridEditorAlign(getLayout(), payload as GridEditorAlignPayload, {
+        targetIds: allowedIds,
+        selectedIds: selection.value.selectedIds,
+        activeId: selection.value.activeId,
+        metaById: editorMetaById.value,
+        sectionRows: sectionRows.value,
+        cols: isFiniteGridNumber(payload.cols) ? payload.cols : 12,
+        maxRows: isFiniteGridNumber(payload.maxRows) ? payload.maxRows : Infinity
+      });
+      if (geometryResult.status !== "blocked") previewLayout = geometryResult.layout;
+    }
+
+    if (!previewLayout && (command.type === "distribute" || command.type === "tidy")) {
+      const geometryResult = command.type === "distribute"
+        ? applyGridEditorDistribute(getLayout(), payload as GridEditorDistributePayload, {
+            targetIds: allowedIds,
+            selectedIds: selection.value.selectedIds,
+            activeId: selection.value.activeId,
+            metaById: editorMetaById.value,
+            sectionRows: sectionRows.value,
+            cols: isFiniteGridNumber(payload.cols) ? payload.cols : 12,
+            maxRows: isFiniteGridNumber(payload.maxRows) ? payload.maxRows : Infinity
+          })
+        : applyGridEditorTidy(getLayout(), payload as GridEditorTidyPayload, {
+            targetIds: allowedIds,
+            selectedIds: selection.value.selectedIds,
+            activeId: selection.value.activeId,
+            metaById: editorMetaById.value,
+            sectionRows: sectionRows.value,
+            cols: isFiniteGridNumber(payload.cols) ? payload.cols : 12,
+            maxRows: isFiniteGridNumber(payload.maxRows) ? payload.maxRows : Infinity
+          });
+      if (geometryResult.status !== "blocked") previewLayout = geometryResult.layout;
+    }
+
+    if (isMetadataCommand(command.type)) {
+      allowedIds.forEach(id => {
+        const patch =
+          command.type === "lock" ? { locked: true } :
+          command.type === "unlock" ? { locked: false } :
+          command.type === "show" ? { visible: true } :
+          { visible: false };
+        const patched = patchEditorMeta(previewMeta, id, patch);
+        if (patched.patch) {
+          previewMeta = applyEditorMetadataPatches(previewMeta, [patched.patch]);
+        }
+      });
+    }
+
+    if (command.type === "select") {
+      previewSelection = updateSelectionByIntent(getLayout(), selection.value, {
+        id: typeof payload.id === "string" ? payload.id : undefined,
+        ids: Array.isArray(payload.ids)
+          ? payload.ids.filter((id): id is string => typeof id === "string")
+          : typeof payload.id === "string"
+            ? undefined
+            : allowedIds,
+        toggle: payload.toggle === true,
+        range: payload.range === true,
+        source: command.source === "keyboard" ? "keyboard" : command.source === "pointer" ? "pointer" : "api"
+      });
+      previewFocusId = previewSelection.activeId;
+    } else if (command.type === "clearSelection") {
+      previewSelection = clearEditorSelection("api");
+      previewFocusId = null;
+    }
+
+    if (isSectionRowCommand(command.type)) {
+      const sectionPayload = payload as GridEditorSectionRowCommandPayload;
+      const resolvedRows = normalizeGridEditorSectionRows(previewRows, getLayout());
+      const rowIds = allowedIds.length > 0
+        ? allowedIds
+        : sectionPayload.id
+          ? [sectionPayload.id]
+          : [];
+      const missingRows = rowIds.filter(id => !resolvedRows.items[id]);
+      if (missingRows.length === 0) {
+        const nextRows = cloneSectionRows({
+          version: 1,
+          items: resolvedRows.items,
+          itemMembership: resolvedRows.itemMembership
+        });
+        const affectedItemIds = itemIdsForSectionRows(resolvedRows, rowIds);
+        if (command.type === "section-row-collapse" || command.type === "section-row-expand") {
+          const collapsed = command.type === "section-row-collapse";
+          rowIds.forEach(id => {
+            nextRows.items[id] = { ...nextRows.items[id], collapsed };
+          });
+          if (collapsed) {
+            previewSelection = createGridEditorSelection(
+              previewSelection.selectedIds.filter(id => !affectedItemIds.includes(id)),
+              "api"
+            );
+            previewFocusId = previewSelection.activeId;
+          }
+        } else if (command.type === "section-row-reorder") {
+          rowIds.forEach(id => {
+            nextRows.items[id] = {
+              ...nextRows.items[id],
+              order: orderForSectionRow(resolvedRows, sectionPayload)
+            };
+          });
+        } else if (command.type === "section-row-move") {
+          const dy = isFiniteGridNumber(sectionPayload.dy) ? Math.floor(sectionPayload.dy) : 0;
+          previewLayout = (previewLayout || getLayout()).map(item =>
+            affectedItemIds.includes(item.i)
+              ? { ...item, y: Math.max(0, item.y + dy) }
+              : item
+          );
+          rowIds.forEach(id => {
+            const row = nextRows.items[id];
+            nextRows.items[id] = {
+              ...row,
+              bounds: row.bounds ? { ...row.bounds, y: Math.max(0, row.bounds.y + dy) } : row.bounds
+            };
+          });
+        } else if (command.type === "section-row-delete") {
+          rowIds.forEach(id => {
+            delete nextRows.items[id];
+          });
+          Object.keys(nextRows.itemMembership || {}).forEach(itemId => {
+            const membership = nextRows.itemMembership?.[itemId] || {};
+            const nextMembership = {
+              sectionId: membership.sectionId && rowIds.includes(membership.sectionId)
+                ? undefined
+                : membership.sectionId,
+              rowId: membership.rowId && rowIds.includes(membership.rowId)
+                ? undefined
+                : membership.rowId
+            };
+            if (!nextMembership.sectionId && !nextMembership.rowId) {
+              delete nextRows.itemMembership?.[itemId];
+            } else if (nextRows.itemMembership) {
+              nextRows.itemMembership[itemId] = nextMembership;
+            }
+          });
+          if (sectionPayload.deleteItems === true) {
+            previewLayout = (previewLayout || getLayout()).filter(item => !affectedItemIds.includes(item.i));
+            affectedItemIds.forEach(id => {
+              delete previewMeta[id];
+            });
+            previewSelection = createGridEditorSelection(
+              previewSelection.selectedIds.filter(id => !affectedItemIds.includes(id)),
+              "api"
+            );
+            previewFocusId = previewSelection.activeId;
+          }
+        }
+        const normalizedNextRows = normalizeGridEditorSectionRows(nextRows, previewLayout || getLayout());
+        previewRows = {
+          version: 1,
+          items: normalizedNextRows.items,
+          itemMembership: normalizedNextRows.itemMembership
+        };
+      }
+    }
+
+    return createGridEditorTransactionPreview(before, snapshotWithDraft(before, {
+      layout: previewLayout || undefined,
+      editorMetaById: previewMeta,
+      sectionRows: previewRows,
+      selection: previewSelection,
+      focusId: previewFocusId
+    }), {
+      risk
+    });
+  };
+
+  const commandKernel = createGridEditorCommandKernel({
+    beforeCommand: options.beforeCommand,
+    guardTimeoutMs: options.guardTimeoutMs,
+    getSnapshot: createSnapshot,
+    getStateRevision: () => stateRevision,
+    check: command => checkGridEditorCommand(command, {
       mode: mode.value,
       modeMissing,
       layout: getLayout(),
       editorMetaById: editorMetaById.value,
       selection: selection.value,
       commandPolicy: options.commandPolicy
-    });
-
-    if (!check.ok && check.result) {
-      return finalize(command, check.result, startedAt);
-    }
-
-    const guard = await runGridEditorBeforeCommand(
-      options.beforeCommand,
-      command,
-      {
+    }),
+    getGuardContext: (command, check, preview, signal) => {
+      const payload = getPayloadRecord(command);
+      const placementSummary = payload.placementSummary && typeof payload.placementSummary === "object"
+        ? payload.placementSummary as {
+            ghostItemIds?: string[];
+            affectedIds?: string[];
+            diagnostics?: unknown[];
+          }
+        : undefined;
+      return {
+        source: command.source || "api",
+        origin: command.origin,
         targetIds: check.allowedIds,
         layout: getLayout(),
         layouts: getLayouts(),
         editorMetaById: editorMetaById.value,
+        sectionRows: sectionRows.value,
         selection: selection.value,
-        mode: mode.value
-      },
-      options.guardTimeoutMs
-    );
-    if (guard.result) return finalize(command, guard.result, startedAt, guard.guardMs);
-
-    try {
-      if (isPersistenceCommand(command.type)) {
-        const persistenceResult =
-          command.type === "save" ? await persistenceBridge.save() :
-          command.type === "discard" ? persistenceBridge.discard() :
-          persistenceBridge.reset();
-        if (persistenceResult.status === "changed") {
-          lastSavedSnapshot.value = createSnapshot();
-          saveFailed.value = false;
-        }
-        return finalize(command, { ...persistenceResult, id: command.id }, startedAt, guard.guardMs);
+        mode: mode.value,
+        history: {
+          canUndo: Boolean(history?.canUndo.value),
+          canRedo: Boolean(history?.canRedo.value)
+        },
+        preview,
+        placement: placementSummary || payload.placementSessionId
+          ? {
+              sessionId: typeof payload.placementSessionId === "string"
+                ? payload.placementSessionId
+                : undefined,
+              source: typeof payload.placementSource === "string"
+                ? payload.placementSource
+                : undefined,
+              summary: placementSummary,
+              affectedIds: placementSummary?.affectedIds,
+              diagnostics: placementSummary?.diagnostics
+            }
+          : undefined,
+        signal
+      };
+    },
+    buildPreview: (command, check, before) =>
+      buildCommandPreview(command, check.allowedIds, before),
+    cleanupInteraction: () => {
+      interaction.value = null;
+      clearPlacementSession("command-cleanup");
+    },
+    finalize,
+    now,
+    isStopped: () => stopped.value,
+    onStart: command => {
+      if (command.source === "keyboard" && isLayoutCommand(command.type)) {
+        interaction.value = "keyboardEditing";
       }
+      emit({ type: "command-start", command });
+    },
+    commit: async ({ command, check, before, startedAt, guardMs }) => {
+      try {
+        if (isPersistenceCommand(command.type)) {
+          const persistenceResult =
+            command.type === "save" ? await persistenceBridge.save() :
+            command.type === "discard" ? persistenceBridge.discard() :
+            persistenceBridge.reset();
+          if (persistenceResult.status === "changed") {
+            lastSavedSnapshot.value = createSnapshot();
+            saveFailed.value = false;
+          }
+          return finalize(command, { ...persistenceResult, id: command.id }, startedAt, guardMs);
+        }
 
-      if (isHistoryCommand(command.type)) {
-        const entry = command.type === "undo" ? history?.undo() : history?.redo();
-        if (!entry) {
+        if (isHistoryCommand(command.type)) {
+          const entry = command.type === "undo" ? history?.undo() : history?.redo();
+          if (!entry) {
+            return finalize(command, createGridEditorCommandResult(command, "blocked", {
+              blocked: { reason: "missing-item", message: "No editor history entry is available." }
+            }), startedAt, guardMs);
+          }
+          applySnapshot(command.type === "undo" ? entry.before : entry.after);
+          return finalize(command, createGridEditorCommandResult(command, "changed", {
+            affectedIds: entry.affectedIds || entry.after.selection.selectedIds,
+            selection: selection.value,
+            undo: entry,
+            diagnostics: {
+              durationMs: 0,
+              historyMode: "ignore",
+              source: command.source,
+              origin: command.origin
+            }
+          }), startedAt, guardMs);
+        }
+
+        const result = await executeMutation(command, check.allowedIds, check.blockedIds, before);
+        return finalize(command, result, startedAt, guardMs);
+      } catch (error) {
+        if (error instanceof GridEditorClipboardError) {
           return finalize(command, createGridEditorCommandResult(command, "blocked", {
-            blocked: { reason: "missing-item", message: "No editor history entry is available." }
-          }), startedAt, guard.guardMs);
+            targetIds: check.targetIds,
+            blocked: {
+              reason: error.code,
+              itemIds: check.targetIds,
+              message: error.message
+            },
+            error: { message: error.message, cause: error }
+          }), startedAt, guardMs);
         }
-        applySnapshot(command.type === "undo" ? entry.before : entry.after);
-        return finalize(command, createGridEditorCommandResult(command, "changed", {
-          affectedIds: entry.after.selection.selectedIds,
-          selection: selection.value,
-          undo: entry
-        }), startedAt, guard.guardMs);
+        return finalize(
+          command,
+          errorGridEditorCommandResult(command, "Editor command failed.", error),
+          startedAt,
+          guardMs
+        );
       }
-
-      const result = await executeMutation(command, check.allowedIds, check.blockedIds, before);
-      return finalize(command, result, startedAt, guard.guardMs);
-    } catch (error) {
-      if (error instanceof GridEditorClipboardError) {
-        return finalize(command, createGridEditorCommandResult(command, "blocked", {
-          targetIds: check.targetIds,
-          blocked: {
-            reason: error.code,
-            itemIds: check.targetIds,
-            message: error.message
-          },
-          error: { message: error.message, cause: error }
-        }), startedAt, guard.guardMs);
-      }
-      return finalize(
-        command,
-        errorGridEditorCommandResult(command, "Editor command failed.", error),
-        startedAt,
-        guard.guardMs
-      );
     }
+  });
+
+  const noteExternalStateRevision = (reason: string) => {
+    if (stopped.value || internalStateWriteDepth > 0) return;
+    commandKernel.abortPending(reason);
+    interaction.value = null;
+    clearPlacementSession(reason);
+    stateRevision += 1;
+    const layout = getLayout();
+    const cleanedMeta = removeOrphanEditorMeta(editorMetaById.value, layout);
+    if (!deepEqual(cleanedMeta, editorMetaById.value)) {
+      editorMetaById.value = cleanedMeta;
+    }
+    const nextSelection = sanitizeSelectionForLayout(
+      selection.value,
+      layout,
+      editorMetaById.value,
+      "external"
+    );
+    selection.value = nextSelection;
+    focusId.value = nextSelection.activeId;
+    history?.replacePresent(createSnapshot(), { preserveRedoStack: true });
+  };
+
+  if (options.layout) {
+    stopHandles.push(watch(layoutRef, () => {
+      noteExternalStateRevision("external-layout");
+    }, { deep: true, flush: "sync" }));
+  }
+
+  if (options.layouts) {
+    stopHandles.push(watch(layoutsRef, () => {
+      noteExternalStateRevision("external-layouts");
+    }, { deep: true, flush: "sync" }));
+  }
+
+  const execute = async (
+    inputCommand: GridEditorCommand
+  ): Promise<GridEditorCommandResult> => {
+    return commandKernel.execute(inputCommand);
   };
 
   const canExecute = (inputCommand: GridEditorCommand): GridEditorCommandResult => {
-    const command = normalizeGridEditorCommand(inputCommand);
+    const descriptor = requireGridEditorCommandDescriptor(inputCommand.type);
+    const command = normalizeGridEditorCommand({
+      source: descriptor.defaultSource,
+      ...inputCommand,
+      history: inputCommand.history || descriptor.defaultHistory
+    });
     const check = checkGridEditorCommand(command, {
       mode: mode.value,
       modeMissing,
@@ -1440,32 +2441,352 @@ export const createGridEditorController = (
       commandPolicy: options.commandPolicy
     });
     if (check.result) return check.result;
+    const validation = descriptor.validatePayload?.(command);
+    if (validation && !validation.ok) {
+      return blockedGridEditorCommandResult(command, "invalid-input", {
+        targetIds: check.targetIds,
+        blocked: {
+          reason: "invalid-input",
+          itemIds: check.targetIds,
+          message: validation.message
+        }
+      });
+    }
     return createGridEditorCommandResult(command, "noop", {
       targetIds: check.allowedIds
     });
   };
 
-  const setExternalLayout = (layout: Layout, reason = "external") => {
+  const beginPlacement = async (
+    input: GridEditorBeginPlacementInput
+  ): Promise<GridEditorPlacementSessionResult> => {
+    const commandType = input.commandType || (input.source === "paste" ? "paste" : "add");
+    if (modeMissing) {
+      return blockedPlacementResult(commandType, "editor-mode-missing", "Editor mode is not configured.");
+    }
+    if (mode.value === "view") {
+      return blockedPlacementResult(commandType, "mode-readonly", "Placement requires edit mode.");
+    }
+    if (stopped.value) {
+      return blockedPlacementResult(commandType, "unsupported-scope", "Editor controller is stopped.");
+    }
+    if (interaction.value) {
+      return blockedPlacementResult(commandType, "unsupported-scope", `Cannot start placement while ${interaction.value}.`);
+    }
+    if (placementSession.value) {
+      return blockedPlacementResult(commandType, "command-pending", "A placement session is already active.");
+    }
+
+    let resolvedInput: GridEditorBeginPlacementInput = {
+      ...input,
+      commandType
+    };
+    const placementEngineOptions = resolveLayoutEngineOptions({
+      cols: input.cols,
+      maxRows: input.maxRows,
+      compactType: input.compactType,
+      allowOverlap: input.allowOverlap,
+      preventCollision: input.preventCollision
+    });
+    if (input.source === "paste" || commandType === "paste") {
+      const adapter = resolveClipboard();
+      let clipboardPayload: Awaited<ReturnType<GridEditorClipboardAdapter["read"]>> | null = null;
+      let clipboardError: unknown = null;
+      try {
+        clipboardPayload = await adapter.read();
+      } catch (error) {
+        clipboardError = error;
+      }
+      if ((!clipboardPayload || clipboardError) && adapter !== internalGridEditorClipboard) {
+        try {
+          clipboardPayload = await internalGridEditorClipboard.read();
+        } catch (error) {
+          if (!clipboardError) clipboardError = error;
+        }
+      }
+      if (!clipboardPayload && clipboardError) {
+        const reason = clipboardError instanceof GridEditorClipboardError
+          ? clipboardError.code
+          : "clipboard-invalid";
+        return blockedPlacementResult(
+          "paste",
+          reason,
+          clipboardError instanceof Error ? clipboardError.message : "Clipboard could not be read."
+        );
+      }
+      if (!clipboardPayload || clipboardPayload.items.length === 0) {
+        return blockedPlacementResult(
+          "paste",
+          "clipboard-unavailable",
+          "Clipboard is empty or unavailable."
+        );
+      }
+      const normalizedClipboard = normalizeGridEditorClipboardItemsForTarget(clipboardPayload, {
+        cols: input.cols ?? placementEngineOptions?.cols
+      });
+      const mapped = mapIds(
+        normalizedClipboard.items,
+        clipboardPayload.editorMetaById,
+        new Set(getLayout().map(item => item.i)),
+        options.idGenerator || defaultIdGenerator
+      );
+      const resolvedClipboardPayload: GridEditorResolvedPastePayload = {
+        items: mapped.items,
+        editorMetaById: mapped.metaById,
+        sourceId: clipboardPayload.sourceId,
+        source: clipboardPayload.version === 2 ? clipboardPayload.source : undefined,
+        originalGeometryById: clipboardPayload.version === 2
+          ? clipboardPayload.originalGeometryById
+          : undefined,
+        responsive: {
+          scaled: normalizedClipboard.scaled,
+          sourceCols: normalizedClipboard.sourceCols,
+          targetCols: normalizedClipboard.targetCols
+        },
+        mapped: true
+      };
+      resolvedInput = {
+        ...resolvedInput,
+        commandType: "paste",
+        items: mapped.items,
+        editorMetaById: mapped.metaById,
+        resolvedClipboardPayload
+      };
+    } else {
+      resolvedInput = prepareAddPlacementInput(resolvedInput);
+    }
+
+    const placementInput: GridEditorBeginPlacementInput = {
+      ...resolvedInput,
+      compactType: resolvedInput.compactType ?? placementEngineOptions?.compactType,
+      allowOverlap: resolvedInput.allowOverlap ?? placementEngineOptions?.allowOverlap,
+      preventCollision: resolvedInput.preventCollision ?? placementEngineOptions?.preventCollision
+    };
+
+    const session = createGridEditorPlacementSession(placementInput, {
+      baseLayout: getLayout(),
+      baseRevision: stateRevision,
+      defaultStrategy: placementInput.strategy || (commandType === "paste" ? options.pasteStrategy || "offset" : "first-fit"),
+      cols: placementInput.cols,
+      maxRows: placementInput.maxRows
+    });
+
+    if (session.items.length === 0 || (session.blocked && session.ghostItems.length === 0)) {
+      return blockedPlacementResult(
+        commandType,
+        session.blocked?.reason || "invalid-input",
+        session.blocked?.message || "No items were provided for placement.",
+        session.blocked?.itemIds,
+        placementSessionDiagnostics(session)
+      );
+    }
+
+    placementSession.value = session;
+    emit({ type: "placement-start", session });
+    return {
+      status: session.blocked ? "blocked" : "started",
+      session,
+      blocked: session.blocked
+        ? {
+            reason: session.blocked.reason,
+            itemIds: session.blocked.itemIds,
+            message: session.blocked.message
+          }
+        : undefined,
+      diagnostics: placementSessionDiagnostics(session)
+    };
+  };
+
+  const updatePlacement = (
+    input: Parameters<GridEditorController["updatePlacement"]>[0]
+  ): ReturnType<GridEditorController["updatePlacement"]> => {
+    const active = placementSession.value;
+    if (!active) {
+      return { status: "noop" };
+    }
+    const next = updateGridEditorPlacementSession(active, input);
+    placementSession.value = next;
+    emit({ type: "placement-update", session: next });
+    return {
+      status: next.blocked ? "blocked" : "updated",
+      session: next,
+      blocked: next.blocked
+        ? {
+            reason: next.blocked.reason,
+            itemIds: next.blocked.itemIds,
+            message: next.blocked.message
+          }
+        : undefined,
+      diagnostics: placementSessionDiagnostics(next)
+    };
+  };
+
+  const cancelPlacement = (
+    reason = "cancelled"
+  ): ReturnType<GridEditorController["cancelPlacement"]> => {
+    const active = placementSession.value;
+    if (!active) return { status: "noop" };
+    const result = cancelGridEditorPlacementSession(active, reason);
+    clearPlacementSession(reason);
+    return result;
+  };
+
+  const shouldKeepPlacementAfterBlockedCommit = (
+    result: GridEditorCommandResult
+  ): boolean => {
+    const reason = result.blocked?.reason;
+    return result.status === "blocked" && (
+      reason === "bounds" ||
+      reason === "collision" ||
+      reason === "maxRows" ||
+      reason === "section-row-policy" ||
+      reason === "invalid-input"
+    );
+  };
+
+  const commitPlacement = async (
+    input: Parameters<GridEditorController["commitPlacement"]>[0] = {}
+  ): Promise<GridEditorCommandResult> => {
+    const active = placementSession.value;
+    if (!active) {
+      return createGridEditorCommandResult({
+        id: `placement-commit:noop:${Date.now()}`,
+        type: "add"
+      }, "noop");
+    }
+    if (!active.candidateLayout || active.blocked) {
+      const result = createGridEditorCommandResult({
+        id: `placement-commit:blocked:${active.id}`,
+        type: active.commandType
+      }, "blocked", {
+        targetIds: active.items.map(item => item.i),
+        blocked: {
+          reason: active.blocked?.reason || "invalid-input",
+          itemIds: active.blocked?.itemIds || active.items.map(item => item.i),
+          message: active.blocked?.message || "Placement does not have a valid candidate."
+        },
+        diagnostics: placementSessionDiagnostics(active)
+      });
+      lastResult.value = result;
+      return result;
+    }
+    if (stateRevision !== active.baseRevision) {
+      const diagnostics = placementSessionDiagnostics(active) || { durationMs: 0 };
+      const result = createGridEditorCommandResult({
+        id: `placement-commit:stale:${active.id}`,
+        type: active.commandType
+      }, "blocked", {
+        targetIds: active.items.map(item => item.i),
+        blocked: {
+          reason: "stale-command",
+          itemIds: active.items.map(item => item.i),
+          message: "Placement base layout changed before commit."
+        },
+        diagnostics: {
+          ...diagnostics,
+          durationMs: diagnostics.durationMs || 0,
+          stale: true,
+          stateRevision
+        }
+      });
+      lastResult.value = result;
+      clearPlacementSession("stale-command");
+      return result;
+    }
+
+    const committing = {
+      ...active,
+      phase: "committing" as const,
+      ghostItems: active.ghostItems.map(item => ({ ...item, state: "committing" as const }))
+    };
+    placementSession.value = committing;
+    const command = buildGridEditorPlacementCommitCommand(committing, input);
+    const result = await execute(command);
+    emit({ type: "placement-commit", sessionId: committing.id, result });
+    if (
+      result.status === "changed" ||
+      result.status === "noop" ||
+      input?.autoCancelOnBlocked === true ||
+      !shouldKeepPlacementAfterBlockedCommit(result)
+    ) {
+      clearPlacementSession(result.status);
+    } else {
+      const next = updateGridEditorPlacementSession(active, {});
+      placementSession.value = {
+        ...next,
+        blocked: {
+          reason: result.blocked?.reason || next.blocked?.reason || "invalid-input",
+          itemIds: result.blocked?.itemIds || next.blocked?.itemIds,
+          message: result.blocked?.message || next.blocked?.message,
+          recoverable: true
+        },
+        phase: "blocked"
+      };
+    }
+    return result;
+  };
+
+  const resolveExternalHistoryPolicy = (
+    input: GridEditorCommand["history"] | undefined
+  ): GridEditorHistoryPolicy => normalizeGridEditorHistoryPolicy(input, "ignore");
+
+  const applyExternalHistoryPolicy = (policy: GridEditorHistoryPolicy) => {
+    if (!history) return;
+    if (policy.mode === "clear") {
+      history.clear(createSnapshot());
+      return;
+    }
+    if (policy.mode === "replace") {
+      history.replacePresent(createSnapshot(), {
+        preserveRedoStack: policy.preserveRedoStack
+      });
+      return;
+    }
+    history.replacePresent(createSnapshot(), {
+      preserveRedoStack: policy.preserveRedoStack ?? true
+    });
+  };
+
+  const setExternalLayout = (
+    layout: Layout,
+    reason = "external",
+    externalOptions: Parameters<GridEditorController["setExternalLayout"]>[2] = {}
+  ) => {
+    const historyPolicy = resolveExternalHistoryPolicy(externalOptions.history);
+    commandKernel.abortPending(externalOptions.origin || reason);
     interaction.value = null;
     setLayout(layout);
+    stateRevision += 1;
     editorMetaById.value = removeOrphanEditorMeta(editorMetaById.value, layout);
     setSelection(sanitizeSelectionForLayout(selection.value, layout, editorMetaById.value, "external"));
-    history?.replacePresent(createSnapshot());
-    emit({ type: "editor-state-change", state: state.value, reason });
+    applyExternalHistoryPolicy(historyPolicy);
+    emit({
+      type: "editor-state-change",
+      state: state.value,
+      reason: externalOptions.origin || reason
+    });
   };
 
   const setExternalLayouts = (
     layouts: LayoutsMap,
     breakpoint: string,
-    reason = "external"
+    reason = "external",
+    externalOptions: Parameters<GridEditorController["setExternalLayouts"]>[3] = {}
   ) => {
+    const historyPolicy = resolveExternalHistoryPolicy(externalOptions.history);
+    commandKernel.abortPending(externalOptions.origin || reason);
     interaction.value = null;
     setLayouts(layouts, breakpoint);
     const layout = layouts[breakpoint] || [];
+    stateRevision += 1;
     editorMetaById.value = removeOrphanEditorMeta(editorMetaById.value, layout);
     setSelection(sanitizeSelectionForLayout(selection.value, layout, editorMetaById.value, "external"));
-    history?.replacePresent(createSnapshot());
-    emit({ type: "editor-state-change", state: state.value, reason });
+    applyExternalHistoryPolicy(historyPolicy);
+    emit({
+      type: "editor-state-change",
+      state: state.value,
+      reason: externalOptions.origin || reason
+    });
   };
 
   if (modeMissing) {
@@ -1487,6 +2808,7 @@ export const createGridEditorController = (
     }
     if (next === "view") {
       guides.value = { ...EMPTY_GUIDES };
+      clearPlacementSession("mode-readonly");
     }
     emit({ type: "mode-change", from: previous, to: next, source: "external" });
   }));
@@ -1503,8 +2825,17 @@ export const createGridEditorController = (
 
   if (options.selectedIds) {
     stopHandles.push(watch(options.selectedIds, ids => {
-      selection.value = createGridEditorSelection(ids, "external");
-    }));
+      commandKernel.abortPending("external-selection");
+      stateRevision += 1;
+      selection.value = sanitizeSelectionForLayout(
+        createGridEditorSelection(ids, "external"),
+        getLayout(),
+        editorMetaById.value,
+        "external"
+      );
+      focusId.value = selection.value.activeId;
+      history?.replacePresent(createSnapshot(), { preserveRedoStack: true });
+    }, { flush: "sync" }));
   }
 
   stopHandles.push(watch(editorMetaById, meta => {
@@ -1540,12 +2871,17 @@ export const createGridEditorController = (
     selection,
     editorMetaById,
     sectionRows,
+    placementSession,
     dirty,
     conflict,
     guides,
     lastResult,
     execute,
     canExecute,
+    beginPlacement,
+    updatePlacement,
+    commitPlacement,
+    cancelPlacement,
     getToolbarState: () => deriveGridEditorToolbarState(controller),
     undo: () => execute({ type: "undo", source: "api" }),
     redo: () => execute({ type: "redo", source: "api" }),
@@ -1557,6 +2893,8 @@ export const createGridEditorController = (
     stop() {
       if (stopped.value) return;
       stopped.value = true;
+      commandKernel.abortPending("editor-stop");
+      clearPlacementSession("editor-stop");
       stopHandles.forEach(stop => stop());
       persistenceController?.stop();
     }

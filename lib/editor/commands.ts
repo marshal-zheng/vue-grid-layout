@@ -6,8 +6,11 @@ import type {
   GridEditorCommand,
   GridEditorCommandPolicy,
   GridEditorCommandResult,
+  GridEditorCommandSource,
   GridEditorCommandStatus,
   GridEditorCommandType,
+  GridEditorHistoryMode,
+  GridEditorHistoryPolicy,
   GridEditorMetaById,
   GridEditorMetadataPatch,
   GridEditorMode,
@@ -17,6 +20,8 @@ import { resolveEditorItemCapability } from "./metadata";
 
 export type NormalizedGridEditorCommand = GridEditorCommand & {
   id: string;
+  source?: GridEditorCommandSource;
+  history?: GridEditorCommand["history"];
 };
 
 export type GridEditorCommandCheckContext = {
@@ -52,6 +57,28 @@ export const normalizeGridEditorCommand = (
   ...command,
   id: command.id || `editor-command:${command.type}:${++commandSeq}`
 });
+
+export const normalizeGridEditorHistoryPolicy = (
+  history: GridEditorCommand["history"] | undefined,
+  fallbackMode: GridEditorHistoryMode
+): GridEditorHistoryPolicy => {
+  if (typeof history === "string") return { mode: history };
+  if (history?.skip) {
+    return {
+      ...history,
+      mode: "ignore",
+      preserveRedoStack: history.preserveRedoStack ?? true
+    };
+  }
+  const mode = history?.mode || fallbackMode;
+  return {
+    ...history,
+    mode,
+    preserveRedoStack:
+      history?.preserveRedoStack ??
+      (mode === "ignore" || mode === "record-preserveRedoStack")
+  };
+};
 
 export const isSelectionOnlyCommand = (type: GridEditorCommandType): boolean =>
   type === "select" || type === "clearSelection";
@@ -89,6 +116,14 @@ export const isHistoryCommand = (type: GridEditorCommandType): boolean =>
 export const shouldRecordGridEditorHistory = (type: GridEditorCommandType): boolean =>
   isLayoutCommand(type) || isMetadataCommand(type) || isSectionRowCommand(type);
 
+export const defaultGridEditorHistoryMode = (
+  type: GridEditorCommandType
+): GridEditorHistoryMode => {
+  if (isSelectionOnlyCommand(type) || isHistoryCommand(type)) return "ignore";
+  if (isLayoutCommand(type) || isMetadataCommand(type) || isSectionRowCommand(type)) return "record";
+  return "ignore";
+};
+
 export const createGridEditorCommandResult = (
   command: Pick<NormalizedGridEditorCommand, "id" | "type">,
   status: GridEditorCommandStatus,
@@ -111,7 +146,13 @@ export const createGridEditorCommandResult = (
     operationResult: input.diagnostics?.operationResult,
     intelligence: input.diagnostics?.intelligence,
     computed: input.diagnostics?.computed,
-    messages: input.diagnostics?.messages
+    messages: input.diagnostics?.messages,
+    pendingScope: input.diagnostics?.pendingScope,
+    stateRevision: input.diagnostics?.stateRevision,
+    stale: input.diagnostics?.stale,
+    historyMode: input.diagnostics?.historyMode,
+    source: input.diagnostics?.source,
+    origin: input.diagnostics?.origin
   },
   undo: input.undo,
   error: input.error
@@ -466,16 +507,54 @@ export const runGridEditorBeforeCommand = async (
   if (!beforeCommand) return { guardMs: 0 };
   const start = now();
   let timeout: ReturnType<typeof setTimeout> | null = null;
+  let abortListener: (() => void) | null = null;
 
   try {
+    if (context.signal?.aborted) {
+      return {
+        guardMs: 0,
+        result: createGridEditorCommandResult(command, "cancelled", {
+          targetIds: context.targetIds,
+          blocked: {
+            reason: "guard-aborted",
+            itemIds: context.targetIds,
+            message: "beforeCommand guard was aborted."
+          },
+          diagnostics: { durationMs: 0, guardMs: 0 }
+        })
+      };
+    }
+
     const pending = Promise.resolve(beforeCommand({ ...context, command }));
+    const abortPromise = context.signal
+      ? new Promise<"__aborted__">(resolve => {
+          abortListener = () => resolve("__aborted__");
+          context.signal?.addEventListener("abort", abortListener, { once: true });
+        })
+      : null;
     const guardResult = await Promise.race([
       pending,
+      ...(abortPromise ? [abortPromise] : []),
       new Promise<"__timeout__">(resolve => {
         timeout = setTimeout(() => resolve("__timeout__"), timeoutMs);
       })
     ]);
     const guardMs = now() - start;
+
+    if (guardResult === "__aborted__") {
+      return {
+        guardMs,
+        result: createGridEditorCommandResult(command, "cancelled", {
+          targetIds: context.targetIds,
+          blocked: {
+            reason: "guard-aborted",
+            itemIds: context.targetIds,
+            message: "beforeCommand guard was aborted."
+          },
+          diagnostics: { durationMs: 0, guardMs }
+        })
+      };
+    }
 
     if (guardResult === "__timeout__") {
       return {
@@ -574,6 +653,7 @@ export const runGridEditorBeforeCommand = async (
     };
   } finally {
     if (timeout) clearTimeout(timeout);
+    if (abortListener) context.signal?.removeEventListener("abort", abortListener);
   }
 };
 

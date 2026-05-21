@@ -188,9 +188,86 @@ export const bindGridEditorKeyboard = (
 
   const handleKeydown = (event: Event) => {
     const keyboardEvent = event as KeyboardEvent;
+    if (!shouldIgnoreEditorKeyboardEvent(keyboardEvent, options) && controller.placementSession.value) {
+      if (keyboardEvent.key === "Escape") {
+        keyboardEvent.preventDefault();
+        controller.cancelPlacement("keyboard-escape");
+        options.ariaMessage?.({
+          code: "grid-editor.placement.cancelled",
+          level: "info",
+          message: "Placement cancelled.",
+          recoverable: true
+        });
+        return;
+      }
+      if (keyboardEvent.key === "Enter") {
+        keyboardEvent.preventDefault();
+        void controller.commitPlacement({ source: "keyboard" }).then(result => {
+          const message = messageFromCommandResult(result);
+          options.ariaMessage?.(message || {
+            code: "grid-editor.placement.commit",
+            level: "info",
+            message: "Placement committed.",
+            itemIds: result.affectedIds,
+            recoverable: true
+          });
+        });
+        return;
+      }
+      const step = keyboardEvent.shiftKey
+        ? options.placementFastNudgeStep || 4
+        : options.placementNudgeStep || 1;
+      const direction =
+        keyboardEvent.key === "ArrowLeft" ? { dx: -step, dy: 0 } :
+        keyboardEvent.key === "ArrowRight" ? { dx: step, dy: 0 } :
+        keyboardEvent.key === "ArrowUp" ? { dx: 0, dy: -step } :
+        keyboardEvent.key === "ArrowDown" ? { dx: 0, dy: step } :
+        null;
+      if (direction && !keyboardEvent.ctrlKey && !keyboardEvent.metaKey && !keyboardEvent.altKey) {
+        keyboardEvent.preventDefault();
+        const session = controller.placementSession.value;
+        const cursor = session.cursor || session.ghostItems[0]?.item || session.items[0];
+        controller.updatePlacement({
+          cursor: {
+            x: Math.max(0, (cursor?.x || 0) + direction.dx),
+            y: Math.max(0, (cursor?.y || 0) + direction.dy),
+            source: "keyboard"
+          }
+        });
+        return;
+      }
+    }
     const command = getGridEditorKeyboardCommand(keyboardEvent, options);
     if (!command) return;
     keyboardEvent.preventDefault();
+    if (command.type === "paste" && options.pasteMode === "interactive") {
+      void controller.beginPlacement({
+        source: "paste",
+        commandType: "paste",
+        strategy: "cursor",
+        placementIntent: "here",
+        placementAnchor: "top-left"
+      }).then(result => {
+        if (result.status === "blocked") {
+          options.ariaMessage?.({
+            code: result.blocked?.reason || "grid-editor.placement.blocked",
+            level: "warning",
+            message: result.blocked?.message || "Placement could not start.",
+            itemIds: result.blocked?.itemIds,
+            recoverable: true
+          });
+        } else {
+          options.ariaMessage?.({
+            code: "grid-editor.placement.start",
+            level: "info",
+            message: "Placement started.",
+            itemIds: result.session?.items.map(item => item.i),
+            recoverable: true
+          });
+        }
+      });
+      return;
+    }
     void controller.execute(command).then(result => {
       const message = messageFromCommandResult(result);
       if (message) options.ariaMessage?.(message);
