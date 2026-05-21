@@ -10,6 +10,12 @@ import {
 } from "../utils";
 import { findOrGenerateResponsiveLayout } from "../responsiveUtils";
 import { rowColumnOccupancyStrategy } from "./indexing";
+import {
+  executeMigrateSettings,
+  executePlaceItems,
+  executeRepairCollisions,
+  executeTranslateLayout
+} from "./migration";
 
 import type {
   CompactType,
@@ -1042,6 +1048,11 @@ const computeLegacyLayout = (request: LayoutOperationRequest): Layout => {
         }
       ], options);
     }
+    case "migrateSettings":
+    case "repairCollisions":
+    case "translateLayout":
+    case "placeItems":
+      return request.layout;
     default:
       return request.layout;
   }
@@ -1051,6 +1062,14 @@ export function compareWithLegacyLayout(
   request: LayoutOperationRequest,
   result: LayoutOperationResult
 ): { matches: boolean; differences: string[] } {
+  if (
+    request.operation.type === "migrateSettings" ||
+    request.operation.type === "repairCollisions" ||
+    request.operation.type === "translateLayout" ||
+    request.operation.type === "placeItems"
+  ) {
+    return { matches: true, differences: [] };
+  }
   if (request.operation.type === "groupMove" && request.operation.ids.length > 1) {
     return { matches: true, differences: [] };
   }
@@ -1109,6 +1128,14 @@ function executeLayoutOperationWithIndex(
         return executeValidate(normalizedRequest, start);
       case "generateResponsiveLayout":
         return executeResponsiveLayout(normalizedRequest, start);
+      case "migrateSettings":
+        return executeMigrateSettings(normalizedRequest, start);
+      case "repairCollisions":
+        return executeRepairCollisions(normalizedRequest, start);
+      case "translateLayout":
+        return executeTranslateLayout(normalizedRequest, start);
+      case "placeItems":
+        return executePlaceItems(normalizedRequest, start);
       default:
         return executeError(normalizedRequest, "unknown layout operation", start);
     }

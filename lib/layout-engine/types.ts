@@ -43,6 +43,28 @@ export type LayoutOperation =
       cols: number;
       layouts?: Record<string, Layout>;
       breakpoints?: Record<string, number>;
+    }
+  | {
+      type: "migrateSettings";
+      previousSettings: LayoutMigrationSettings;
+      nextSettings: LayoutMigrationSettings;
+      policy?: LayoutMigrationPolicy;
+    }
+  | {
+      type: "repairCollisions";
+      policy?: LayoutRepairPolicy;
+    }
+  | {
+      type: "translateLayout";
+      dx: number;
+      dy: number;
+      clampNegative?: boolean;
+      policy?: LayoutRepairPolicy;
+    }
+  | {
+      type: "placeItems";
+      items: LayoutPlacementRequest[];
+      policy?: LayoutRepairPolicy;
     };
 
 export type LayoutOperationStatus =
@@ -80,6 +102,131 @@ export type LayoutBlockedReason =
   | "invalid-input"
   | "unsupported";
 
+export type LayoutMigrationSettings = {
+  cols?: number | null;
+  columns?: number | null;
+  minColumns?: number | null;
+  maxRows?: number | null;
+  [key: string]: unknown;
+};
+
+export type LayoutMigrationAxis = "horizontal" | "xy";
+export type LayoutMigrationRounding = "round";
+export type LayoutRepairStrategy =
+  | "none"
+  | "first-fit"
+  | "nearest-fit"
+  | "nearest-then-first"
+  | "heuristic"
+  | "custom";
+
+export type LayoutRepairObjective = {
+  minimizeMovement?: number;
+  minimizeResize?: number;
+  preserveOrder?: number;
+  preserveStatic?: number;
+  preserveGroups?: number;
+};
+
+export type LayoutMigrationPolicy = {
+  axis?: LayoutMigrationAxis;
+  rounding?: LayoutMigrationRounding;
+  sanitizeInvalidItems?: boolean;
+  forceRepair?: boolean;
+  repair?: LayoutRepairPolicy;
+};
+
+export type LayoutRepairPolicy = {
+  strategy?: LayoutRepairStrategy;
+  fallback?: "none" | "first-fit" | "nearest-fit" | "nearest-then-first" | "heuristic";
+  objective?: LayoutRepairObjective;
+  customRepairSolver?: LayoutRepairSolver;
+  customSolverBudgetMs?: number;
+  createDiagnostics?: boolean;
+};
+
+export type LayoutPlacementRequest = {
+  item: Pick<LayoutItem, "i" | "w" | "h"> & Partial<LayoutItem>;
+  target?: { x: number; y: number };
+  strategy?: "target-first" | "first-fit" | "append-after-bottom";
+  repair?: LayoutRepairPolicy;
+};
+
+export type LayoutRepairSolver = (input: LayoutRepairSolverInput) => LayoutRepairSolverResult;
+
+export type LayoutRepairSolverInput = {
+  layout: Layout;
+  originalLayout: Layout;
+  cols: number;
+  maxRows?: number;
+  allowOverlap: boolean;
+  preventCollision: boolean;
+  policy: LayoutRepairPolicy;
+  objective: Required<LayoutRepairObjective>;
+};
+
+export type LayoutRepairSolverResult = {
+  layout: Layout;
+  diagnostics?: LayoutRepairDiagnostic[];
+  summary?: LayoutRepairSummary;
+};
+
+export type LayoutMigrationSummary = {
+  previousCols: number;
+  nextCols: number;
+  ratio: number;
+  axis: LayoutMigrationAxis;
+  rounding: LayoutMigrationRounding;
+  geometryChanged: boolean;
+  visualOnlyChange: boolean;
+};
+
+export type LayoutRepairSummary = {
+  strategy: LayoutRepairStrategy;
+  fallback?: string;
+  score?: number;
+  objective?: Required<LayoutRepairObjective>;
+  candidateCount: number;
+  movedCount: number;
+  resizedCount: number;
+  clampedCount: number;
+  forcedStaticRepairCount: number;
+  unresolvedIds: string[];
+  durationMs?: number;
+};
+
+export type LayoutRepairDiagnosticCode =
+  | "settings-invalid"
+  | "settings-visual-only"
+  | "settings-ratio"
+  | "item-invalid"
+  | "item-sanitized"
+  | "item-clamped"
+  | "item-shrunk"
+  | "item-expanded"
+  | "item-moved"
+  | "item-added"
+  | "item-skipped"
+  | "collision-detected"
+  | "repair-fallback"
+  | "static-preserved"
+  | "forced-static-repair"
+  | "unresolved-item"
+  | "custom-solver-fallback"
+  | "policy-unsupported"
+  | "placement-source";
+
+export type LayoutRepairDiagnostic = {
+  code: LayoutRepairDiagnosticCode;
+  level: "info" | "warning" | "error";
+  message: string;
+  itemId?: string;
+  before?: Pick<LayoutItem, "x" | "y" | "w" | "h">;
+  after?: Pick<LayoutItem, "x" | "y" | "w" | "h">;
+  reason?: string;
+  details?: unknown;
+};
+
 export type LayoutDiagnostics = {
   operationId: string;
   operationType: LayoutOperation["type"];
@@ -94,6 +241,7 @@ export type LayoutDiagnostics = {
   queueMs?: number;
   computeMs?: number;
   stale?: boolean;
+  details?: LayoutRepairDiagnostic[];
   debug?: LayoutDebugSummary;
 };
 
@@ -109,6 +257,9 @@ export type LayoutDebugSummary = {
     affectedIds: string[];
     collisionIds: string[];
     blockedReason?: LayoutBlockedReason;
+    migration?: LayoutMigrationSummary;
+    repair?: LayoutRepairSummary;
+    details?: LayoutRepairDiagnostic[];
   };
 };
 
@@ -131,6 +282,8 @@ export type LayoutOperationResult = {
     fallback?: "first-fit" | "nearest-fit" | "none";
     reason?: "collision" | "bounds" | "maxRows" | "invalid-input" | "no-fit";
   };
+  migration?: LayoutMigrationSummary;
+  repair?: LayoutRepairSummary;
   error?: {
     message: string;
     cause?: unknown;

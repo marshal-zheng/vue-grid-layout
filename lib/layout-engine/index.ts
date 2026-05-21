@@ -23,12 +23,27 @@ export type {
   LayoutIndex,
   LayoutIndexOptions,
   LayoutIndexStrategy,
+  LayoutMigrationAxis,
+  LayoutMigrationPolicy,
+  LayoutMigrationRounding,
+  LayoutMigrationSettings,
+  LayoutMigrationSummary,
   LayoutOperation,
   LayoutOperationPhase,
   LayoutOperationRequest,
   LayoutOperationResult,
   LayoutOperationStatus,
   LayoutPatch,
+  LayoutPlacementRequest,
+  LayoutRepairDiagnostic,
+  LayoutRepairDiagnosticCode,
+  LayoutRepairObjective,
+  LayoutRepairPolicy,
+  LayoutRepairSolver,
+  LayoutRepairSolverInput,
+  LayoutRepairSolverResult,
+  LayoutRepairStrategy,
+  LayoutRepairSummary,
   LayoutWorkerLike,
   ScheduledLayoutTask
 } from "./types";
@@ -46,3 +61,15 @@ export {
   mainThreadLayoutExecutor,
   workerLayoutExecutor
 } from "./executor";
+export {
+  migrateLayoutSettings,
+  placeLayoutItems,
+  repairLayoutCollisions,
+  translateLayout
+} from "./migration";
+export type {
+  LayoutPlaceItemsOptions,
+  LayoutRepairCollisionsOptions,
+  LayoutSettingsMigrationOptions,
+  LayoutTranslateOptions
+} from "./migration";

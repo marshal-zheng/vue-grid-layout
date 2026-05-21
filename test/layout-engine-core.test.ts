@@ -6,7 +6,11 @@ import {
   createLayoutEngine,
   executeLayoutOperation,
   mainThreadLayoutExecutor,
+  migrateLayoutSettings,
+  placeLayoutItems,
+  repairLayoutCollisions,
   rowColumnOccupancyStrategy,
+  translateLayout,
   workerLayoutExecutor
 } from '../lib/layout-engine'
 import type { LayoutOperationResult } from '../lib/layout-engine'
@@ -346,6 +350,28 @@ function testGroupMoveCollisionsAndCompaction() {
   assert.equal(noCompactType.status, 'changed')
   assert.equal(getAllCollisions(noCompactType.layout, getLayoutItem(noCompactType.layout, 'c')!).length, 0)
 
+  const noCompactCascade = executeLayoutOperation({
+    id: 'move-null-compact-cascade',
+    phase: 'commit',
+    layout: [
+      { i: 'revenue', x: 0, y: 0, w: 6, h: 3 },
+      { i: 'pipeline', x: 6, y: 0, w: 6, h: 3 },
+      { i: 'utilization', x: 12, y: 0, w: 6, h: 3 },
+      { i: 'service', x: 18, y: 0, w: 6, h: 3, static: true },
+      { i: 'incidents', x: 0, y: 3, w: 10, h: 4 },
+      { i: 'region', x: 10, y: 3, w: 14, h: 4 }
+    ],
+    operation: { type: 'move', id: 'pipeline', x: 9, y: 0, userAction: true },
+    options: { ...options, compactType: null, preventCollision: false }
+  })
+  assert.equal(noCompactCascade.status, 'changed')
+  assert.equal(getLayoutItem(noCompactCascade.layout, 'pipeline')?.x, 9)
+  assert.equal(getLayoutItem(noCompactCascade.layout, 'utilization')?.y, 3)
+  assert.equal(getLayoutItem(noCompactCascade.layout, 'region')?.y, 6)
+  for (const item of noCompactCascade.layout) {
+    assert.equal(getAllCollisions(noCompactCascade.layout, item).length, 0, `${item.i} should not collide`)
+  }
+
   const staticObstacle = executeLayoutOperation({
     id: 'group-static-obstacle',
     phase: 'preview',
@@ -406,6 +432,293 @@ function testResizeDropResponsive() {
   assert.ok(responsive.layout.every(item => item.x + item.w <= 6))
 }
 
+function testMigrationAndRepairOperations() {
+  const wide: Layout = [
+    { i: 'a', x: 0, y: 0, w: 6, h: 2 },
+    { i: 'b', x: 12, y: 3, w: 6, h: 4, minW: 2 }
+  ]
+  const migrated = migrateLayoutSettings(wide, {
+    previousSettings: { cols: 24 },
+    nextSettings: { cols: 12 },
+    engineOptions: { ...options, cols: 24, compactType: null },
+    id: 'migrate-24-12',
+    debug: true
+  })
+  assert.equal(migrated.status, 'changed')
+  assert.equal(migrated.migration?.ratio, 0.5)
+  assert.equal(getLayoutItem(migrated.layout, 'b')?.x, 6)
+  assert.equal(getLayoutItem(migrated.layout, 'b')?.w, 3)
+  assert.equal(getLayoutItem(migrated.layout, 'b')?.y, 3)
+  assert.equal(getLayoutItem(migrated.layout, 'b')?.h, 4)
+  assert.ok(migrated.diagnostics?.details?.some(detail => detail.code === 'settings-ratio'))
+
+  const expanded = executeLayoutOperation({
+    id: 'migrate-12-24',
+    phase: 'commit',
+    layout: migrated.layout,
+    operation: { type: 'migrateSettings', previousSettings: { columns: 12 }, nextSettings: { columns: 24 } },
+    options: { ...options, cols: 12, compactType: null }
+  })
+  assert.equal(expanded.status, 'changed')
+  assert.equal(getLayoutItem(expanded.layout, 'b')?.x, 12)
+  assert.equal(getLayoutItem(expanded.layout, 'b')?.w, 6)
+
+  const xy = executeLayoutOperation({
+    id: 'migrate-xy',
+    phase: 'commit',
+    layout: [{ i: 'a', x: 2, y: 4, w: 2, h: 4 }],
+    operation: {
+      type: 'migrateSettings',
+      previousSettings: { cols: 12 },
+      nextSettings: { cols: 6 },
+      policy: { axis: 'xy' }
+    },
+    options: { ...options, cols: 12, compactType: null }
+  })
+  assert.equal(xy.status, 'changed')
+  assert.deepEqual(
+    getLayoutItem(xy.layout, 'a') && {
+      x: getLayoutItem(xy.layout, 'a')!.x,
+      y: getLayoutItem(xy.layout, 'a')!.y,
+      w: getLayoutItem(xy.layout, 'a')!.w,
+      h: getLayoutItem(xy.layout, 'a')!.h
+    },
+    { x: 1, y: 2, w: 1, h: 2 }
+  )
+
+  const visualOnly = executeLayoutOperation({
+    id: 'migrate-visual-only',
+    phase: 'commit',
+    layout: wide,
+    operation: {
+      type: 'migrateSettings',
+      previousSettings: { columns: 24, margin: [8, 8], rowHeight: 30 },
+      nextSettings: { columns: 24, margin: [12, 12], rowHeight: 48 }
+    },
+    options: { ...options, cols: 24 }
+  })
+  assert.equal(visualOnly.status, 'noop')
+  assert.equal(visualOnly.layout, wide)
+  assert.equal(visualOnly.migration?.visualOnlyChange, true)
+
+  const invalidSettings = executeLayoutOperation({
+    id: 'migrate-invalid-settings',
+    phase: 'commit',
+    layout: wide,
+    operation: { type: 'migrateSettings', previousSettings: { columns: 24 }, nextSettings: { columns: 0 } },
+    options: { ...options, cols: 24 }
+  })
+  assert.equal(invalidSettings.status, 'error')
+  assert.ok(invalidSettings.diagnostics?.details?.some(detail => detail.code === 'settings-invalid'))
+
+  const clamped = executeLayoutOperation({
+    id: 'migrate-clamp',
+    phase: 'commit',
+    layout: [{ i: 'edge', x: 22, y: 0, w: 4, h: 1, minW: 2 }],
+    operation: { type: 'migrateSettings', previousSettings: { columns: 24 }, nextSettings: { columns: 12 } },
+    options: { ...options, cols: 24, compactType: null }
+  })
+  assert.equal(clamped.status, 'changed')
+  assert.equal(getLayoutItem(clamped.layout, 'edge')?.x, 10)
+  assert.equal(getLayoutItem(clamped.layout, 'edge')?.w, 2)
+  assert.ok(clamped.diagnostics?.details?.some(detail => detail.code === 'item-clamped'))
+
+  const invalidItem = executeLayoutOperation({
+    id: 'migrate-invalid-item',
+    phase: 'commit',
+    layout: [{ i: 'bad', x: Number.NaN, y: 0, w: 1, h: 1 }],
+    operation: { type: 'migrateSettings', previousSettings: { columns: 12 }, nextSettings: { columns: 6 } },
+    options: { ...options, cols: 12 }
+  })
+  assert.equal(invalidItem.status, 'error')
+  assert.ok(invalidItem.diagnostics?.details?.some(detail => detail.code === 'item-invalid'))
+
+  const sanitized = executeLayoutOperation({
+    id: 'migrate-sanitize',
+    phase: 'commit',
+    layout: [{ i: 'bad', x: Number.NaN, y: -2, w: 0, h: 1 }],
+    operation: {
+      type: 'migrateSettings',
+      previousSettings: { columns: 12 },
+      nextSettings: { columns: 6 },
+      policy: { sanitizeInvalidItems: true }
+    },
+    options: { ...options, cols: 12, compactType: null }
+  })
+  assert.equal(sanitized.status, 'changed')
+  assert.equal(getLayoutItem(sanitized.layout, 'bad')?.x, 0)
+  assert.equal(getLayoutItem(sanitized.layout, 'bad')?.w, 1)
+  assert.ok(sanitized.diagnostics?.details?.some(detail => detail.code === 'item-sanitized'))
+
+  const collisionLayout: Layout = [
+    { i: 's', x: 0, y: 0, w: 2, h: 2, static: true },
+    { i: 'a', x: 0, y: 0, w: 2, h: 2 },
+    { i: 'b', x: 2, y: 0, w: 2, h: 2 }
+  ]
+  const repaired = repairLayoutCollisions(collisionLayout, {
+    engineOptions: { ...options, cols: 6, compactType: null },
+    id: 'repair-static'
+  })
+  assert.equal(repaired.status, 'changed')
+  assert.equal(getLayoutItem(repaired.layout, 's')?.x, 0)
+  assert.equal(getAllCollisions(repaired.layout, getLayoutItem(repaired.layout, 's')!).length, 0)
+  assert.ok(repaired.diagnostics?.details?.some(detail => detail.code === 'static-preserved'))
+
+  const forcedStatic = repairLayoutCollisions([
+    { i: 's1', x: 0, y: 0, w: 2, h: 1, static: true },
+    { i: 's2', x: 0, y: 0, w: 2, h: 1, static: true }
+  ], {
+    engineOptions: { ...options, cols: 4, compactType: null },
+    id: 'repair-forced-static'
+  })
+  assert.equal(forcedStatic.status, 'changed')
+  assert.equal(getAllCollisions(forcedStatic.layout, getLayoutItem(forcedStatic.layout, 's1')!).length, 0)
+  assert.ok(forcedStatic.diagnostics?.details?.some(detail => detail.code === 'forced-static-repair'))
+
+  const staticOutOfBounds = repairLayoutCollisions([
+    { i: 's', x: 5, y: 0, w: 2, h: 1, static: true }
+  ], {
+    engineOptions: { ...options, cols: 4, compactType: null, preventCollision: true },
+    id: 'repair-static-out-of-bounds'
+  })
+  assert.equal(staticOutOfBounds.status, 'changed')
+  assert.equal(getLayoutItem(staticOutOfBounds.layout, 's')?.x, 2)
+  assert.equal(staticOutOfBounds.repair?.forcedStaticRepairCount, 1)
+  assert.ok(staticOutOfBounds.diagnostics?.details?.some(detail => detail.code === 'forced-static-repair'))
+
+  const unresolved = repairLayoutCollisions([
+    { i: 'a', x: 0, y: 0, w: 1, h: 1 },
+    { i: 'b', x: 0, y: 0, w: 1, h: 1 }
+  ], {
+    engineOptions: { ...options, cols: 1, maxRows: 1, compactType: null, preventCollision: true },
+    id: 'repair-unresolved'
+  })
+  assert.equal(unresolved.status, 'blocked')
+  assert.ok(unresolved.diagnostics?.details?.some(detail => detail.code === 'unresolved-item'))
+
+  const overlapPreserved = executeLayoutOperation({
+    id: 'migrate-overlap-preserved',
+    phase: 'commit',
+    layout: [
+      { i: 'a', x: 0, y: 0, w: 2, h: 1 },
+      { i: 'b', x: 0, y: 0, w: 2, h: 1 }
+    ],
+    operation: { type: 'migrateSettings', previousSettings: { columns: 4 }, nextSettings: { columns: 4 } },
+    options: { ...options, cols: 4, allowOverlap: true, preventCollision: false }
+  })
+  assert.equal(overlapPreserved.status, 'noop')
+  assert.equal(overlapPreserved.collisions.length, 2)
+}
+
+function testPlacementTranslateAndCustomSolver() {
+  const placed = placeLayoutItems([
+    { i: 'a', x: 0, y: 0, w: 2, h: 2 }
+  ], {
+    items: [
+      { item: { i: 'b', w: 2, h: 1 }, strategy: 'append-after-bottom' },
+      { item: { i: 'c', w: 1, h: 1 }, target: { x: 0, y: 0 }, strategy: 'target-first' }
+    ],
+    engineOptions: { ...options, cols: 4, compactType: null },
+    id: 'place-items'
+  })
+  assert.equal(placed.status, 'changed')
+  assert.equal(getLayoutItem(placed.layout, 'b')?.y, 2)
+  assert.notDeepEqual(
+    { x: getLayoutItem(placed.layout, 'c')?.x, y: getLayoutItem(placed.layout, 'c')?.y },
+    { x: 0, y: 0 }
+  )
+  assert.ok(placed.diagnostics?.details?.some(detail => detail.code === 'placement-source'))
+
+  const translated = translateLayout([
+    { i: 'a', x: 2, y: 3, w: 1, h: 1 },
+    { i: 'b', x: 4, y: 4, w: 1, h: 1 }
+  ], {
+    dx: -5,
+    dy: -10,
+    engineOptions: { ...options, cols: 6, compactType: null },
+    id: 'translate-clamp'
+  })
+  assert.equal(translated.status, 'changed')
+  assert.equal(getLayoutItem(translated.layout, 'a')?.x, 0)
+  assert.equal(getLayoutItem(translated.layout, 'a')?.y, 0)
+
+  const custom = repairLayoutCollisions([
+    { i: 'a', x: 0, y: 0, w: 1, h: 1 },
+    { i: 'b', x: 0, y: 0, w: 1, h: 1 }
+  ], {
+    engineOptions: { ...options, cols: 4, compactType: null },
+    policy: {
+      strategy: 'custom',
+      customRepairSolver: input => ({
+        layout: input.layout.map((item, index) => ({ ...item, x: index, y: 0 }))
+      })
+    },
+    id: 'custom-success'
+  })
+  assert.equal(custom.status, 'changed')
+  assert.equal(custom.repair?.strategy, 'custom')
+  assert.equal(getAllCollisions(custom.layout, getLayoutItem(custom.layout, 'a')!).length, 0)
+
+  const customThrow = repairLayoutCollisions([
+    { i: 'a', x: 0, y: 0, w: 1, h: 1 },
+    { i: 'b', x: 0, y: 0, w: 1, h: 1 }
+  ], {
+    engineOptions: { ...options, cols: 4, compactType: null },
+    policy: {
+      strategy: 'custom',
+      customRepairSolver: () => {
+        throw new Error('solver boom')
+      }
+    },
+    id: 'custom-throw'
+  })
+  assert.equal(customThrow.status, 'fallback')
+  assert.ok(customThrow.diagnostics?.details?.some(detail => detail.code === 'custom-solver-fallback'))
+
+  const customInvalid = repairLayoutCollisions([
+    { i: 'a', x: 0, y: 0, w: 1, h: 1 },
+    { i: 'b', x: 0, y: 0, w: 1, h: 1 }
+  ], {
+    engineOptions: { ...options, cols: 4, compactType: null },
+    policy: {
+      strategy: 'custom',
+      fallback: 'none',
+      customRepairSolver: input => ({ layout: input.layout.slice(0, 1) })
+    },
+    id: 'custom-invalid'
+  })
+  assert.equal(customInvalid.status, 'blocked')
+  assert.ok(customInvalid.diagnostics?.details?.some(detail => detail.code === 'custom-solver-fallback'))
+
+  const customBudget = repairLayoutCollisions([
+    { i: 'a', x: 0, y: 0, w: 1, h: 1 },
+    { i: 'b', x: 0, y: 0, w: 1, h: 1 }
+  ], {
+    engineOptions: { ...options, cols: 4, compactType: null },
+    policy: {
+      strategy: 'custom',
+      customSolverBudgetMs: -1,
+      customRepairSolver: input => ({
+        layout: input.layout.map((item, index) => ({ ...item, x: index, y: 0 }))
+      })
+    },
+    id: 'custom-budget'
+  })
+  assert.equal(customBudget.status, 'fallback')
+  assert.ok(customBudget.diagnostics?.details?.some(detail => detail.reason === 'over-budget'))
+
+  const unsupportedPolicy = repairLayoutCollisions([
+    { i: 'a', x: 0, y: 0, w: 1, h: 1 },
+    { i: 'b', x: 0, y: 0, w: 1, h: 1 }
+  ], {
+    engineOptions: { ...options, cols: 4, compactType: null },
+    policy: { strategy: 'solver' as never },
+    id: 'unsupported-policy'
+  })
+  assert.equal(unsupportedPolicy.status, 'changed')
+  assert.ok(unsupportedPolicy.diagnostics?.details?.some(detail => detail.code === 'policy-unsupported'))
+}
+
 async function testSchedulerAndExecutors() {
   assert.equal(createLayoutExecutor({ kind: 'main-thread' }).kind, 'main-thread')
   const scheduler = createInteractionScheduler({ mode: 'commitOnly' })
@@ -452,6 +765,58 @@ async function testSchedulerAndExecutors() {
     { i: 'b', x: 3, y: 2 }
   )
 
+  const heavyScheduler = createInteractionScheduler({ mode: 'auto', auto: { eagerMaxItems: 0, rafMaxItems: 0, workerMinItems: 1 } })
+  let heavyScheduled: LayoutOperationResult | null = null
+  heavyScheduler.schedule(
+    {
+      id: 'heavy-preview',
+      phase: 'preview',
+      heavy: true,
+      layout: baseLayout,
+      operation: { type: 'repairCollisions' },
+      options: { ...options, scheduler: { mode: 'auto', auto: { eagerMaxItems: 0, rafMaxItems: 0, workerMinItems: 1 } } }
+    },
+    request => executeLayoutOperation(request),
+    result => {
+      heavyScheduled = result
+    }
+  )
+  assert.equal((heavyScheduled as LayoutOperationResult | null)?.status, 'noop')
+  assert.equal((heavyScheduled as LayoutOperationResult | null)?.diagnostics?.schedulerMode, 'commitOnly')
+
+  const staleEvents: string[] = []
+  const staleScheduler = createInteractionScheduler({ mode: 'eager' })
+  let releaseFirst = () => {}
+  const staleResults: string[] = []
+  staleScheduler.schedule(
+    {
+      id: 'stale-first',
+      phase: 'preview',
+      layout: baseLayout,
+      operation: { type: 'validate' },
+      options: { ...options, onEvent: event => staleEvents.push(event.type) }
+    },
+    request => new Promise<LayoutOperationResult>(resolve => {
+      releaseFirst = () => resolve(executeLayoutOperation(request))
+    }),
+    result => staleResults.push(result.id)
+  )
+  staleScheduler.schedule(
+    {
+      id: 'stale-second',
+      phase: 'preview',
+      layout: baseLayout,
+      operation: { type: 'validate' },
+      options: { ...options, onEvent: event => staleEvents.push(event.type) }
+    },
+    request => executeLayoutOperation(request),
+    result => staleResults.push(result.id)
+  )
+  releaseFirst()
+  await new Promise(resolve => setTimeout(resolve, 0))
+  assert.deepEqual(staleResults, ['stale-second'])
+  assert.ok(staleEvents.includes('stale-result'))
+
   const main = await mainThreadLayoutExecutor().execute({
     id: 'main',
     phase: 'commit',
@@ -469,6 +834,24 @@ async function testSchedulerAndExecutors() {
     options
   })
   assert.equal(unavailable.status, 'fallback')
+
+  class TimeoutWorker {
+    onmessage: ((event: { data: unknown }) => void) | null = null
+    onerror: ((event: unknown) => void) | null = null
+    postMessage() {}
+    terminate() {}
+  }
+  const timeoutWorker = workerLayoutExecutor({ workerFactory: () => new TimeoutWorker(), timeoutMs: 1 })
+  const timeoutResult = await timeoutWorker.execute({
+    id: 'worker-timeout',
+    phase: 'commit',
+    layout: baseLayout,
+    operation: { type: 'compact' },
+    options
+  })
+  assert.equal(timeoutResult.status, 'fallback')
+  assert.equal(timeoutResult.error?.message, 'worker task timed out')
+  timeoutWorker.dispose?.()
 
   class FakeWorker {
     onmessage: ((event: { data: unknown }) => void) | null = null
@@ -495,6 +878,46 @@ async function testSchedulerAndExecutors() {
   assert.equal(workerResult.status, 'changed')
   assert.equal(workerResult.diagnostics?.operationType, 'groupMove')
   worker.dispose?.()
+
+  let postedRequest: unknown = null
+  class InspectWorker {
+    onmessage: ((event: { data: unknown }) => void) | null = null
+    onerror: ((event: unknown) => void) | null = null
+    postMessage(message: unknown) {
+      postedRequest = message
+      setTimeout(() => {
+        this.onmessage?.({ data: runLayoutWorkerRequest(message as never) })
+      }, 0)
+    }
+    terminate() {}
+  }
+  const sanitizeWorker = workerLayoutExecutor({ workerFactory: () => new InspectWorker(), timeoutMs: 1000 })
+  const sanitizedResult = await sanitizeWorker.execute({
+    id: 'worker-sanitize-custom-solver',
+    phase: 'commit',
+    layout: [
+      { i: 'a', x: 0, y: 0, w: 1, h: 1 },
+      { i: 'b', x: 0, y: 0, w: 1, h: 1 }
+    ],
+    operation: {
+      type: 'repairCollisions',
+      policy: {
+        strategy: 'custom',
+        customRepairSolver: input => ({ layout: input.layout })
+      }
+    },
+    options
+  })
+  assert.ok(['changed', 'fallback', 'blocked', 'noop'].includes(sanitizedResult.status))
+  const message = postedRequest as {
+    request?: {
+      operation?: {
+        policy?: Record<string, unknown>
+      }
+    }
+  }
+  assert.equal(typeof message.request?.operation?.policy?.customRepairSolver, 'undefined')
+  sanitizeWorker.dispose?.()
 }
 
 function testInteractionController() {
@@ -563,6 +986,8 @@ async function main() {
   testGroupMoveValidationAndParity()
   testGroupMoveCollisionsAndCompaction()
   testResizeDropResponsive()
+  testMigrationAndRepairOperations()
+  testPlacementTranslateAndCustomSolver()
   testInteractionController()
   testPublicComponentSurface()
   testLargeSmokeCases()

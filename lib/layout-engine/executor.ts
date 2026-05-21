@@ -5,8 +5,10 @@ import type {
   LayoutAbortSignal,
   LayoutExecutor,
   LayoutExecutorOptions,
+  LayoutOperation,
   LayoutOperationRequest,
   LayoutOperationResult,
+  LayoutRepairPolicy,
   LayoutWorkerLike
 } from "./types";
 
@@ -78,8 +80,52 @@ const sanitizeOptions = (options: GridLayoutEngineOptions): GridLayoutEngineOpti
   diagnostics: options.diagnostics
 });
 
+const sanitizeRepairPolicy = (policy?: LayoutRepairPolicy) => {
+  if (!policy) return policy;
+  const rest = { ...policy };
+  delete rest.customRepairSolver;
+  return rest;
+};
+
+const sanitizeOperation = (operation: LayoutOperation): LayoutOperation => {
+  switch (operation.type) {
+    case "migrateSettings":
+      return {
+        ...operation,
+        policy: operation.policy
+          ? {
+              ...operation.policy,
+              repair: sanitizeRepairPolicy(operation.policy.repair)
+            }
+          : operation.policy
+      };
+    case "repairCollisions":
+      return {
+        ...operation,
+        policy: sanitizeRepairPolicy(operation.policy)
+      };
+    case "translateLayout":
+      return {
+        ...operation,
+        policy: sanitizeRepairPolicy(operation.policy)
+      };
+    case "placeItems":
+      return {
+        ...operation,
+        policy: sanitizeRepairPolicy(operation.policy),
+        items: operation.items.map(item => ({
+          ...item,
+          repair: sanitizeRepairPolicy(item.repair)
+        }))
+      };
+    default:
+      return operation;
+  }
+};
+
 const sanitizeRequest = (request: LayoutOperationRequest): LayoutOperationRequest => ({
   ...request,
+  operation: sanitizeOperation(request.operation),
   options: sanitizeOptions(request.options)
 });
 
