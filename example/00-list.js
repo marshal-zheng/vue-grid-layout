@@ -25,7 +25,9 @@ const demos = [
   ["Persistence - IndexedDB", "20-persistence-indexeddb"],
   ["Persistence - Remote HTTP", "21-persistence-remote-http"],
   ["Layout Engine Diagnostics / Worker", "22-layout-engine-performance"],
-  ["Professional Dashboard Editor", "23-professional-dashboard-editor"]
+  ["Professional Dashboard Editor", "23-professional-dashboard-editor"],
+  ["Dashboard Settings Migration", "24-dashboard-runtime-lab"],
+  ["Dashboard Editor Shell", "25-dashboard-editor-shell"]
 ];
 
 const App = {

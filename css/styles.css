@@ -21,6 +21,11 @@
   --vgl-editor-placeholder-bg: rgba(71, 85, 105, 0.12);
   --vgl-editor-placeholder-border: rgba(71, 85, 105, 0.72);
   --vgl-editor-placeholder-shadow: rgba(15, 23, 42, 0.16);
+  --vgl-editor-placement-ghost-bg: rgba(14, 165, 233, 0.16);
+  --vgl-editor-placement-ghost-border: rgba(2, 132, 199, 0.9);
+  --vgl-editor-placement-blocked-bg: rgba(244, 63, 94, 0.12);
+  --vgl-editor-placement-blocked-border: rgba(225, 29, 72, 0.86);
+  --vgl-editor-placement-affected-border: rgba(245, 158, 11, 0.82);
   --vgl-editor-hud-bg: rgba(15, 23, 42, 0.92);
   --vgl-editor-hud-color: rgba(248, 250, 252, 1);
   --vgl-editor-hud-blocked: rgba(239, 68, 68, 0.95);
@@ -101,6 +106,10 @@
   );
 }
 
+.vue-grid-layout.editor-placement-active {
+  cursor: crosshair;
+}
+
 .vue-grid-item.drag-blocked,
 .vue-grid-item.resize-blocked,
 .vue-grid-item.vue-grid-placeholder.placeholder-blocked {
@@ -110,6 +119,58 @@
 
 .vue-grid-item.vue-grid-placeholder.placeholder-resizing {
   transition: none;
+}
+
+.vue-grid-editor-placement-ghost,
+.vue-grid-editor-placement-affected,
+.vue-grid-editor-placement-hud {
+  position: absolute;
+  z-index: 6;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.vue-grid-editor-placement-ghost {
+  background: var(--vgl-editor-placement-ghost-bg);
+  border: 2px dashed var(--vgl-editor-placement-ghost-border);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72), 0 12px 28px -18px rgba(2, 132, 199, 0.8);
+}
+
+.vue-grid-editor-placement-ghost-blocked {
+  background: var(--vgl-editor-placement-blocked-bg);
+  border-color: var(--vgl-editor-placement-blocked-border);
+}
+
+.vue-grid-editor-placement-affected {
+  border: 2px solid var(--vgl-editor-placement-affected-border);
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.vue-grid-editor-placement-affected-shift {
+  border-style: dashed;
+}
+
+.vue-grid-editor-placement-affected-collision {
+  border-color: var(--vgl-editor-placement-blocked-border);
+  background: rgba(244, 63, 94, 0.08);
+}
+
+.vue-grid-editor-placement-hud {
+  transform: translate(8px, -2px);
+  max-width: 220px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.86);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.vue-grid-editor-placement-hud-blocked {
+  background: rgba(136, 19, 55, 0.9);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -198,6 +259,12 @@
   outline: var(--vgl-editor-selection-outline-width) solid var(--vgl-editor-selection-outline);
   outline-offset: -2px;
   z-index: 5;
+}
+
+.vue-grid-item.editor-placement-reflowed {
+  outline: 2px dashed var(--vgl-editor-placement-affected-border);
+  outline-offset: -2px;
+  transition: transform 120ms ease, top 120ms ease, left 120ms ease;
 }
 
 .vue-grid-item.editor-active {

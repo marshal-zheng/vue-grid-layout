@@ -15,9 +15,15 @@ VGL is Vue3-only and does not require jQuery.
 - [MCP Integration](#mcp-integration)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Interaction State and Drag Activation](#interaction-state-and-drag-activation)
 - [History (Pinia-powered undo/redo)](#history-pinia-powered-undoredo)
 - [Layout Persistence](#layout-persistence)
+- [Height Modes and Render Precision](#height-modes-and-render-precision)
 - [Professional Dashboard Editor](#professional-dashboard-editor)
+- [Dashboard Editor Shell Integration](#dashboard-editor-shell-integration)
+- [Dashboard Layout Document Adapter](#dashboard-layout-document-adapter)
+- [Dashboard Responsive Profiles](#dashboard-responsive-profiles)
+- [Layout Settings Migration and Repair](#layout-settings-migration-and-repair)
 - [Layout Engine Performance](#layout-engine-performance)
 - [Responsive Usage](#responsive-usage)
 - [Providing Grid Width](#providing-grid-width)
@@ -44,6 +50,8 @@ VGL is Vue3-only and does not require jQuery.
 1. [History / Undo-Redo](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/16-history.js)
 1. [Persistence](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/18-persistence.js)
 1. [Professional Dashboard Editor](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/23-professional-dashboard-editor.js)
+1. [Dashboard Settings Migration](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/24-dashboard-runtime-lab.js)
+1. [Dashboard Editor Shell Integration](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/25-dashboard-editor-shell.js)
 
 ## Features
 
@@ -149,6 +157,25 @@ export default defineComponent({
 </script>
 ```
 
+## Interaction State and Drag Activation
+
+Pointer interactions are guarded by an internal state machine so click-like item interactions do not start layout drag work. By default, mouse and pen drags activate after `4px` of pointer travel; touch/coarse pointer drags activate after `8px`.
+
+```vue
+<VueGridLayout
+  v-model="layout"
+  :width="1200"
+  :cols="12"
+  :drag-activation-distance="{ mouse: 4, pen: 4, touch: 8, coarse: 8 }"
+/>
+```
+
+- `onDragStart`, `onDrag` and `onDragStop` are semantic drag lifecycle events. A normal click, context-menu click or pointer movement below the activation distance does not emit them and does not show editor guides, write preview layout, create history entries or save persistence.
+- Set `dragActivationDistance={0}` when you need the closest compatibility with the older immediate `dragStart` timing.
+- Resize handle press still starts resize immediately, but no-op resize ticks and no-op resize stops do not preview or commit layout changes.
+- External drop enters an active drop state as soon as it is over the grid. Repeated dragover events at the same grid position and size are ignored for guide/layout preview, `dropDragOver` size overrides participate in preview and commit, and drag leave, rejected drop, cancel and commit all clear dropping placeholder state.
+- Debug editor guide state remains internal; use existing editor diagnostics and layout-engine diagnostics for operation ids, phases, blocked reasons and stale/fallback status.
+
 ## History (Pinia-powered undo/redo)
 
 - Install peer: `npm i pinia` (already a peer dependency).
@@ -223,10 +250,15 @@ const editor = useGridEditor({
   layout,
   defaultMode: "edit",
   clipboard: internalGridEditorClipboard,
-  beforeCommand: async ({ command }) => {
+  beforeCommand: async ({ command, preview, source, history }) => {
     if (command.type === "delete" && !canDelete.value) {
       return { status: "block", reason: "before-command-blocked" };
     }
+    if (preview?.risk === "destructive") {
+      const ok = await confirm(`Apply ${source} command to ${preview.affectedIds.length} item(s)?`);
+      return ok ? { status: "allow" } : { status: "cancel" };
+    }
+    console.debug(history.canUndo, history.canRedo);
     return { status: "allow" };
   }
 });
@@ -236,19 +268,28 @@ Editor fundamentals:
 
 - `mode` is controlled; `defaultMode` is uncontrolled. If editor is enabled without either value, it fail-safes to `view` and emits `editor-mode-missing`.
 - Commands include `select`, `clearSelection`, `move`, `resize`, `add`, `delete`, `duplicate`, `copy`, `paste`, `align`, `distribute`, `tidy`, `lock`, `unlock`, `show`, `hide`, `save`, `discard`, `reset`, `undo`, `redo`, `section-row-collapse`, `section-row-expand`, `section-row-move`, `section-row-delete` and `section-row-reorder`.
-- `canExecute()` performs synchronous mode/capability checks for disabled toolbar states. `execute()` runs the same checks, optional async `beforeCommand`, then commits mutation only after the guard resolves.
+- `canExecute()` performs synchronous mode/capability checks for disabled toolbar states. `execute()` enters the Command Kernel: descriptor defaults, synchronous validation, pending guard scope checks, optional async `beforeCommand`, stale revision checks, transaction commit, history policy, and command events.
+- `beforeCommand` is the interception point for permissions and confirmation. Its context includes `command`, `source`, `origin`, `targetIds`, `layout`/`layouts`, `editorMetaById`, `sectionRows`, `selection`, `mode`, history availability, optional `preview` and an `AbortSignal`. The core library waits for the returned promise; it does not provide modal, toast or i18n UI.
+- Command events (`command-start`, `command-commit`, `command-blocked`, `command-error`) are observational. Throwing inside `onEvent` does not change a completed command result; use `beforeCommand` when business logic must block or cancel.
+- Command history accepts `"record"`, `"ignore"`, `"record-preserveRedoStack"`, `"replace"` and `"clear"` or an object with `mergeKey`, `mergeWindowMs`, `preserveRedoStack` and legacy `skip`. Selection/focus default to `"ignore"`; external/programmatic layout updates default to `"ignore"` while preserving redo.
 - `selectedIds`, `activeId`, `anchorId` and `selection.mode` support single and multiple selection. Selection/focus commands do not write persistence or layout history.
 - Item editor metadata lives in sidecar `editorMetaById`; `locked`, `visible`, `editable`, `deletable`, `duplicatable` and `copyable` are not written into `LayoutItem` by default.
 - Multi-selection move is engine-first: dragging a selected item in a multi-selection, using keyboard arrows, or executing a multi-target `move` command submits a layout-engine `groupMove` operation. The operation preserves selected item offsets, returns per-item layout patches/diagnostics, and records one undoable history entry at commit.
 - `locked: true` is editor metadata: it blocks direct editing of that item but does not make it a physical obstacle. `static: true` belongs on the `LayoutItem`: it blocks direct movement and acts as a collision obstacle for other moving items, including group moves.
 - `commandPolicy: "skip-blocked"` moves only allowed selected items and reports skipped ids; the default `"all-or-nothing"` policy blocks the whole command if any target is locked, hidden, static, missing or otherwise not movable.
 - Group move follows the same collision and bounds rules as the layout engine. `preventCollision=true` blocks group collisions with external items, `preventCollision=false` may push/compact external non-static items, `allowOverlap=true` permits overlap, and bounds/maxRows violations are reported as structured blocked results.
+- Pointer drag, resize and external drop use the same command guard before durable commit when an editor controller is present. If guard blocks, cancels, times out or the command is stale, the visual preview is rolled back to the committed layout and placeholder/guides/auto-scroll state is cleared.
 - Legacy/disabled layout-engine paths do not implement a shadow group move. Multi-item group move returns `unsupported`; single-item move keeps the existing behavior.
 - `visible: false` preserves the layout item but does not render it. It is not permission isolation.
 - `meta.editor` stores `{ version, editorMetaById, sectionRows, updatedAt }` in the same persistence document as layout data. Do not store sensitive permission data in `meta.editor`; enforce permissions on your server or in `beforeCommand`.
-- Default copy/paste uses `internalGridEditorClipboard`; `systemClipboardAdapter()` is optional and safely reports unavailable or denied clipboard access.
-- Keyboard editing covers arrows, accelerated arrows, Alt+arrows resize, Delete/Backspace, Cmd/Ctrl+C/V/D/S and Esc. Input, textarea, select and contenteditable targets are ignored.
-- CSS state classes include `.editor-enabled`, `.editor-mode-view`, `.editor-mode-edit`, `.editor-selected`, `.editor-active`, `.editor-locked`, `.editor-hidden`, `.editor-readonly`, `.editor-keyboard-editing`, `.editor-drop-target` and guide classes.
+- Default copy/paste uses `internalGridEditorClipboard`; `systemClipboardAdapter()` is optional and safely reports unavailable or denied clipboard access. Clipboard payloads are v1/v2 compatible: v2 adds source grid context such as `cols`, `breakpoint`, `layoutId` and `viewFormat`, while v1 payloads continue to paste with the legacy geometry.
+- Advanced placement is exposed as a headless transaction on `GridEditorController`: `placementSession`, `beginPlacement()`, `updatePlacement()`, `commitPlacement()` and `cancelPlacement()`. Dashboard shell flows should call `shell.actions.commitPlacement()` so the editor commit, dashboard/profile write-back and widget/reference adapters finish in one awaitable action. Preview updates do not write layout, history, persistence, selection, focus or adapter payloads; commit converts the session back into the existing `add`/`paste` command pipeline.
+- Placement sessions default to `collisionPolicy: "block"` so precise ghost placement stays conservative. Set `collisionPolicy: "layout"` to reuse the grid's existing collision semantics: `preventCollision=true` blocks, `preventCollision=false` with a compacting layout can push/compact existing non-static items, and `allowOverlap=true` permits overlap. Existing items may render at predicted coordinates during preview, but layout, history, persistence and business payloads are unchanged until commit.
+- Default Cmd/Ctrl+V remains immediate paste. Set `keyboard: { pasteMode: "interactive" }` only when you want the paste shortcut to enter placement mode. Text inputs, textareas, selects, contenteditable targets and configured ignored targets still receive native keyboard behavior.
+- Placement paste reads the configured clipboard once at `beginPlacement()`, falls back from system to internal clipboard, and returns `clipboard-unavailable`, `clipboard-permission` or `clipboard-invalid` without creating a half-active ghost when no payload is usable. The resolved payload is reused at commit so preview ids, metadata, responsive geometry and final ids stay aligned.
+- Placement ghost and HUD are visual-only: `.vue-grid-editor-placement-ghost`, `.vue-grid-editor-placement-affected*` and `.vue-grid-editor-placement-hud` are rendered by the overlay layer and are not added to slot children, `state.layout`, `droppingDOMNode` or business widget component trees. In layout-collision preview, affected existing grid items receive render-only candidate coordinates plus `.editor-placement-reflowed`; Esc, blur/unmount, readonly mode, external layout replacement and commit cleanup remove the transient state.
+- Keyboard editing covers arrows, accelerated arrows, Alt+arrows resize, Delete/Backspace, Cmd/Ctrl+C/V/D/S and Esc. During active placement, Esc cancels, Enter commits the current candidate, and arrow keys nudge the candidate by `placementNudgeStep` / `placementFastNudgeStep`. Input, textarea, select and contenteditable targets are ignored.
+- CSS state classes include `.editor-enabled`, `.editor-mode-view`, `.editor-mode-edit`, `.editor-placement-active`, `.editor-selected`, `.editor-active`, `.editor-locked`, `.editor-hidden`, `.editor-readonly`, `.editor-keyboard-editing`, `.editor-drop-target`, placement classes and guide classes.
 - Smart guides keep full candidates in `guides` and expose the product-safe subset in `displayGuides`. By default drag/drop renders at most 3 guides, resize renders at most 2, and only one spacing guide receives a distance label. `debug: "layer"` or `debug: "panel"` exposes full candidates separately from the default user-facing guides.
 - Background grid lines are optional editing scaffolding, not smart guides. `showGrid` defaults to interaction-only rendering, uses `.editor-guide-grid`, and stays visually below placeholder, active item, snapped guide and candidate guide layers.
 - Alignment guides use blue guide styling and endpoint markers to show which edge or center is aligned. Spacing guides use green dashed styling plus a short label such as `2 cols` or `1 row`; non-debug mode should not show full-canvas high-saturation lines or label every candidate.
@@ -321,7 +362,7 @@ Event order for committed layout commands is:
 
 Metadata-only commands emit editor command/state events and update editor history/dirty state without emitting `layoutChange`.
 
-Known editor limits: group resize and group bounding-box ghosting are not included, section/row metadata is a client editing model rather than a permission boundary, system clipboard depends on browser permission, hidden items are not a security boundary, legacy layout-engine mode does not support multi-item group move, and legacy `historyStore` remains layout-only while editor history tracks layout, metadata, selection and focus.
+Known editor limits: group resize and group bounding-box ghosting are not included, section/row metadata is a client editing model rather than a permission boundary, system clipboard depends on browser permission, hidden items are not a security boundary, legacy layout-engine mode does not support multi-item group move, and legacy `historyStore` remains a layout-only compatibility layer. New guard, metadata, selection, section row, transaction preview and pointer command behavior are committed through editor command history, not through the legacy `historyStore` contract.
 
 ### localStorage refresh recovery
 
@@ -350,7 +391,7 @@ const adapter = localStorageAdapter({ prefix: 'vgl:' })
 </script>
 ```
 
-`autoSave` defaults to `true` and saves committed layout changes after drag/resize stop, debounced by `debounceMs` (default `300`). It does not write drag or resize preview frames. Adapter operations time out after `timeoutMs` (default `10000`) so a stalled remote store leaves the current in-memory layout intact and surfaces an `adapter-timeout` error.
+`autoSave` defaults to `true` and saves committed layout changes after drag/resize/drop commit, debounced by `debounceMs` (default `300`). It does not write drag, resize or drop preview frames. Adapter operations time out after `timeoutMs` (default `10000`) so a stalled remote store leaves the current in-memory layout intact and surfaces an `adapter-timeout` error.
 
 ### autosave dirty state
 
@@ -435,6 +476,305 @@ For responsive grids, pass `persistence` to `<ResponsiveVueGridLayout>`; it stor
 Migration note: replace ad-hoc `layoutChange` saves with `persistence` or `useGridLayoutPersistence()`. Keep `historyStore` only where you need undo/redo inside the current browser session.
 
 Security note: `localStorage` is not suitable for sensitive data. Do not put credentials, private query keys or confidential business data in layout `meta`. During SSR or when browser storage is unavailable, the default localStorage adapter reports an unavailable/error state instead of touching `window`.
+
+## Height Modes and Render Precision
+
+`VueGridLayout` supports runtime height modes without changing `LayoutItem`. Item `x/y/w/h` values remain integer grid units for drag, resize, collision, compaction, history and persistence.
+
+```vue
+<VueGridLayout
+  v-model="layout"
+  :width="1200"
+  :cols="12"
+  height-mode="fit"
+  :container-height="640"
+  :min-row-height="24"
+  render-precision="subpixel"
+/>
+```
+
+Height modes:
+
+- `auto`: preserves the classic content-sized grid behavior.
+- `fixed`: uses `containerHeight` and hides overflow.
+- `scroll`: uses `containerHeight` and allows scrolling.
+- `fit`: derives runtime `rowHeight` from available container height and rendered rows.
+
+When `containerHeight` is not controlled by the parent, opt in to parent measurement:
+
+```vue
+<VueGridLayout
+  v-model="layout"
+  :width="1200"
+  height-mode="fit"
+  :auto-measure-container-height="true"
+/>
+```
+
+`containerHeight` always wins over measured height. Measurement observes the grid root parent content box, not the grid root itself, so `fit` does not feed back into its own height.
+
+`renderPrecision="integer"` is the default and keeps the historical rounded CSS output. `renderPrecision="subpixel"` allows decimal CSS `left/top/width/height`; it does not change committed layout units, collision, compaction, history or persistence.
+
+Compatibility notes:
+
+- If `heightMode` is omitted, `autoSize: true` maps to `auto`.
+- If `heightMode` is omitted, `autoSize: false` keeps the legacy externally sized container path.
+- Dashboard `autoFillHeight` and `mobileAutoFillHeight` act as compatibility aliases for `fit` only when explicit `heightMode` or `mobileHeightMode` is missing.
+
+## Dashboard Editor Shell Integration
+
+`useDashboardEditorShell()` is a headless product-shell layer for dashboard editors. It sits above `DashboardLayoutDocument`, `DashboardResponsiveRuntime` / `useDashboardResponsiveProfileModel()` and `GridEditorController`; it does not add context menu DOM, dialogs, palette UI, business widget schema, reference fields or persistence side effects to `VueGridLayout` or `DashboardResponsiveVueGridLayout`.
+
+```ts
+import {
+  useDashboardEditorShell,
+  type DashboardEditorShellWidgetAdapter,
+  type DashboardEditorShellReferenceAdapter
+} from "@marsio/vue-grid-layout";
+
+const shell = useDashboardEditorShell({
+  document: dashboardDocumentRef,
+  model: dashboardResponsiveModel,
+  gridElement: gridRootRef,
+  mode,
+  controlled: true,
+  widgetAdapter,
+  referenceAdapter,
+  palette: {
+    open: async context => pickWidgetTemplate(context)
+  },
+  confirm: async context => confirmRemove(context.itemIds),
+  onDocumentChange: event => {
+    // Proposed document only. Persist explicitly through your app/editor flow.
+    proposedDocument.value = event.document;
+  },
+  onEvent: event => auditShellAction(event)
+});
+```
+
+Shell responsibilities:
+
+- Position helpers map pointer/contextmenu/drop events or keyboard fallback state to grid `{ x, y }`; list/mobile runtimes return insertion context instead of writing list-only ordering fields to `LayoutItem`.
+- `pasteAtEvent()`, `pasteWidget()`, `placeClipboard()`, `commitPlacement()`, `addWidgetFromTemplate()`, `pasteWidgetReference()`, `openWidgetPalette()` and `handleExternalDrop()` reuse the editor command pipeline with explicit placement strategies and dashboard/profile write-back. `placeClipboard()` and `placementMode: "interactive"` start a placement session; `commitPlacement()` commits it through the shell transaction so document write-back and adapters are awaitable.
+- `selectItem()`, `highlightItem()` and `scrollToItem()` keep selection in the editor and highlight/scroll as transient shell state. Highlight is not written to `DashboardLayoutDocument`, `LayoutItem`, `editorMetaById`, history or persistence.
+- `prepareDashboardContextMenu()` and `prepareWidgetContextMenu()` return plain descriptors with ids, label/labelKey, icons, shortcuts, enabled/hidden/reason, metadata and action callbacks. Render them with your own menu/i18n/permission UI.
+- `copyWidget()`, `cutWidget()`, `pasteWidget()`, `duplicateWidget()` and `removeWidget()` work without a widget adapter for layout/editor metadata; when an adapter is present it participates in prepare, commit and rollback.
+- `undo()` and `redo()` replay editor history through dashboard/profile write-back, so keyboard shortcuts, toolbar buttons, menu actions and API calls keep the runtime layout and `DashboardLayoutDocument` in sync after paste/add/remove.
+- `copyWidgetReference()`, `pasteWidgetReference()` and `replaceReferenceWithWidgetCopy()` require a reference adapter. Reference payloads are opaque; diagnostics record status, ids and error codes, not sensitive payload content.
+- `openWidgetPalette()` only calls your palette hook. Catalogs, search, categories and widget configuration remain application code.
+- `moveAllWidgets(dx, dy)` uses dashboard migration/layout-engine translation for profile-scoped or default-layout movement and reports applied patches/diagnostics.
+- Optional keyboard binding maps shortcuts to shell actions, ignores text-editing targets and uses the same action pipeline as menus/toolbars/API calls. Defaults include Cmd/Ctrl+C copy, Cmd/Ctrl+X cut, Cmd/Ctrl+R copy reference, Cmd/Ctrl+V immediate paste, Cmd/Ctrl+I or Cmd/Ctrl+Shift+V paste reference, Ctrl+Enter or Cmd+Enter interactive “place from clipboard”, Delete/Backspace remove, undo/redo, palette and move-all shortcuts. After a keyboard cut, the next Cmd/Ctrl+V starts interactive clipboard placement instead of filling the newly-opened original slot.
+
+Document ownership is controlled-first. If the shell is given controlled `document`/runtime inputs, successful mutations emit `onDocumentChange` and shell events with a proposed document and `persist: false`; the shell does not autosave. With `controlled: false`, the shell may update the supplied local document ref after a successful action, but remote persistence is still caller-owned.
+
+Adapter transactions follow `prepare -> editor/dashboard mutation -> commit`, with rollback/compensation when prepare succeeds but mutation or commit fails. This avoids reporting layout success when business payload creation failed, and avoids orphan business payloads when placement/write-back is blocked.
+
+### Shell placement strategies
+
+Shell add/paste/drop entry points accept `strategy?: "cursor" | "nearest-fit" | "first-fit" | "insert-top-shift" | "offset"`, `placementIntent?: "auto" | "here" | "selection" | "viewport"`, `placementMode?: "immediate" | "interactive"` and `collisionPolicy?: "block" | "layout"` through the shared placement options. Targetless widget paste uses `placementIntent: "auto"` and can inherit `menu.defaultPasteStrategy` or `menu.defaultAddStrategy`, so keyboard/toolbars can follow the same left-to-right insertion policy as add flows. When a v2 clipboard source has different `cols` than the active target grid, paste and placement sessions scale the copied group’s `x`, `w` and relative horizontal offsets to the target columns before id mapping. Keyboard bindings can provide `placementOptions` globally or per shortcut, and shortcuts support platform `primary` plus explicit `ctrl` / `meta` modifiers, which lets Ctrl+Enter start the same interactive clipboard placement flow as a toolbar button while reusing the app's current collision policy. Event/grid-position actions use `placementIntent: "here"` by default; dashboard context-menu items are labelled “Paste here” / “Add widget here” for immediate commit and may also expose “Place from clipboard” for ghost placement through the public controller API. For `cursor` placements with `placementIntent: "here"`, the default block policy treats the target as the new item’s top-left anchor and blocks collision in placement sessions; `collisionPolicy: "layout"` instead follows `preventCollision`, `allowOverlap` and `compactType` so the preview can show existing widgets being pushed before commit.
+
+- `first-fit` scans the active runtime layout from `{ x: 0, y: 0 }`, left to right and then row by row. Hidden, static, locked, and currently unrendered items still occupy their geometry because they remain part of the active layout.
+- `insert-top-shift` places the new item or copied group at the top-left and shifts every existing active-layout item down by the inserted group height. Static or locked items move only for this layout-level reflow; their drag, resize, and remove permissions do not change.
+- If item size, collision repair, bounds, `maxRows`, missing profile write-back, guard checks, or adapter stages fail, the shell returns a blocked/error result with placement diagnostics and rolls back prepared adapter work. Adapter diagnostics include stages, ids, codes, and reasons, not opaque business payloads.
+- Responsive write-back stays scoped to the current runtime/profile. Editing a default layout does not overwrite profile overrides, and editing a profile does not materialize unrelated inherited items.
+
+See `example/25-dashboard-editor-shell.js` for context menu descriptors, paste at pointer, selection/highlight/scroll, empty dashboard add, palette hook, widget copy/paste, reference copy/paste/replace mocks, remove confirm and move-all wiring. The example menu/palette/buttons are demonstration UI only; their DOM, styles and labels are not public API.
+
+## Dashboard Layout Document Adapter
+
+Dashboard products often need more than the generic `LayoutItem` geometry model. Use `DashboardLayoutDocument` when you need a durable product document with widget layout fields, grid settings, breakpoint/profile overrides, editor sidecar metadata, migrations and ThingsBoard-style import/export boundaries.
+
+```ts
+import {
+  projectDashboardLayoutDocument,
+  writeDashboardRuntimeToDocument,
+  type DashboardLayoutDocument
+} from '@marsio/vue-grid-layout'
+
+const dashboardDocument: DashboardLayoutDocument = {
+  dashboardSchemaVersion: 1,
+  kind: 'dashboard-layout',
+  key: 'dashboard:operations',
+  revision: 'rev-1',
+  sourceId: 'server',
+  savedAt: new Date().toISOString(),
+  primaryLayoutId: 'default',
+  layouts: {
+    default: {
+      gridSettings: {
+        columns: 24,
+        rowHeight: 80,
+        heightMode: 'fit',
+        minRowHeight: 24,
+        renderPrecision: 'subpixel'
+      },
+      widgets: {
+        temperature: {
+          col: 0,
+          row: 0,
+          sizeX: 6,
+          sizeY: 4,
+          resizable: false,
+          mobileOrder: 1
+        }
+      },
+      editor: {
+        version: 1,
+        editorMetaById: {
+          temperature: { label: 'Temperature' }
+        }
+      }
+    }
+  }
+}
+
+const projected = projectDashboardLayoutDocument(dashboardDocument, {
+  profileId: 'mobile',
+  targetView: 'mobile'
+})
+
+if (projected.ok) {
+  const layout = projected.projection.layout
+  const editorMetaById = projected.projection.editorMetaById
+  const gridSettings = projected.projection.gridSettings
+
+  // Pass layout to VueGridLayout modelValue, and pass editorMetaById
+  // to your headless editor controller or product shell.
+  console.log(layout, editorMetaById, gridSettings)
+}
+```
+
+To persist committed editor changes back into the dashboard document, write runtime geometry and mapped metadata through the adapter:
+
+```ts
+const saved = writeDashboardRuntimeToDocument(dashboardDocument, {
+  layout: committedLayout,
+  editorMetaById: committedEditorMetaById
+}, {
+  targetView: 'desktop'
+})
+
+if (saved.ok) {
+  await dashboardAdapter.save(saved.document.key, saved.document)
+}
+```
+
+The dashboard adapter is framework-independent. It does not add `useDashboardLayoutPersistence()`, component-level dashboard props, collision repair, context menus, widget palettes or business data source models. `LayoutItem` remains the generic grid runtime shape; dashboard-only fields such as `mobileOrder`, `mobileHeight`, `desktopHide`, `mobileHide`, `preserveAspectRatio` and grid settings stay in the dashboard document or sidecar diagnostics.
+
+## Dashboard Responsive Profiles
+
+Use the dashboard responsive layer when a `DashboardLayoutDocument` has breakpoint profiles and you want profile fallback, mobile/list projection, visibility metadata and profile-scoped write-back without changing the generic `ResponsiveVueGridLayout` API.
+
+```ts
+import {
+  resolveDashboardResponsiveProfile,
+  writeDashboardResponsiveRuntimeToDocument,
+  type DashboardLayoutDocument
+} from '@marsio/vue-grid-layout'
+
+const result = resolveDashboardResponsiveProfile(dashboardDocument, {
+  width: 390,
+  breakpoints: { desktop: 960, mobile: 0 },
+  targetViewRule: { mobileBreakpointIds: ['mobile'] },
+  mode: 'view'
+})
+
+if (result.ok) {
+  result.runtime.layout        // Layout for VueGridLayout
+  result.runtime.renderItemIds // Slot/widget ids to render
+  result.runtime.heightOptions // Profile-derived height/precision defaults
+  result.runtime.diagnostics   // profile-fallback, unknown-profile-item, etc.
+}
+
+const saved = result.ok && writeDashboardResponsiveRuntimeToDocument(
+  dashboardDocument,
+  result.runtime,
+  committedLayout,
+  { createMissingProfileOnEdit: false }
+)
+```
+
+For Vue integrations that want headless state, use the composable:
+
+```ts
+import { useDashboardResponsiveProfileModel } from '@marsio/vue-grid-layout'
+
+const model = useDashboardResponsiveProfileModel({
+  document,
+  width,
+  breakpoints: { desktop: 960, mobile: 0 },
+  targetViewRule: { mobileBreakpointIds: ['mobile'] },
+  mode: 'edit',
+  onEvent: event => console.log(event.type)
+})
+```
+
+For a thin component wrapper, key slot children by dashboard widget id:
+
+```vue
+<DashboardResponsiveVueGridLayout
+  v-model:document="document"
+  :width="width"
+  :breakpoints="{ desktop: 960, mobile: 0 }"
+  :targetViewRule="{ mobileBreakpointIds: ['mobile'] }"
+  :container-height="640"
+>
+  <WidgetCard key="temperature" />
+  <WidgetCard key="pressure" />
+</DashboardResponsiveVueGridLayout>
+```
+
+Legacy responsive layouts can be converted into a dashboard document. Breakpoint ids such as `lg`, `md`, `sm`, `xs` and `xxs` become dashboard profile ids; by default the largest breakpoint width becomes the default dashboard layout.
+
+```ts
+import { createDashboardDocumentFromResponsiveLayouts } from '@marsio/vue-grid-layout'
+
+const migrated = createDashboardDocumentFromResponsiveLayouts({
+  key: 'dashboard:from-responsive',
+  layouts,
+  breakpoints: { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 },
+  cols,
+  margin,
+  containerPadding
+})
+```
+
+Dashboard profile `gridSettings` can set `heightMode`, `mobileHeightMode`, `minRowHeight`, `rowHeight`, `mobileRowHeight`, `autoFillHeight`, `mobileAutoFillHeight` and `renderPrecision`. The thin component passes those settings to the base grid as defaults; explicit component props such as `height-mode`, `container-height`, `row-height` and `render-precision` take precedence.
+
+This layer intentionally stays thin. It does not implement aspect-ratio resize, dashboard context menus, widget palettes, copy/paste shells or business widget data sources. Future specs can build those features on top of profile resolution, settings projection, mobile/list runtime, height runtime, settings migration and write-back.
+
+## Layout Settings Migration and Repair
+
+Use the layout engine helpers when changing geometric settings such as columns, importing items, repairing collisions, or translating an entire layout. Visual settings such as margin, row height, height mode and render precision do not automatically rewrite committed item geometry.
+
+```ts
+import {
+  migrateLayoutSettings,
+  repairLayoutCollisions,
+  migrateDashboardLayoutSettings
+} from '@marsio/vue-grid-layout'
+
+const migrated = migrateLayoutSettings(layout, {
+  previousSettings: { columns: 24 },
+  nextSettings: { columns: 12 },
+  engineOptions: { cols: 24, compactType: null, preventCollision: true }
+})
+
+console.log(migrated.status, migrated.patches, migrated.diagnostics?.details)
+
+const repaired = repairLayoutCollisions(migrated.layout, {
+  engineOptions: { cols: 12, compactType: null, preventCollision: true },
+  policy: { strategy: 'heuristic' }
+})
+
+const dashboardResult = migrateDashboardLayoutSettings(document, {
+  profileId: 'tablet',
+  nextSettings: { columns: 12 },
+  policy: { repair: { strategy: 'nearest-then-first' } }
+})
+```
+
+The default repair implementation is deterministic heuristic repair: static or locked items are preserved first, movable items use nearest-fit with first-fit fallback, and diagnostics identify scaling, clamping, movement, fallback and unresolved constraints. The API is solver-ready through `customRepairSolver`, objective metadata, budget fields and solver diagnostics, but the package does not ship a full constraint solver, ILP/CP-SAT dependency, settings dialog UI, schema rewrite, height/render precision calculation, aspect-ratio resize or mobile/list ordering rewrite as part of this feature.
 
 ## Layout Engine Performance
 
@@ -642,6 +982,21 @@ width: number,
 // If true, the container height swells and contracts to fit contents
 autoSize?: boolean = true,
 
+// Runtime height mode. Explicit heightMode takes precedence over autoSize.
+heightMode?: 'auto' | 'scroll' | 'fit' | 'fixed',
+
+// Controlled container height in px for fixed, scroll and fit modes.
+containerHeight?: number,
+
+// Measure the grid root parent content box when containerHeight is omitted.
+autoMeasureContainerHeight?: boolean = false,
+
+// Minimum row height for fit mode before falling back to scroll.
+minRowHeight?: number,
+
+// Final CSS pixel output; subpixel does not change committed grid units.
+renderPrecision?: 'integer' | 'subpixel' = 'integer',
+
 // Number of columns in this layout.
 cols?: number = 12,
 
@@ -699,6 +1054,16 @@ transformScale?: number = 1,
 // Auto-scroll the nearest scroll container when dragging/resizing near an edge.
 // If true, uses defaults. Or pass { margin?: number; speed?: number }.
 autoScroll?: boolean | { margin?: number; speed?: number } = false,
+
+// Drag activation threshold in px.
+// Defaults are mouse/pen: 4, touch/coarse: 8. Set 0 for legacy-style immediate dragStart.
+dragActivationDistance?: number | {
+  mouse?: number,
+  pen?: number,
+  touch?: number,
+  coarse?: number,
+  default?: number
+},
 
 // If true, grid can be placed one over the other.
 // If set, implies `preventCollision`.
