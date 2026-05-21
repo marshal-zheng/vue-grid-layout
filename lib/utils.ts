@@ -918,6 +918,20 @@ export function moveElementAwayFromCollision(
   const compactV = compactType === "vertical";
   const preventCollision = collidesWith.static; // we're already colliding (not for static items)
 
+  if (compactType == null) {
+    return moveElement(
+      layout,
+      itemToMove,
+      compactType,
+      cols,
+      false,
+      itemToMove.x,
+      collidesWith.y + collidesWith.h,
+      false,
+      preventCollision,
+    );
+  }
+
   // If there is enough space above the collision to put this element, move it there.
   // We only do this on the main collision as this can get funky in cascades and cause
   // unwanted swapping behavior.
@@ -968,11 +982,6 @@ export function moveElementAwayFromCollision(
         isUserAction,
         preventCollision,
       );
-    } else if (collisionNorth && compactType == null) {
-      collidesWith.y = itemToMove.y;
-      itemToMove.y = itemToMove.y + itemToMove.h;
-
-      return layout;
     } else if (collisionWest && compactH) {
       return moveElement(
         layout,

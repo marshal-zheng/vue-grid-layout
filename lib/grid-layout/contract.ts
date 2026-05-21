@@ -1,5 +1,6 @@
 import type { ComponentInternalInstance } from "vue";
 import type { EventCallback, Layout, LayoutItem } from "../utils";
+import type { GridHeightRuntime } from "../grid-height";
 
 export const gridLayoutEmits = [
   "update:modelValue",
@@ -11,7 +12,8 @@ export const gridLayoutEmits = [
   "resize",
   "resizeStop",
   "drop",
-  "dropDragOver"
+  "dropDragOver",
+  "heightRuntimeChange"
 ];
 
 export type GridLayoutEmitName =
@@ -24,7 +26,8 @@ export type GridLayoutEmitName =
   | "resize"
   | "resizeStop"
   | "drop"
-  | "dropDragOver";
+  | "dropDragOver"
+  | "heightRuntimeChange";
 export type DropDragOverResult = { w?: number; h?: number } | false | void;
 
 type EmitFn = (event: GridLayoutEmitName, ...args: unknown[]) => void;
@@ -39,7 +42,8 @@ const eventHandlerKeys: Record<GridLayoutEmitName, string[]> = {
   resize: ["onResize"],
   resizeStop: ["onResizeStop", "onResize-stop"],
   drop: ["onDrop"],
-  dropDragOver: ["onDropDragOver", "onDrop-drag-over"]
+  dropDragOver: ["onDropDragOver", "onDrop-drag-over"],
+  heightRuntimeChange: ["onHeightRuntimeChange", "onHeight-runtime-change"]
 };
 
 export type GridRootAttrs = {
@@ -134,6 +138,9 @@ export function createGridLayoutEventBridge(
     emitResizeStop: emitInteraction("resizeStop"),
     emitDrop(layout: Layout, event: Event, item?: LayoutItem) {
       emit("drop", layout, event, item);
+    },
+    emitHeightRuntimeChange(runtime: GridHeightRuntime) {
+      emit("heightRuntimeChange", runtime);
     },
     callDropDragOver(event: DragEvent): Exclude<DropDragOverResult, void> | undefined {
       const result = callReturnableEvent(instance, "dropDragOver", [event]);

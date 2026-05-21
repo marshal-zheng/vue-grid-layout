@@ -1,7 +1,6 @@
-import { defineComponent, VNode, onMounted, onBeforeUnmount, h, Fragment, markRaw, toRef, getCurrentInstance, type Ref } from 'vue'
+import { defineComponent, VNode, onMounted, onBeforeUnmount, h, Fragment, markRaw, toRef, getCurrentInstance, computed, ref, watch, type Ref } from 'vue'
 import clsx from "clsx";
 import {
-  bottom,
   noop,
   getNonFragmentChildren
 } from "./utils";
@@ -27,6 +26,10 @@ import {
   createGridEditorOverlayGeometry,
   renderGridEditorOverlay
 } from "./grid-layout/GridEditorOverlay";
+import {
+  resolveGridHeightRuntime,
+  useContainerHeightMeasurement
+} from "./grid-height";
 
 // Utility class names
 const layoutClassName = "vue-grid-layout";
@@ -56,6 +59,32 @@ const VueGridLayout = defineComponent({
       syncHistory,
       onLayoutMaybeChanged
     } = model;
+    const rootRef = ref<HTMLElement | null>(null);
+    const measuredContainer = useContainerHeightMeasurement({
+      enabled: () => props.autoMeasureContainerHeight === true,
+      rootRef
+    });
+    const heightRuntime = computed(() => resolveGridHeightRuntime({
+      layout: state.layout,
+      autoSize: props.autoSize,
+      heightMode: props.heightMode,
+      rowHeight: props.rowHeight,
+      minRowHeight: props.minRowHeight,
+      margin: props.margin,
+      containerPadding: props.containerPadding || props.margin,
+      containerHeight: props.containerHeight,
+      measuredContainerHeight: measuredContainer.measuredContainerHeight.value,
+      measurementDiagnostics: measuredContainer.diagnostics.value,
+      autoMeasureContainerHeight: props.autoMeasureContainerHeight,
+      renderPrecision: props.renderPrecision,
+      context: { source: "grid" }
+    }));
+    const resolvedRuntimeProps = new Proxy(props, {
+      get(target, key) {
+        if (key === "rowHeight") return heightRuntime.value.rowHeight;
+        return target[key as keyof typeof target];
+      }
+    });
     const engineBridge = useGridLayoutEngineBridge({
       props,
       getLayout: () => state.layout
@@ -65,7 +94,7 @@ const VueGridLayout = defineComponent({
       current: null as ReturnType<typeof useGridInteractions> | null
     };
     const editorRuntime = useGridEditorRuntime({
-      props,
+      props: resolvedRuntimeProps,
       layoutRef: toRef(state, 'layout') as Ref<Layout>,
       persistenceController,
       engineBridge,
@@ -106,7 +135,7 @@ const VueGridLayout = defineComponent({
     });
 
     const interactions = useGridInteractions({
-      props,
+      props: resolvedRuntimeProps,
       state,
       eventBridge,
       engineBridge,
@@ -118,7 +147,11 @@ const VueGridLayout = defineComponent({
         snapCandidate: editorRuntime.snapCandidate,
         updateIntelligence: editorRuntime.updateIntelligence,
         resolveMoveDrag: editorRuntime.resolveMoveDrag,
-        notifyMoveBlocked: editorRuntime.notifyMoveBlocked
+        notifyMoveBlocked: editorRuntime.notifyMoveBlocked,
+        commitMove: editorRuntime.commitMove,
+        commitResize: editorRuntime.commitResize,
+        commitDrop: editorRuntime.commitDrop,
+        rollbackInteraction: editorRuntime.rollbackInteraction
       },
       isFirefox,
       layoutClassName,
@@ -152,33 +185,40 @@ const VueGridLayout = defineComponent({
       engineBridge.dispose("component unmounted");
       model.stop();
       editorRuntime.stop();
+      measuredContainer.stop();
     });
+
+    let lastHeightRuntimeSignature = "";
+    const emitHeightRuntimeChange = () => {
+      const runtime = heightRuntime.value;
+      const signature = JSON.stringify(runtime);
+      if (signature === lastHeightRuntimeSignature) return;
+      lastHeightRuntimeSignature = signature;
+      eventBridge.emitHeightRuntimeChange(runtime);
+    };
+
+    watch(
+      heightRuntime,
+      () => {
+        if (state.mounted) emitHeightRuntimeChange();
+      },
+      { deep: true }
+    );
 
     // Set the component to mounted state
     onMounted(() => {
       state.mounted = true;
       editorRuntime.mount();
+      emitHeightRuntimeChange();
       void model.loadPersistedLayout();
     });
-
-    // Calculate container height based on the layout
-    const containerHeight = (): string | null => {
-      const { containerPadding, rowHeight, margin, autoSize } = props;
-      if (!autoSize) return null;
-      const nbRow = bottom(state.layout);
-      const containerPaddingY = containerPadding ? containerPadding[1] : margin[1];
-      const heightPx =
-        nbRow === 0
-          ? containerPaddingY * 2
-          : nbRow * rowHeight + (nbRow - 1) * margin[1] + containerPaddingY * 2;
-      return `${Math.max(0, heightPx)}px`;
-    };
 
     // Create a placeholder element
     const placeholder = (): VNode | null => {
       const { activeDrag } = state;
       if (!activeDrag) return null;
-      const { width = 0, cols, margin, containerPadding, rowHeight, maxRows, useCSSTransforms, transformScale } = props;
+      const { width = 0, cols, margin, containerPadding, maxRows, useCSSTransforms, transformScale } = props;
+      const runtime = heightRuntime.value;
 
       return (
         <GridItem
@@ -196,7 +236,9 @@ const VueGridLayout = defineComponent({
           margin={margin}
           containerPadding={containerPadding || margin}
           maxRows={maxRows}
-          rowHeight={rowHeight}
+          rowHeight={runtime.rowHeight}
+          dragActivationDistance={props.dragActivationDistance}
+          renderPrecision={runtime.renderPrecision}
           isDraggable={false}
           isResizable={false}
           isBounded={false}
@@ -225,7 +267,6 @@ const VueGridLayout = defineComponent({
         cols,
         margin,
         containerPadding,
-        rowHeight,
         maxRows,
         isDraggable,
         isResizable,
@@ -237,6 +278,7 @@ const VueGridLayout = defineComponent({
         resizeHandles,
         resizeHandle
       } = props;
+      const runtime = heightRuntime.value;
 
       const { mounted, droppingPosition } = state;
 
@@ -247,6 +289,7 @@ const VueGridLayout = defineComponent({
       );
       if (!editorItemState.visible) return null;
 
+      const renderItem = editorItemState.previewItem || l;
       const resizeHandlesOptions = l.resizeHandles || resizeHandles;
       return (
         <GridItem
@@ -256,7 +299,9 @@ const VueGridLayout = defineComponent({
           margin={margin}
           containerPadding={containerPadding || margin}
           maxRows={maxRows}
-          rowHeight={rowHeight}
+          rowHeight={runtime.rowHeight}
+          dragActivationDistance={props.dragActivationDistance}
+          renderPrecision={runtime.renderPrecision}
           cancel={draggableCancel}
           handle={draggableHandle}
           onDragStop={interactions.onDragStop}
@@ -273,16 +318,16 @@ const VueGridLayout = defineComponent({
           useCSSTransforms={useCSSTransforms && mounted}
           usePercentages={!mounted}
           transformScale={transformScale}
-          w={l.w}
-          h={l.h}
-          x={l.x}
-          y={l.y}
-          i={l.i}
-          minH={l.minH}
-          minW={l.minW}
-          maxH={l.maxH}
-          maxW={l.maxW}
-          static={l.static}
+          w={renderItem.w}
+          h={renderItem.h}
+          x={renderItem.x}
+          y={renderItem.y}
+          i={renderItem.i}
+          minH={renderItem.minH}
+          minW={renderItem.minW}
+          maxH={renderItem.maxH}
+          maxW={renderItem.maxW}
+          static={renderItem.static}
           class={editorItemState.className}
           onItemClick={editorItemState.onClick}
           droppingPosition={isDroppingItem && props.dropStrategy !== 'auto' ? droppingPosition : undefined}
@@ -296,19 +341,22 @@ const VueGridLayout = defineComponent({
 
     return () => {
       const { class: className, style, isDroppable, innerRef } = props;
+      const runtime = heightRuntime.value;
       const rootAttrs = splitGridRootAttrs(attrs);
       const editorDropEnabled = isDroppable && !editorRuntime.isViewMode();
       const mergedClassName = clsx(layoutClassName, rootAttrs.class as Parameters<typeof clsx>[number], className, {
         "editor-enabled": editorRuntime.isEnabled(),
         "editor-mode-view": editorRuntime.isEnabled() && editorRuntime.isViewMode(),
         "editor-mode-edit": editorRuntime.isEnabled() && editorRuntime.isEditMode(),
+        "editor-placement-active": editorRuntime.isPlacementActive(),
         "editor-dirty": editorRuntime.controller?.dirty.value,
         "editor-conflict": editorRuntime.controller?.state.value === "conflict",
         "editor-guide-grid": editorRuntime.controller?.guides.value.showGrid
       });
       const mergedStyle: Kv = {
         ...(rootAttrs.style && typeof rootAttrs.style === "object" && !Array.isArray(rootAttrs.style) ? rootAttrs.style as Kv : {}),
-        height: containerHeight(),
+        height: runtime.containerStyle.height,
+        ...(runtime.containerStyle.overflow ? { overflow: runtime.containerStyle.overflow } : {}),
         ...style
       };
 
@@ -322,17 +370,25 @@ const VueGridLayout = defineComponent({
         width: props.width || 0,
         margin: props.margin,
         containerPadding: props.containerPadding || props.margin,
-        rowHeight: props.rowHeight,
+        rowHeight: runtime.rowHeight,
+        renderPrecision: runtime.renderPrecision,
         cols: props.cols,
         maxRows: props.maxRows
       });
+      const setRootRef = (element: HTMLElement | null) => {
+        rootRef.value = element;
+        if (innerRef && typeof innerRef === "object" && "value" in innerRef) {
+          (innerRef as Ref<HTMLElement | null>).value = element;
+        }
+      };
 
       return (
         <div
           {...rootAttrs.attrs}
-          ref={innerRef}
+          ref={setRootRef}
           class={mergedClassName}
           style={mergedStyle}
+          onMousemove={editorRuntime.onRootPointerMove}
           onClick={editorRuntime.onRootClick}
           onDrop={editorDropEnabled ? interactions.onDrop : noop}
           onDragleave={editorDropEnabled ? interactions.onDragLeave : noop}
@@ -345,9 +401,10 @@ const VueGridLayout = defineComponent({
             processGridItem(state.droppingDOMNode, layoutItemById, true)}
           {placeholder()}
           {renderGridEditorOverlay({
-            enabled: editorRuntime.guidesEnabled(),
+            enabled: editorRuntime.guidesEnabled() || editorRuntime.isPlacementActive(),
             geometry: overlayGeometry,
             guideState: editorRuntime.controller?.guides.value,
+            placementSession: editorRuntime.controller?.placementSession.value,
             itemMap: layoutItemById,
             layout: state.layout
           })}

@@ -17,11 +17,16 @@ import type {
   ResizeHandleAxis
 } from "../utils";
 import type {
+  GridDragContext,
+  GridInteractionEffect
+} from "../interaction-state-machine";
+import type {
   GridInteractionCommonOptions,
   GridInteractionModelCommitters
 } from "./gridInteractionTypes";
 import type { GridEditorBlockedReason } from "../editor";
 import type { LayoutOperationResult } from "../layout-engine";
+import { useGridInteractionMachine } from "./useGridInteractionMachine";
 
 const LARGE_LAYOUT_THRESHOLD = 200;
 
@@ -58,6 +63,7 @@ export function useGridDragResizeInteractions({
   frameUpdate,
   autoScroll,
   editor,
+  interactionMachine: providedInteractionMachine,
   nextInteractionRequestId,
   syncHistory,
   onLayoutMaybeChanged
@@ -70,12 +76,18 @@ export function useGridDragResizeInteractions({
   const dragBlockedItemIds = ref<string[]>([]);
   const dragBlockedMessage = ref<string | null>(null);
   let activeMoveContext: ActiveMoveContext | null = null;
+  let activeDragHasMoved = false;
+  let activeDragInteractionId: string | null = null;
+  let activeResizeInteractionId: string | null = null;
 
   const getLayoutEngineProp = () => engineBridge.getLayoutEngineProp();
   const isLegacyLayoutEngine = () => engineBridge.isLegacyLayoutEngine();
   const resetInteractionController = (layout?: Layout) => engineBridge.reset(layout);
   const runEnginePreview: typeof engineBridge.preview = (...args) => engineBridge.preview(...args);
   const runEngineCommit: typeof engineBridge.commit = (...args) => engineBridge.commit(...args);
+  const interactionMachine = providedInteractionMachine || useGridInteractionMachine({
+    getDragActivationDistance: () => props.dragActivationDistance
+  });
 
   const buildResizeCandidate = (
     item: LayoutItem,
@@ -161,13 +173,88 @@ export function useGridDragResizeInteractions({
     resizeBlocked.value = false;
     clearDragBlockedFeedback();
     activeMoveContext = null;
+    activeDragHasMoved = false;
+    activeDragInteractionId = null;
+    activeResizeInteractionId = null;
+    interactionMachine.reset("clear-active-interaction");
   };
 
-  const onResizeStart = (i: string, w: number, h: number, { e, node }: GridResizeEvent) => {
+  const finishDragInteraction = () => {
+    state.activeDrag = null;
+    state.oldDragItem = null;
+    activeDragId.value = null;
+    dragBlocked.value = false;
+    clearDragBlockedFeedback();
+    activeMoveContext = null;
+    activeDragHasMoved = false;
+    activeDragInteractionId = null;
+    autoScroll.reset();
+    editor.clearGuides();
+    interactionMachine.reset("finish-drag-interaction");
+  };
+
+  const sameGeometry = (
+    a: Pick<LayoutItem, "x" | "y" | "w" | "h">,
+    b: Pick<LayoutItem, "x" | "y" | "w" | "h">
+  ) => a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
+
+  const hasEffect = <Type extends GridInteractionEffect["type"]>(
+    effects: GridInteractionEffect[],
+    type: Type
+  ): Extract<GridInteractionEffect, { type: Type }> | undefined =>
+    effects.find((effect): effect is Extract<GridInteractionEffect, { type: Type }> => effect.type === type);
+
+  const toCoreDragContext = (context: ActiveMoveContext): GridDragContext => {
+    if (context.kind === "group") {
+      return {
+        kind: "group",
+        activeId: context.activeId,
+        ids: context.ids
+      };
+    }
+    if (context.kind === "blocked") {
+      return {
+        kind: "blocked",
+        reason: context.reason,
+        ids: context.ids,
+        activeId: context.activeId
+      };
+    }
+    return {
+      kind: "single",
+      id: context.id
+    };
+  };
+
+  const cleanupResizeInteraction = () => {
+    state.activeDrag = null;
+    state.oldResizeItem = null;
+    state.resizing = false;
+    activeResizeId.value = null;
+    resizeBlocked.value = false;
+    activeResizeInteractionId = null;
+    autoScroll.reset();
+    editor.clearGuides();
+    state.oldLayout = null;
+    interactionMachine.reset("resize-cleanup");
+  };
+
+  const onResizeStart = (i: string, w: number, h: number, { e, node, handle }: GridResizeEvent) => {
     frameUpdate.cancel();
     const { layout } = state;
     const l = getLayoutItem(layout, i);
     if (!l) return;
+    const resizeHandle = (handle || "se") as ResizeHandleAxis;
+    const resizeInteractionId = nextInteractionRequestId("resize-interaction", i);
+    const startTransition = interactionMachine.dispatch({
+      type: "START_RESIZE",
+      interactionId: resizeInteractionId,
+      itemId: i,
+      handle: resizeHandle,
+      geometry: { x: l.x, y: l.y, w: l.w, h: l.h }
+    });
+    if (!hasEffect(startTransition.effects, "EMIT_RESIZE_START")) return;
+    activeResizeInteractionId = resizeInteractionId;
     syncHistory(layout, "replace");
     activeResizeId.value = i;
     resizeBlocked.value = false;
@@ -190,12 +277,18 @@ export function useGridDragResizeInteractions({
   const onResize = (i: string, w: number, h: number, { e, node, handle }: GridResizeEvent) => {
     const { oldResizeItem } = state;
     const { cols, preventCollision, allowOverlap } = props;
+    const resizeHandle = handle as ResizeHandleAxis;
+    const currentResizeItem = getLayoutItem(state.layout, i);
+    if (!currentResizeItem) return;
+    const requestedGeometry = buildResizeCandidate(currentResizeItem, w, h, resizeHandle);
+    if (sameGeometry(currentResizeItem, requestedGeometry)) {
+      return;
+    }
     if (!isLegacyLayoutEngine()) {
       const layout = state.layout;
       const l = getLayoutItem(layout, i);
       if (!l) return;
       autoScroll.maybeScroll(e, node);
-      const resizeHandle = handle as ResizeHandleAxis;
       const snapped = editor.snapCandidate(
         i,
         l,
@@ -203,8 +296,19 @@ export function useGridDragResizeInteractions({
         layout,
         resizeHandle
       );
+      let previewEffect: Extract<GridInteractionEffect, { type: "PREVIEW_RESIZE" }> | undefined;
+      if (activeResizeInteractionId) {
+        const transition = interactionMachine.dispatch({
+          type: "MOVE_RESIZE",
+          interactionId: activeResizeInteractionId,
+          geometry: { x: snapped.x, y: snapped.y, w: snapped.w, h: snapped.h }
+        });
+        previewEffect = hasEffect(transition.effects, "PREVIEW_RESIZE");
+        if (!previewEffect) return;
+      }
+      if (!previewEffect) return;
       runEnginePreview(
-        nextInteractionRequestId("resize", i),
+        previewEffect.requestId,
         {
           type: "resize",
           id: i,
@@ -216,6 +320,7 @@ export function useGridDragResizeInteractions({
         },
         result => {
           if (result.status === "stale") return;
+          if (!interactionMachine.isCurrentPreviewRequest(previewEffect.interactionId, previewEffect.requestId)) return;
           if (activeResizeId.value !== i) return;
           const nextLayout = result.status === "changed" || result.status === "fallback"
             ? result.layout
@@ -330,6 +435,14 @@ export function useGridDragResizeInteractions({
         static: true,
         i: i
       };
+      if (activeResizeInteractionId) {
+        const transition = interactionMachine.dispatch({
+          type: "MOVE_RESIZE",
+          interactionId: activeResizeInteractionId,
+          geometry: { x: placeholder.x, y: placeholder.y, w: placeholder.w, h: placeholder.h }
+        });
+        if (!hasEffect(transition.effects, "PREVIEW_RESIZE")) return;
+      }
       eventBridge.emitResize(finalLayout, oldResizeItem, l, placeholder, e, node);
       const nextLayout = allowOverlap ? finalLayout : compact(finalLayout, compactType(props), cols);
       const nextItem = getLayoutItem(nextLayout, i) || l;
@@ -432,6 +545,15 @@ export function useGridDragResizeInteractions({
       i: i
     };
 
+    if (activeResizeInteractionId) {
+      const transition = interactionMachine.dispatch({
+        type: "MOVE_RESIZE",
+        interactionId: activeResizeInteractionId,
+        geometry: { x: placeholder.x, y: placeholder.y, w: placeholder.w, h: placeholder.h }
+      });
+      if (!hasEffect(transition.effects, "PREVIEW_RESIZE")) return;
+    }
+
     eventBridge.emitResize(finalLayout, oldResizeItem, l, placeholder, e, node);
 
     const didResize =
@@ -463,12 +585,40 @@ export function useGridDragResizeInteractions({
     const { cols, allowOverlap } = props;
     const l = getLayoutItem(layout, i);
     if (!l) return;
+    const resizeHandle = handle as ResizeHandleAxis;
+    const stopGeometry = state.activeDrag || buildResizeCandidate(l, w, h, resizeHandle);
+    let coreResizeCommitEffect: Extract<GridInteractionEffect, { type: "COMMIT_RESIZE" }> | undefined;
+    if (activeResizeInteractionId) {
+      const transition = interactionMachine.dispatch({
+        type: "STOP_RESIZE",
+        interactionId: activeResizeInteractionId,
+        geometry: {
+          x: stopGeometry.x,
+          y: stopGeometry.y,
+          w: stopGeometry.w,
+          h: stopGeometry.h
+        }
+      });
+      coreResizeCommitEffect = hasEffect(transition.effects, "COMMIT_RESIZE");
+      if (!coreResizeCommitEffect) {
+        if (hasEffect(transition.effects, "EMIT_RESIZE_STOP") || !activeResizeInteractionId) {
+          eventBridge.emitResizeStop(layout, oldResizeItem, l, undefined, e, node);
+        }
+        cleanupResizeInteraction();
+        return;
+      }
+    }
+    if (!coreResizeCommitEffect) {
+      eventBridge.emitResizeStop(layout, oldResizeItem, l, undefined, e, node);
+      cleanupResizeInteraction();
+      return;
+    }
 
     if (!isLegacyLayoutEngine()) {
-      const commitGeometry = state.activeDrag || buildResizeCandidate(l, w, h, handle as ResizeHandleAxis);
+      const commitGeometry = stopGeometry;
       const committedBefore = engineBridge.getCommitted();
       runEngineCommit(
-        nextInteractionRequestId("resize-stop", i),
+        coreResizeCommitEffect.requestId,
         {
           type: "resize",
           id: i,
@@ -479,12 +629,53 @@ export function useGridDragResizeInteractions({
           handle: handle as ResizeHandleAxis
         },
         result => {
+          void (async () => {
           if (result.status === "stale") return;
+          if (!interactionMachine.isCurrentRequest(coreResizeCommitEffect.interactionId, coreResizeCommitEffect.requestId)) return;
+          let applyEffects: GridInteractionEffect[] = [];
+          if (activeResizeInteractionId) {
+            const coreStatus = result.status === "cancelled" ? "error" : result.status;
+            applyEffects = interactionMachine.dispatch({
+              type: "APPLY_RESULT",
+              interactionId: activeResizeInteractionId,
+              requestId: coreResizeCommitEffect.requestId,
+              status: coreStatus
+            }).effects;
+          }
           const newLayout = result.status === "changed" || result.status === "fallback"
             ? result.layout
             : engineBridge.getCommitted();
           const nextItem = getLayoutItem(newLayout, i) || l;
-          eventBridge.emitResizeStop(newLayout, oldResizeItem, nextItem, undefined, e, node);
+          const commandResult = result.status === "changed" || result.status === "fallback"
+            ? (state.suppressLayoutChange = true, await editor.commitResize?.({
+              id: i,
+              beforeLayout: oldLayout || committedBefore || layout,
+              afterLayout: newLayout,
+              handle: resizeHandle
+            }))
+            : null;
+          if (
+            commandResult &&
+            commandResult.status !== "changed" &&
+            commandResult.status !== "noop"
+          ) {
+            const rollbackLayout = oldLayout || committedBefore || layout;
+            state.suppressLayoutChange = true;
+            state.layout = markRaw(rollbackLayout);
+            editor.rollbackInteraction?.(rollbackLayout, commandResult.status);
+            state.activeDrag = null;
+            state.oldResizeItem = null;
+            state.resizing = false;
+            activeResizeId.value = null;
+            resizeBlocked.value = false;
+            activeResizeInteractionId = null;
+            autoScroll.reset();
+            state.oldLayout = null;
+            return;
+          }
+          if (hasEffect(applyEffects, "EMIT_RESIZE_STOP")) {
+            eventBridge.emitResizeStop(newLayout, oldResizeItem, nextItem, undefined, e, node);
+          }
 
           state.activeDrag = null;
           state.layout = markRaw(newLayout);
@@ -492,10 +683,12 @@ export function useGridDragResizeInteractions({
           state.resizing = false;
           activeResizeId.value = null;
           resizeBlocked.value = false;
+          activeResizeInteractionId = null;
           autoScroll.reset();
           editor.clearGuides();
           state.oldLayout = null;
           onLayoutMaybeChanged(newLayout, oldLayout || committedBefore || layout, "push");
+          })();
         },
         shouldUseWorkerForCurrentLayout()
       );
@@ -503,7 +696,37 @@ export function useGridDragResizeInteractions({
     }
 
     const newLayout = allowOverlap ? layout : compact(layout, compactType(props), cols);
-    eventBridge.emitResizeStop(newLayout, oldResizeItem, l, undefined, e, node);
+    let applyEffects: GridInteractionEffect[] = [];
+    if (activeResizeInteractionId && coreResizeCommitEffect) {
+      applyEffects = interactionMachine.dispatch({
+        type: "APPLY_RESULT",
+        interactionId: activeResizeInteractionId,
+        requestId: coreResizeCommitEffect.requestId,
+        status: "changed"
+      }).effects;
+    }
+    void (async () => {
+      const commandResult = (state.suppressLayoutChange = true, await editor.commitResize?.({
+        id: i,
+        beforeLayout: oldLayout || layout,
+        afterLayout: newLayout,
+        handle: resizeHandle
+      }));
+      if (
+        commandResult &&
+        commandResult.status !== "changed" &&
+        commandResult.status !== "noop"
+      ) {
+        const rollbackLayout = oldLayout || layout;
+        state.suppressLayoutChange = true;
+        state.layout = markRaw(rollbackLayout);
+        editor.rollbackInteraction?.(rollbackLayout, commandResult.status);
+        cleanupResizeInteraction();
+        return;
+      }
+    if (hasEffect(applyEffects, "EMIT_RESIZE_STOP")) {
+      eventBridge.emitResizeStop(newLayout, oldResizeItem, l, undefined, e, node);
+    }
 
     state.activeDrag = null;
     state.layout = markRaw(newLayout);
@@ -511,11 +734,13 @@ export function useGridDragResizeInteractions({
     state.resizing = false;
     activeResizeId.value = null;
     resizeBlocked.value = false;
+    activeResizeInteractionId = null;
     autoScroll.reset();
     editor.clearGuides();
 
     state.oldLayout = null;
     onLayoutMaybeChanged(newLayout, oldLayout || layout, "push");
+    })();
   };
 
   const onDragStart = (i: string, x: number, y: number, { e, node }: GridDragEvent) => {
@@ -538,6 +763,19 @@ export function useGridDragResizeInteractions({
         ids: moveIntent.ids,
         activeId: moveIntent.activeId
       };
+      const dragInteractionId = nextInteractionRequestId("drag-interaction", i);
+      const startTransition = interactionMachine.dispatch({
+        type: "START_DRAG",
+        interactionId: dragInteractionId,
+        itemId: i,
+        grid: { x, y },
+        context: toCoreDragContext(activeMoveContext)
+      });
+      if (!hasEffect(startTransition.effects, "EMIT_DRAG_START")) {
+        activeMoveContext = null;
+        return;
+      }
+      activeDragInteractionId = dragInteractionId;
       activeDragId.value = moveIntent.activeId || i;
       setDragBlockedFeedback(
         moveIntent.reason as GridEditorBlockedReason,
@@ -547,6 +785,7 @@ export function useGridDragResizeInteractions({
       state.oldDragItem = cloneLayoutItem(l);
       state.oldLayout = cloneLayout(layout);
       state.activeDrag = markRaw({ w: l.w, h: l.h, x: l.x, y: l.y, placeholder: true, i });
+      activeDragHasMoved = false;
       editor.notifyMoveBlocked({
         ...moveIntent,
         message: `Pointer move blocked by ${moveIntent.reason}.`
@@ -555,7 +794,6 @@ export function useGridDragResizeInteractions({
     }
 
     const placeholder = { w: l.w, h: l.h, x: l.x, y: l.y, placeholder: true, i: i };
-    syncHistory(layout, "replace");
     activeMoveContext = moveIntent.kind === "group"
       ? {
           kind: "group",
@@ -570,10 +808,26 @@ export function useGridDragResizeInteractions({
           startX: l.x,
           startY: l.y
         };
+    const dragInteractionId = nextInteractionRequestId("drag-interaction", i);
+    const startTransition = interactionMachine.dispatch({
+      type: "START_DRAG",
+      interactionId: dragInteractionId,
+      itemId: i,
+      grid: { x, y },
+      context: toCoreDragContext(activeMoveContext)
+    });
+    if (!hasEffect(startTransition.effects, "EMIT_DRAG_START")) {
+      activeMoveContext = null;
+      return;
+    }
+    activeDragInteractionId = dragInteractionId;
+    syncHistory(layout, "replace");
     activeDragId.value = activeMoveContext.kind === "group" ? activeMoveContext.activeId : i;
     dragBlocked.value = false;
     clearDragBlockedFeedback();
     editor.resetSnap();
+    editor.clearGuides();
+    activeDragHasMoved = false;
     autoScroll.init(node);
     state.oldDragItem = cloneLayoutItem(l);
     state.oldLayout = cloneLayout(layout);
@@ -581,7 +835,7 @@ export function useGridDragResizeInteractions({
     if (!isLegacyLayoutEngine()) {
       resetInteractionController(layout);
       engineBridge.start({
-        id: nextInteractionRequestId("drag-start", activeDragId.value || i),
+        id: activeDragInteractionId,
         type: "drag",
         itemId: activeDragId.value || i
       });
@@ -603,6 +857,8 @@ export function useGridDragResizeInteractions({
       return;
     }
 
+    if (!activeDragInteractionId) return;
+
     if (activeMoveContext?.kind === "group" && !isLegacyLayoutEngine()) {
       const context = activeMoveContext;
       const activeItem = getLayoutItem(layout, context.activeId) || l;
@@ -612,10 +868,22 @@ export function useGridDragResizeInteractions({
         { ...activeItem, x, y },
         layout
       );
+      const dragTransition = interactionMachine.dispatch({
+        type: "MOVE_DRAG",
+        interactionId: activeDragInteractionId,
+        currentPx: { x: snapped.x, y: snapped.y },
+        grid: { x: snapped.x, y: snapped.y }
+      });
+      const dragPreviewEffect = hasEffect(dragTransition.effects, "PREVIEW_DRAG");
+      if (!dragPreviewEffect) {
+        if (!activeDragHasMoved) editor.clearGuides();
+        return;
+      }
+      activeDragHasMoved = true;
       const dx = snapped.x - context.startX;
       const dy = snapped.y - context.startY;
       runEnginePreview(
-        nextInteractionRequestId("drag", context.activeId),
+        dragPreviewEffect.requestId,
         {
           type: "groupMove",
           ids: context.ids,
@@ -626,6 +894,7 @@ export function useGridDragResizeInteractions({
         },
         result => {
           if (result.status === "stale") return;
+          if (!interactionMachine.isCurrentPreviewRequest(dragPreviewEffect.interactionId, dragPreviewEffect.requestId)) return;
           if (activeMoveContext !== context || activeDragId.value !== context.activeId) return;
           const nextLayout = result.status === "changed" || result.status === "fallback"
             ? result.layout
@@ -656,11 +925,24 @@ export function useGridDragResizeInteractions({
 
     if (!isLegacyLayoutEngine()) {
       const snapped = editor.snapCandidate(i, l, { ...l, x, y }, layout);
+      const dragTransition = interactionMachine.dispatch({
+        type: "MOVE_DRAG",
+        interactionId: activeDragInteractionId,
+        currentPx: { x: snapped.x, y: snapped.y },
+        grid: { x: snapped.x, y: snapped.y }
+      });
+      const dragPreviewEffect = hasEffect(dragTransition.effects, "PREVIEW_DRAG");
+      if (!dragPreviewEffect) {
+        if (!activeDragHasMoved) editor.clearGuides();
+        return;
+      }
+      activeDragHasMoved = true;
       runEnginePreview(
-        nextInteractionRequestId("drag", i),
+        dragPreviewEffect.requestId,
         { type: "move", id: i, x: snapped.x, y: snapped.y, userAction: true },
         result => {
           if (result.status === "stale") return;
+          if (!interactionMachine.isCurrentPreviewRequest(dragPreviewEffect.interactionId, dragPreviewEffect.requestId)) return;
           if (activeMoveContext?.kind !== "single" || activeMoveContext.id !== i || activeDragId.value !== i) return;
           const nextLayout = result.status === "changed" || result.status === "fallback"
             ? result.layout
@@ -711,6 +993,17 @@ export function useGridDragResizeInteractions({
 
     const isUserAction = true;
     const snapped = editor.snapCandidate(i, l, { ...l, x, y }, layout);
+    const dragTransition = interactionMachine.dispatch({
+      type: "MOVE_DRAG",
+      interactionId: activeDragInteractionId,
+      currentPx: { x: snapped.x, y: snapped.y },
+      grid: { x: snapped.x, y: snapped.y }
+    });
+    if (!hasEffect(dragTransition.effects, "PREVIEW_DRAG")) {
+      if (!activeDragHasMoved) editor.clearGuides();
+      return;
+    }
+    activeDragHasMoved = true;
     layout = moveElement(
       layout,
       l,
@@ -773,17 +1066,24 @@ export function useGridDragResizeInteractions({
     const l = getLayoutItem(layout, i);
     if (!l) return;
 
-    if (activeMoveContext?.kind === "blocked") {
-      eventBridge.emitDragStop(prevLayout, oldDragItem, l, undefined, e, node);
-      state.activeDrag = null;
-      state.oldDragItem = null;
+    let dragCommitEffect: Extract<GridInteractionEffect, { type: "COMMIT_DRAG" }> | undefined;
+    let stopEffects: GridInteractionEffect[] = [];
+    if (activeDragInteractionId) {
+      const stopTransition = interactionMachine.dispatch({
+        type: "STOP_DRAG",
+        interactionId: activeDragInteractionId,
+        grid: { x, y }
+      });
+      stopEffects = stopTransition.effects;
+      dragCommitEffect = hasEffect(stopTransition.effects, "COMMIT_DRAG");
+    }
+
+    if (!dragCommitEffect) {
+      if (hasEffect(stopEffects, "EMIT_DRAG_STOP") || !activeDragInteractionId) {
+        eventBridge.emitDragStop(prevLayout, oldDragItem, l, undefined, e, node);
+      }
+      finishDragInteraction();
       state.oldLayout = null;
-      activeDragId.value = null;
-      dragBlocked.value = false;
-      clearDragBlockedFeedback();
-      activeMoveContext = null;
-      autoScroll.reset();
-      editor.clearGuides();
       return;
     }
 
@@ -794,7 +1094,7 @@ export function useGridDragResizeInteractions({
       const dy = commitGeometry.y - context.startY;
       const committedBefore = engineBridge.getCommitted();
       runEngineCommit(
-        nextInteractionRequestId("drag-stop", context.activeId),
+        dragCommitEffect.requestId,
         {
           type: "groupMove",
           ids: context.ids,
@@ -804,15 +1104,55 @@ export function useGridDragResizeInteractions({
           userAction: true
         },
         result => {
+          void (async () => {
           if (result.status === "stale") return;
+          if (!interactionMachine.isCurrentRequest(dragCommitEffect.interactionId, dragCommitEffect.requestId)) return;
           if (result.status === "blocked") {
             syncDragBlockedFromResult(result, context.ids, context.activeId, true);
           }
+          const applyEffects = interactionMachine.dispatch({
+            type: "APPLY_RESULT",
+            interactionId: dragCommitEffect.interactionId,
+            requestId: dragCommitEffect.requestId,
+            status: result.status === "cancelled" ? "error" : result.status
+          }).effects;
           const newLayout = result.status === "changed" || result.status === "fallback"
             ? result.layout
             : engineBridge.getCommitted();
           const nextItem = getLayoutItem(newLayout, context.activeId) || l;
-          eventBridge.emitDragStop(newLayout, oldDragItem, nextItem, undefined, e, node);
+          const commandResult = result.status === "changed" || result.status === "fallback"
+            ? (state.suppressLayoutChange = true, await editor.commitMove?.({
+              ids: context.ids,
+              activeId: context.activeId,
+              beforeLayout: oldLayout || committedBefore || prevLayout,
+              afterLayout: newLayout,
+              source: "pointer"
+            }))
+            : null;
+          if (
+            commandResult &&
+            commandResult.status !== "changed" &&
+            commandResult.status !== "noop"
+          ) {
+            const rollbackLayout = oldLayout || committedBefore || prevLayout;
+            state.suppressLayoutChange = true;
+            state.layout = markRaw(rollbackLayout);
+            editor.rollbackInteraction?.(rollbackLayout, commandResult.status);
+            state.activeDrag = null;
+            state.oldDragItem = null;
+            activeDragId.value = null;
+            dragBlocked.value = false;
+            clearDragBlockedFeedback();
+            activeMoveContext = null;
+            activeDragHasMoved = false;
+            activeDragInteractionId = null;
+            autoScroll.reset();
+            state.oldLayout = null;
+            return;
+          }
+          if (hasEffect(applyEffects, "EMIT_DRAG_STOP")) {
+            eventBridge.emitDragStop(newLayout, oldDragItem, nextItem, undefined, e, node);
+          }
 
           state.activeDrag = null;
           state.layout = markRaw(newLayout);
@@ -821,10 +1161,13 @@ export function useGridDragResizeInteractions({
           dragBlocked.value = false;
           clearDragBlockedFeedback();
           activeMoveContext = null;
+          activeDragHasMoved = false;
+          activeDragInteractionId = null;
           autoScroll.reset();
           editor.clearGuides();
           state.oldLayout = null;
           onLayoutMaybeChanged(newLayout, oldLayout || committedBefore || prevLayout, "push");
+          })();
         },
         shouldUseWorkerForCurrentLayout()
       );
@@ -835,18 +1178,58 @@ export function useGridDragResizeInteractions({
       const commitGeometry = state.activeDrag || { x, y };
       const committedBefore = engineBridge.getCommitted();
       runEngineCommit(
-        nextInteractionRequestId("drag-stop", i),
+        dragCommitEffect.requestId,
         { type: "move", id: i, x: commitGeometry.x, y: commitGeometry.y, userAction: true },
         result => {
+          void (async () => {
           if (result.status === "stale") return;
+          if (!interactionMachine.isCurrentRequest(dragCommitEffect.interactionId, dragCommitEffect.requestId)) return;
           if (result.status === "blocked") {
             syncDragBlockedFromResult(result, [i], i, true);
           }
+          const applyEffects = interactionMachine.dispatch({
+            type: "APPLY_RESULT",
+            interactionId: dragCommitEffect.interactionId,
+            requestId: dragCommitEffect.requestId,
+            status: result.status === "cancelled" ? "error" : result.status
+          }).effects;
           const newLayout = result.status === "changed" || result.status === "fallback"
             ? result.layout
             : engineBridge.getCommitted();
           const nextItem = getLayoutItem(newLayout, i) || l;
-          eventBridge.emitDragStop(newLayout, oldDragItem, nextItem, undefined, e, node);
+          const commandResult = result.status === "changed" || result.status === "fallback"
+            ? (state.suppressLayoutChange = true, await editor.commitMove?.({
+              ids: [i],
+              activeId: i,
+              beforeLayout: oldLayout || committedBefore || prevLayout,
+              afterLayout: newLayout,
+              source: "pointer"
+            }))
+            : null;
+          if (
+            commandResult &&
+            commandResult.status !== "changed" &&
+            commandResult.status !== "noop"
+          ) {
+            const rollbackLayout = oldLayout || committedBefore || prevLayout;
+            state.suppressLayoutChange = true;
+            state.layout = markRaw(rollbackLayout);
+            editor.rollbackInteraction?.(rollbackLayout, commandResult.status);
+            state.activeDrag = null;
+            state.oldDragItem = null;
+            activeDragId.value = null;
+            dragBlocked.value = false;
+            clearDragBlockedFeedback();
+            activeMoveContext = null;
+            activeDragHasMoved = false;
+            activeDragInteractionId = null;
+            autoScroll.reset();
+            state.oldLayout = null;
+            return;
+          }
+          if (hasEffect(applyEffects, "EMIT_DRAG_STOP")) {
+            eventBridge.emitDragStop(newLayout, oldDragItem, nextItem, undefined, e, node);
+          }
 
           state.activeDrag = null;
           state.layout = markRaw(newLayout);
@@ -855,10 +1238,13 @@ export function useGridDragResizeInteractions({
           dragBlocked.value = false;
           clearDragBlockedFeedback();
           activeMoveContext = null;
+          activeDragHasMoved = false;
+          activeDragInteractionId = null;
           autoScroll.reset();
           editor.clearGuides();
           state.oldLayout = null;
           onLayoutMaybeChanged(newLayout, oldLayout || committedBefore || prevLayout, "push");
+          })();
         },
         shouldUseWorkerForCurrentLayout()
       );
@@ -880,7 +1266,44 @@ export function useGridDragResizeInteractions({
     );
 
     const newLayout = allowOverlap ? layout : compact(layout, compactType(props), cols);
-    eventBridge.emitDragStop(newLayout, oldDragItem, l, undefined, e, node);
+    const applyEffects = interactionMachine.dispatch({
+      type: "APPLY_RESULT",
+      interactionId: dragCommitEffect.interactionId,
+      requestId: dragCommitEffect.requestId,
+      status: "changed"
+    }).effects;
+    void (async () => {
+      const commandResult = (state.suppressLayoutChange = true, await editor.commitMove?.({
+        ids: [i],
+        activeId: i,
+        beforeLayout: oldLayout || prevLayout,
+        afterLayout: newLayout,
+        source: "pointer"
+      }));
+      if (
+        commandResult &&
+        commandResult.status !== "changed" &&
+        commandResult.status !== "noop"
+      ) {
+        const rollbackLayout = oldLayout || prevLayout;
+        state.suppressLayoutChange = true;
+        state.layout = markRaw(rollbackLayout);
+        editor.rollbackInteraction?.(rollbackLayout, commandResult.status);
+        state.activeDrag = null;
+        state.oldDragItem = null;
+        activeDragId.value = null;
+        dragBlocked.value = false;
+        clearDragBlockedFeedback();
+        activeMoveContext = null;
+        activeDragHasMoved = false;
+        activeDragInteractionId = null;
+        autoScroll.reset();
+        state.oldLayout = null;
+        return;
+      }
+    if (hasEffect(applyEffects, "EMIT_DRAG_STOP")) {
+      eventBridge.emitDragStop(newLayout, oldDragItem, l, undefined, e, node);
+    }
 
     state.activeDrag = null;
     state.layout = markRaw(newLayout);
@@ -889,11 +1312,14 @@ export function useGridDragResizeInteractions({
     dragBlocked.value = false;
     clearDragBlockedFeedback();
     activeMoveContext = null;
+    activeDragHasMoved = false;
+    activeDragInteractionId = null;
     autoScroll.reset();
     editor.clearGuides();
 
     state.oldLayout = null;
     onLayoutMaybeChanged(newLayout, oldLayout || prevLayout, "push");
+    })();
   };
 
   return {

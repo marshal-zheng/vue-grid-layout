@@ -1,5 +1,6 @@
 import type { Position } from "./utils";
 import { Kv } from './type'
+import type { GridRenderPrecision } from "./grid-height";
 
 export type PositionParams = {
   margin: number[],
@@ -7,7 +8,8 @@ export type PositionParams = {
   containerWidth: number,
   cols: number,
   rowHeight: number,
-  maxRows: number
+  maxRows: number,
+  renderPrecision?: GridRenderPrecision
 };
 
 // Helper for generating column width
@@ -25,13 +27,23 @@ export function calcGridColWidth(positionParams: PositionParams): number {
 export function calcGridItemWHPx(
   gridUnits: number,
   colOrRowSize: number,
-  marginPx: number
+  marginPx: number,
+  renderPrecision: GridRenderPrecision = "integer"
 ): number {
   // 0 * Infinity === NaN, which causes problems with resize contraints
   if (!Number.isFinite(gridUnits)) return gridUnits;
-  return Math.round(
-    colOrRowSize * gridUnits + Math.max(0, gridUnits - 1) * marginPx
+  return applyRenderPrecision(
+    colOrRowSize * gridUnits + Math.max(0, gridUnits - 1) * marginPx,
+    renderPrecision
   );
+}
+
+export function applyRenderPrecision(
+  value: number,
+  precision: GridRenderPrecision = "integer"
+): number {
+  if (!Number.isFinite(value)) return value;
+  return precision === "subpixel" ? value : Math.round(value);
 }
 
 /**
@@ -52,7 +64,7 @@ export function calcGridItemPosition(
   h: number,
   state?: Kv
 ): Position {
-  const { margin, containerPadding, rowHeight } = positionParams;
+  const { margin, containerPadding, rowHeight, renderPrecision = "integer" } = positionParams;
   const colWidth = calcGridColWidth(positionParams);
   const out: Position = {
     width: 0,
@@ -64,32 +76,32 @@ export function calcGridItemPosition(
 
   // If resizing, use the exact width and height as returned from resizing callbacks.
   if (state && state.resizing) {
-    out.width = Math.round(state.resizing.width);
-    out.height = Math.round(state.resizing.height);
+    out.width = applyRenderPrecision(state.resizing.width, renderPrecision);
+    out.height = applyRenderPrecision(state.resizing.height, renderPrecision);
   }
   // Otherwise, calculate from grid units.
   else {
-    out.width = calcGridItemWHPx(w, colWidth, margin[0]);
-    out.height = calcGridItemWHPx(h, rowHeight, margin[1]);
+    out.width = calcGridItemWHPx(w, colWidth, margin[0], renderPrecision);
+    out.height = calcGridItemWHPx(h, rowHeight, margin[1], renderPrecision);
   }
 
   // If dragging, use the exact width and height as returned from dragging callbacks.
   if (state && state.dragging) {
-    out.top = Math.round(state.dragging.top);
-    out.left = Math.round(state.dragging.left);
+    out.top = applyRenderPrecision(state.dragging.top, renderPrecision);
+    out.left = applyRenderPrecision(state.dragging.left, renderPrecision);
   } else if (
     state &&
     state.resizing &&
     typeof state.resizing.top === "number" &&
     typeof state.resizing.left === "number"
   ) {
-    out.top = Math.round(state.resizing.top);
-    out.left = Math.round(state.resizing.left);
+    out.top = applyRenderPrecision(state.resizing.top, renderPrecision);
+    out.left = applyRenderPrecision(state.resizing.left, renderPrecision);
   }
   // Otherwise, calculate from grid units.
   else {
-    out.top = Math.round((rowHeight + margin[1]) * y + containerPadding[1]);
-    out.left = Math.round((colWidth + margin[0]) * x + containerPadding[0]);
+    out.top = applyRenderPrecision((rowHeight + margin[1]) * y + containerPadding[1], renderPrecision);
+    out.left = applyRenderPrecision((colWidth + margin[0]) * x + containerPadding[0], renderPrecision);
   }
 
   return out;

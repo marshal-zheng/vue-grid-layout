@@ -22,6 +22,9 @@ const html = `<!doctype html>
   </head>
   <body>
     <div id="contract" class="test-host"></div>
+    <div id="height" class="test-host"></div>
+    <div id="height-fixed" class="test-host"></div>
+    <div id="height-scroll" class="test-host"></div>
     <div id="blocked" class="test-host"></div>
     <div id="drop" class="test-host"></div>
     <div id="responsive-contract" class="test-host"></div>
@@ -35,6 +38,7 @@ const html = `<!doctype html>
         var ResponsiveGrid = VGL.ResponsiveVueGridLayout || VGL.Responsive;
         var createApp = Vue.createApp;
         var ref = Vue.ref;
+        var nextTick = Vue.nextTick;
 
         function cloneLayout(layout) {
           return layout.map(function (item) { return Object.assign({}, item); });
@@ -104,6 +108,65 @@ const html = `<!doctype html>
           },
           template: '<SingleGrid id="contract-grid" data-probe="single" aria-label="Contract grid" class="contract-class" :style="rootStyle" v-model="layout" :width="720" :cols="6" :rowHeight="30" :layoutEngine="false" @update:modelValue="onModelUpdate" @layoutChange="onLayoutChange" @dragStart="onDragStart" @drag="onDrag" @dragStop="onDragStop" @resizeStart="onResizeStart" @resize="onResize" @resizeStop="onResizeStop"><div v-for="item in layout" :key="item.i">{{ item.i }}</div></SingleGrid>'
         }).mount('#contract');
+
+        var heightLayout = ref([
+          { i: 'height-a', x: 0, y: 0, w: 2, h: 2 }
+        ]);
+        var heightHostHeight = ref(240);
+        var showHeightGrid = ref(true);
+        var heightEvents = [];
+        var heightSaveCount = 0;
+        var heightPersistence = {
+          key: 'height-runtime-browser-test',
+          debounceMs: 20,
+          adapter: {
+            load: function () { return null; },
+            save: function () { heightSaveCount += 1; },
+            remove: function () {},
+            subscribe: function () { return function () {}; }
+          }
+        };
+        createApp({
+          components: { SingleGrid: SingleGrid },
+          setup: function () {
+            return {
+              layout: heightLayout,
+              hostHeight: heightHostHeight,
+              showHeightGrid: showHeightGrid,
+              heightPersistence: heightPersistence,
+              onHeightRuntimeChange: function (runtime) {
+                heightEvents.push(JSON.parse(JSON.stringify(runtime)));
+              }
+            };
+          },
+          template: '<div id="height-parent" :style="{ height: hostHeight + \\'px\\', boxSizing: \\'border-box\\', paddingTop: \\'10px\\', paddingBottom: \\'10px\\', borderTop: \\'5px solid transparent\\', borderBottom: \\'5px solid transparent\\' }"><SingleGrid v-if="showHeightGrid" id="height-grid" v-model="layout" :width="720" :cols="6" :row-height="20" :margin="[5, 5]" :container-padding="[10, 10]" height-mode="fit" :auto-measure-container-height="true" render-precision="subpixel" :layout-engine="false" :persistence="heightPersistence" @heightRuntimeChange="onHeightRuntimeChange"><div v-for="item in layout" :key="item.i">{{ item.i }}</div></SingleGrid></div>'
+        }).mount('#height');
+
+        createApp({
+          components: { SingleGrid: SingleGrid },
+          setup: function () {
+            return {
+              layout: ref([
+                { i: 'fixed-a', x: 0, y: 0, w: 2, h: 2 },
+                { i: 'fixed-b', x: 0, y: 3, w: 2, h: 2 }
+              ])
+            };
+          },
+          template: '<SingleGrid id="fixed-grid" v-model="layout" :width="720" :cols="6" :row-height="30" height-mode="fixed" :container-height="180" :layout-engine="false"><div v-for="item in layout" :key="item.i">{{ item.i }}</div></SingleGrid>'
+        }).mount('#height-fixed');
+
+        createApp({
+          components: { SingleGrid: SingleGrid },
+          setup: function () {
+            return {
+              layout: ref([
+                { i: 'scroll-a', x: 0, y: 0, w: 2, h: 2 },
+                { i: 'scroll-b', x: 0, y: 3, w: 2, h: 2 }
+              ])
+            };
+          },
+          template: '<SingleGrid id="scroll-grid" v-model="layout" :width="720" :cols="6" :row-height="30" height-mode="scroll" :container-height="180" :layout-engine="false"><div v-for="item in layout" :key="item.i">{{ item.i }}</div></SingleGrid>'
+        }).mount('#height-scroll');
 
         var blockedLayout = ref([
           { i: 'block-a', x: 0, y: 0, w: 2, h: 2 },
@@ -180,6 +243,65 @@ const html = `<!doctype html>
               hasContractClass: el.classList.contains('contract-class'),
               borderTopWidth: getComputedStyle(el).borderTopWidth
             };
+          },
+          heightProbe: function () {
+            var root = document.querySelector('#height .vue-grid-layout');
+            var item = document.querySelector('#height .vue-grid-item');
+            if (!root || !item) return { mounted: false, events: heightEvents.slice(), saveCount: heightSaveCount };
+            var rootRect = root.getBoundingClientRect();
+            var itemRect = item.getBoundingClientRect();
+            var latest = heightEvents[heightEvents.length - 1] || null;
+            return {
+              mounted: true,
+              rootHeight: rootRect.height,
+              rootStyleHeight: getComputedStyle(root).height,
+              itemHeight: itemRect.height,
+              itemTop: itemRect.top - rootRect.top,
+              latest: latest,
+              events: heightEvents.slice(),
+              saveCount: heightSaveCount
+            };
+          },
+          heightAlignmentProbe: function () {
+            var root = document.querySelector('#height .vue-grid-layout');
+            var item = Array.prototype.slice.call(document.querySelectorAll('#height .vue-grid-item')).find(function (entry) {
+              return !entry.classList.contains('vue-grid-placeholder');
+            });
+            var placeholder = document.querySelector('#height .vue-grid-placeholder');
+            if (!root || !item || !placeholder) return null;
+            var rootRect = root.getBoundingClientRect();
+            var itemRect = item.getBoundingClientRect();
+            var placeholderRect = placeholder.getBoundingClientRect();
+            function relative(rect) {
+              return {
+                left: rect.left - rootRect.left,
+                top: rect.top - rootRect.top,
+                width: rect.width,
+                height: rect.height
+              };
+            }
+            return {
+              item: relative(itemRect),
+              placeholder: relative(placeholderRect)
+            };
+          },
+          fixedScrollProbe: function () {
+            var fixed = document.querySelector('#height-fixed .vue-grid-layout');
+            var scroll = document.querySelector('#height-scroll .vue-grid-layout');
+            return {
+              fixedHeight: fixed && getComputedStyle(fixed).height,
+              fixedOverflow: fixed && getComputedStyle(fixed).overflow,
+              scrollHeight: scroll && getComputedStyle(scroll).height,
+              scrollOverflow: scroll && getComputedStyle(scroll).overflow
+            };
+          },
+          resizeHeightParent: function (height) {
+            heightHostHeight.value = height;
+            return nextTick();
+          },
+          unmountHeightGrid: function () {
+            showHeightGrid.value = false;
+            return nextTick();
           },
           blockedProbe: function () {
             var item = document.querySelector('#blocked .vue-grid-item');
@@ -328,6 +450,56 @@ async function main() {
     assert.equal(root.dataProbe, 'single');
     assert.equal(root.ariaLabel, 'Contract grid');
 
+    await page.waitForFunction(() => {
+      var probe = window.__gridContractTest.heightProbe();
+      return probe.latest && probe.latest.effectiveHeightMode === 'fit' && probe.rootHeight === 210;
+    });
+    let heightProbe = await page.evaluate(() => window.__gridContractTest.heightProbe());
+    assert.equal(heightProbe.latest.containerHeight, 210);
+    assert.equal(heightProbe.latest.rowHeight, 92.5);
+    assert.equal(heightProbe.latest.renderPrecision, 'subpixel');
+    assert.equal(heightProbe.itemHeight, 190);
+    assert.equal(heightProbe.itemTop, 10);
+    const fixedScrollProbe = await page.evaluate(() => window.__gridContractTest.fixedScrollProbe());
+    assert.equal(fixedScrollProbe.fixedHeight, '180px');
+    assert.equal(fixedScrollProbe.fixedOverflow, 'hidden');
+    assert.equal(fixedScrollProbe.scrollHeight, '180px');
+    assert.equal(fixedScrollProbe.scrollOverflow, 'auto');
+
+    await page.evaluate(() => window.__gridContractTest.resizeHeightParent(300));
+    await page.waitForFunction(() => {
+      var probe = window.__gridContractTest.heightProbe();
+      return probe.latest && probe.latest.containerHeight === 270;
+    });
+    await page.waitForFunction(() => {
+      var probe = window.__gridContractTest.heightProbe();
+      return Math.abs(probe.rootHeight - probe.latest.containerHeight) < 1;
+    });
+    heightProbe = await page.evaluate(() => window.__gridContractTest.heightProbe());
+    assert.ok(Math.abs(heightProbe.rootHeight - 270) <= 1);
+    assert.ok(Math.abs(heightProbe.itemHeight - 250) <= 1);
+    await wait(80);
+    assert.equal((await page.evaluate(() => window.__gridContractTest.heightProbe())).saveCount, 0);
+
+    await dragBy(page, '#height .vue-grid-item', 117.5, 127.5, { hold: true, steps: 10 });
+    await page.waitForFunction(() => window.__gridContractTest.heightAlignmentProbe() !== null);
+    const heightAlignment = await page.evaluate(() => window.__gridContractTest.heightAlignmentProbe());
+    assert.notEqual(heightAlignment.item.left, Math.round(heightAlignment.item.left));
+    assert.notEqual(heightAlignment.item.top, Math.round(heightAlignment.item.top));
+    assert.ok(Math.abs(heightAlignment.item.width - heightAlignment.placeholder.width) <= 1, JSON.stringify(heightAlignment));
+    assert.ok(Math.abs(heightAlignment.item.height - heightAlignment.placeholder.height) <= 1, JSON.stringify(heightAlignment));
+    await page.mouse.up();
+
+    const eventCountBeforeUnmount = await page.evaluate(() => window.__gridContractTest.heightProbe().events.length);
+    await page.evaluate(() => window.__gridContractTest.unmountHeightGrid());
+    await page.waitForFunction(() => window.__gridContractTest.heightProbe().mounted === false);
+    await page.evaluate(() => window.__gridContractTest.resizeHeightParent(330));
+    await wait(80);
+    assert.equal(
+      await page.evaluate(() => window.__gridContractTest.heightProbe().events.length),
+      eventCountBeforeUnmount
+    );
+
     await page.evaluate(() => window.__gridContractTest.clearContractEvents());
     await dragBy(page, '#contract .vue-grid-item', 130, 10, { hold: true });
     await page.waitForFunction(() => window.__gridContractTest.contractEventTypes().includes('drag'));
@@ -393,8 +565,8 @@ async function main() {
       i: 'drop-a',
       x: 0,
       y: 2,
-      w: 1,
-      h: 1,
+      w: 2,
+      h: 3,
       placeholder: false,
       static: false
     });

@@ -1,5 +1,6 @@
 import { useGridDragResizeInteractions } from "./useGridDragResizeInteractions";
 import { useGridDropInteractions } from "./useGridDropInteractions";
+import { useGridInteractionMachine } from "./useGridInteractionMachine";
 import type {
   GridInteractionCommonOptions,
   GridInteractionModelCommitters
@@ -13,11 +14,23 @@ type UseGridInteractionsOptions =
   };
 
 export function useGridInteractions(options: UseGridInteractionsOptions) {
-  const dragResize = useGridDragResizeInteractions(options);
-  const drop = useGridDropInteractions(options);
+  const interactionMachine = useGridInteractionMachine({
+    getDragActivationDistance: () => options.props.dragActivationDistance
+  });
+  const sharedOptions = {
+    ...options,
+    interactionMachine
+  };
+  const dragResize = useGridDragResizeInteractions(sharedOptions);
+  const drop = useGridDropInteractions(sharedOptions);
+  const clearActiveInteraction = () => {
+    dragResize.clearActiveInteraction();
+    drop.clearDropInteraction();
+  };
 
   return {
     ...dragResize,
-    ...drop
+    ...drop,
+    clearActiveInteraction
   };
 }

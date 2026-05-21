@@ -10,7 +10,7 @@ import {
   resolveGridEditorSnap
 } from "../editor";
 import { executeLayoutOperation } from "../layout-engine";
-import { compactType, getLayoutItem } from "../utils";
+import { cloneLayout, compactType, getLayoutItem } from "../utils";
 import type { CompactType, Layout, LayoutItem, ResizeHandleAxis } from "../utils";
 import type {
   GridEditorController,
@@ -21,6 +21,7 @@ import type {
   GridEditorProp
 } from "../editor";
 import type { GridLayoutEngineBridge } from "./gridInteractionTypes";
+import { useGridPlacementInteractions } from "./useGridPlacementInteractions";
 import type {
   LayoutOperation,
   LayoutOperationResult
@@ -31,10 +32,13 @@ type GridEditorRuntimeProps = {
   cols: number;
   compactType: CompactType;
   editor?: false | GridEditorProp;
+  width?: number;
   margin: number[];
+  containerPadding?: number[] | null;
   maxRows: number;
   preventCollision: boolean;
   rowHeight: number;
+  transformScale: number;
   verticalCompact: boolean;
 };
 
@@ -127,7 +131,7 @@ export function useGridEditorRuntime({
     commandId: string;
     layout: Layout;
     operation: LayoutOperation;
-    phase: "commit";
+    phase: "preview" | "commit";
   }) => {
     const id = `${input.commandId}:layout`;
     if (engineBridge.isLegacyLayoutEngine()) {
@@ -152,6 +156,25 @@ export function useGridEditorRuntime({
     : null;
   let unbindKeyboard: (() => void) | null = null;
   let lastSnapResolution: { nextGuideId?: string } | null = null;
+  const placementInteractions = useGridPlacementInteractions({
+    controller,
+    getGeometry: () => ({
+      width: props.width || 0,
+      cols: props.cols,
+      margin: props.margin,
+      maxRows: props.maxRows,
+      rowHeight: props.rowHeight,
+      containerPadding: props.containerPadding || props.margin,
+      transformScale: props.transformScale || 1,
+      compactType: compactType(props),
+      allowOverlap: props.allowOverlap,
+      preventCollision: props.preventCollision
+    }),
+    stopEvent: event => {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  });
 
   const isEnabled = () => Boolean(controller);
   const isViewMode = () => Boolean(controller && controller.mode.value === "view");
@@ -449,6 +472,89 @@ export function useGridEditorRuntime({
     config?.onEvent?.({ type: "command-blocked", command, result });
   };
 
+  const applyCommittedLayout = (layout: Layout) => {
+    layoutRef.value = cloneLayout(layout);
+  };
+
+  const commitMove = async (input: {
+    ids: string[];
+    activeId?: string;
+    beforeLayout: Layout;
+    afterLayout: Layout;
+    source?: "pointer" | "drop";
+  }) => {
+    if (!controller) return null;
+    applyCommittedLayout(input.beforeLayout);
+    return await controller.execute({
+      type: "move",
+      targetIds: input.ids,
+      source: input.source || "pointer",
+      payload: {
+        activeId: input.activeId,
+        candidateLayout: input.afterLayout,
+        cols: props.cols,
+        maxRows: props.maxRows,
+        compactType: props.compactType,
+        allowOverlap: props.allowOverlap,
+        preventCollision: props.preventCollision
+      }
+    });
+  };
+
+  const commitResize = async (input: {
+    id: string;
+    beforeLayout: Layout;
+    afterLayout: Layout;
+    handle?: ResizeHandleAxis;
+  }) => {
+    if (!controller) return null;
+    applyCommittedLayout(input.beforeLayout);
+    return await controller.execute({
+      type: "resize",
+      targetIds: [input.id],
+      source: "pointer",
+      payload: {
+        handle: input.handle,
+        candidateLayout: input.afterLayout,
+        cols: props.cols,
+        maxRows: props.maxRows,
+        compactType: props.compactType,
+        allowOverlap: props.allowOverlap,
+        preventCollision: props.preventCollision
+      }
+    });
+  };
+
+  const commitDrop = async (input: {
+    id: string;
+    beforeLayout: Layout;
+    afterLayout: Layout;
+    item?: LayoutItem;
+    event?: Event;
+  }) => {
+    if (!controller) return null;
+    applyCommittedLayout(input.beforeLayout);
+    return await controller.execute({
+      type: "add",
+      targetIds: [input.id],
+      source: "drop",
+      payload: {
+        item: input.item,
+        candidateLayout: input.afterLayout,
+        cols: props.cols,
+        maxRows: props.maxRows,
+        compactType: props.compactType,
+        allowOverlap: props.allowOverlap,
+        preventCollision: props.preventCollision
+      }
+    });
+  };
+
+  const rollbackInteraction = (layout: Layout) => {
+    applyCommittedLayout(layout);
+    clearGuides();
+  };
+
   const executeSelect = (id: string, event: MouseEvent) => {
     if (!controller || !isEditMode()) return;
     void controller.execute({
@@ -461,6 +567,31 @@ export function useGridEditorRuntime({
       },
       source: "pointer"
     });
+  };
+
+  const getPlacementPreviewItem = (item: LayoutItem): LayoutItem | null => {
+    const session = controller?.placementSession.value;
+    if (
+      !session ||
+      session.collisionPolicy !== "layout" ||
+      session.blocked ||
+      !session.candidateLayout ||
+      session.phase === "starting"
+    ) {
+      return null;
+    }
+    if (session.ghostItems.some(ghost => ghost.id === item.i)) return null;
+    const previewItem = getLayoutItem(session.candidateLayout, item.i);
+    if (!previewItem) return null;
+    if (
+      previewItem.x === item.x &&
+      previewItem.y === item.y &&
+      previewItem.w === item.w &&
+      previewItem.h === item.h
+    ) {
+      return null;
+    }
+    return previewItem;
   };
 
   const getItemRenderState = (
@@ -483,6 +614,7 @@ export function useGridEditorRuntime({
     const bounded = draggable && defaults.isBounded && item.isBounded !== false;
     const selected = controller?.selection.value.selectedIds.includes(item.i) || false;
     const active = controller?.selection.value.activeId === item.i;
+    const previewItem = getPlacementPreviewItem(item);
     const className = controller
       ? clsx({
           "editor-selected": selected,
@@ -491,7 +623,8 @@ export function useGridEditorRuntime({
           "editor-hidden": meta?.visible === false,
           "editor-readonly": readonly,
           "editor-keyboard-editing": controller.state.value === "keyboardEditing",
-          "editor-drop-target": isDroppingItem
+          "editor-drop-target": isDroppingItem,
+          "editor-placement-reflowed": Boolean(previewItem)
         })
       : undefined;
 
@@ -501,14 +634,20 @@ export function useGridEditorRuntime({
       resizable,
       bounded,
       className,
+      previewItem,
       onClick: controller ? (event: MouseEvent) => executeSelect(item.i, event) : undefined
     };
   };
 
   const onRootClick = (event: MouseEvent) => {
+    if (placementInteractions.onClick(event)) return;
     if (event.target === event.currentTarget && controller && isEditMode()) {
       void controller.execute({ type: "clearSelection", source: "pointer" });
     }
+  };
+
+  const onRootPointerMove = (event: MouseEvent | PointerEvent) => {
+    placementInteractions.onPointerMove(event);
   };
 
   const mount = () => {
@@ -523,6 +662,7 @@ export function useGridEditorRuntime({
   const stop = () => {
     unbindKeyboard?.();
     unbindKeyboard = null;
+    placementInteractions.cancel("runtime-stop");
     if (!config?.controller) controller?.stop();
   };
 
@@ -540,7 +680,13 @@ export function useGridEditorRuntime({
     updateIntelligence,
     resolveMoveDrag,
     notifyMoveBlocked,
+    commitMove,
+    commitResize,
+    commitDrop,
+    rollbackInteraction,
     getItemRenderState,
+    isPlacementActive: placementInteractions.isActive,
+    onRootPointerMove,
     onRootClick,
     mount,
     stop

@@ -6,17 +6,23 @@ import type {
   ResizeHandleAxis
 } from "../utils";
 import type { DropDragOverResult } from "./contract";
-import type { GridEditorBlockedReason } from "../editor";
+import type {
+  GridEditorBlockedReason,
+  GridEditorCommandResult
+} from "../editor";
+import type { GridDragActivationDistance } from "../interaction-state-machine";
 import type { LayoutOperationResult } from "../layout-engine";
 import type { GridLayoutState } from "./useGridLayoutModel";
 import type { useGridAutoScroll } from "./useGridAutoScroll";
 import type { useGridFrameUpdate } from "./useGridFrameUpdate";
 import type { useGridLayoutEngineBridge } from "./useGridLayoutEngineBridge";
+import type { GridInteractionMachineController } from "./useGridInteractionMachine";
 
 export type GridDroppingItem = Partial<LayoutItem> & Pick<LayoutItem, "i" | "w" | "h">;
 
 export type GridInteractionsProps = {
   autoScroll?: boolean | { margin?: number; speed?: number };
+  dragActivationDistance?: GridDragActivationDistance;
   allowOverlap: boolean;
   cols: number;
   compactType: CompactType;
@@ -85,6 +91,27 @@ export type GridInteractionsEditor = {
     message?: string;
     operationResult?: LayoutOperationResult;
   }) => void;
+  commitMove?: (input: {
+    ids: string[];
+    activeId?: string;
+    beforeLayout: Layout;
+    afterLayout: Layout;
+    source?: "pointer" | "drop";
+  }) => Promise<GridEditorCommandResult | null>;
+  commitResize?: (input: {
+    id: string;
+    beforeLayout: Layout;
+    afterLayout: Layout;
+    handle?: ResizeHandleAxis;
+  }) => Promise<GridEditorCommandResult | null>;
+  commitDrop?: (input: {
+    id: string;
+    beforeLayout: Layout;
+    afterLayout: Layout;
+    item?: LayoutItem;
+    event?: Event;
+  }) => Promise<GridEditorCommandResult | null>;
+  rollbackInteraction?: (layout: Layout, reason: string) => void;
 };
 
 export type GridInteractionCommonOptions = {
@@ -95,6 +122,7 @@ export type GridInteractionCommonOptions = {
   frameUpdate: GridFrameUpdate;
   autoScroll: GridAutoScroll;
   editor: GridInteractionsEditor;
+  interactionMachine?: GridInteractionMachineController;
   nextInteractionRequestId: (kind: string, itemId: string) => string;
 };
 

@@ -30,6 +30,7 @@ export type GridLayoutState = {
   resizing: boolean,
   droppingDOMNode?: VNode | null,
   droppingPosition?: DroppingPosition,
+  suppressLayoutChange?: boolean,
   compactType?: CompactType,
   children: VNode[]
 };
@@ -94,6 +95,7 @@ export function useGridLayoutModel({
     resizing: false,
     droppingDOMNode: null,
     droppingPosition: undefined,
+    suppressLayoutChange: false,
     compactType: props.compactType,
     children: []
   });
@@ -173,7 +175,11 @@ export function useGridLayoutModel({
   watch(
     () => state.layout,
     (newLayout, oldLayout) => {
-      if (state.activeDrag) return;
+      if (state.suppressLayoutChange) {
+        state.suppressLayoutChange = false;
+        return;
+      }
+      if (state.activeDrag || state.droppingDOMNode || state.droppingPosition) return;
 
       const interactionOldLayout = state.oldLayout;
       if (interactionOldLayout) {

@@ -15,6 +15,8 @@ import type {
 } from "./utils";
 
 import type { PositionParams } from "./calculateUtils";
+import type { GridRenderPrecision } from "./grid-height";
+import type { GridDragActivationDistance } from "./interaction-state-machine";
 import {
   useGridItemDrag,
   type GridItemDragAttrs
@@ -48,6 +50,14 @@ const GridItem = defineComponent({
     cols: { type: Number, required: true },
     containerWidth: { type: Number, required: true },
     rowHeight: { type: Number, required: true },
+    dragActivationDistance: {
+      type: [Number, Object] as PropType<GridDragActivationDistance>,
+      default: undefined
+    },
+    renderPrecision: {
+      type: String as PropType<GridRenderPrecision>,
+      default: "integer"
+    },
     margin: { type: Array as PropType<number[]>, required: true },
     maxRows: { type: Number, required: true },
     containerPadding: { type: Array as PropType<number[]>, required: true },
@@ -97,7 +107,8 @@ const GridItem = defineComponent({
       containerWidth: props.containerWidth,
       margin: props.margin,
       maxRows: props.maxRows,
-      rowHeight: props.rowHeight
+      rowHeight: props.rowHeight,
+      renderPrecision: props.renderPrecision
     }));
 
     const drag = useGridItemDrag({

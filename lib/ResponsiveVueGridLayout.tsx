@@ -9,6 +9,7 @@ import VueGridLayout from "./VueGridLayout";
 import type { ResponsiveGridLayoutPersistenceProp } from "./persistence";
 import type { GridLayoutEngineProp } from "./layout-engine";
 import type { GridEditorProp } from "./editor";
+import type { GridDragActivationDistance } from "./interaction-state-machine";
 import {
   getIndentationValue,
   useResponsiveGridLayoutModel,
@@ -35,6 +36,7 @@ export interface Props<Breakpoint extends string = string> {
   persistence?: ResponsiveGridLayoutPersistenceProp;
   layoutEngine?: false | GridLayoutEngineProp;
   editor?: false | GridEditorProp;
+  dragActivationDistance?: GridDragActivationDistance;
 }
 
 const ResponsiveVueGridLayout = defineComponent({
@@ -89,6 +91,11 @@ const ResponsiveVueGridLayout = defineComponent({
     /** Layout engine configuration for responsive heavy operations and the inner grid */
     layoutEngine: {
       type: [Boolean, Object] as PropType<false | GridLayoutEngineProp>,
+      default: undefined
+    },
+    /** Drag activation distance passed through to the inner grid. */
+    dragActivationDistance: {
+      type: [Number, Object] as PropType<GridDragActivationDistance>,
       default: undefined
     },
     /** Headless professional editor controller/options. Disabled by default. */

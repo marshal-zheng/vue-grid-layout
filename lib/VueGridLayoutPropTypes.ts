@@ -9,6 +9,8 @@ import type { GridHistoryStore } from './history'
 import type { GridLayoutPersistenceProp } from './persistence'
 import type { GridLayoutEngineProp } from './layout-engine'
 import type { GridEditorProp } from './editor'
+import type { GridHeightMode, GridRenderPrecision } from './grid-height'
+import type { GridDragActivationDistance } from './interaction-state-machine'
 
 interface DroppingItem {
   i: string;
@@ -49,7 +51,13 @@ export type Props = {
   style: CSSProperties
   width: number
   autoSize: boolean
+  heightMode?: GridHeightMode | null
+  containerHeight?: number | null
+  autoMeasureContainerHeight?: boolean
+  minRowHeight?: number
+  renderPrecision?: GridRenderPrecision | null
   autoScroll?: boolean | { margin?: number; speed?: number }
+  dragActivationDistance?: GridDragActivationDistance
   cols: number
   draggableCancel: string
   draggableHandle: string
@@ -100,6 +108,33 @@ export const basicProps = {
   autoSize: {
     type: Boolean as PropType<boolean>,
     default: true
+  },
+  /** Runtime height mode. Explicit values take precedence over legacy autoSize. */
+  heightMode: {
+    type: String as PropType<GridHeightMode | null>,
+    default: null,
+    validator: (value: string | null) => value == null || ['auto', 'scroll', 'fit', 'fixed'].includes(value)
+  },
+  /** Controlled grid container height in px for fixed, scroll, and fit modes. */
+  containerHeight: {
+    type: Number as PropType<number | null>,
+    default: null
+  },
+  /** Measure the grid root parent content box when no controlled containerHeight is provided. */
+  autoMeasureContainerHeight: {
+    type: Boolean as PropType<boolean>,
+    default: false
+  },
+  /** Minimum usable row height for fit mode before falling back to scroll. */
+  minRowHeight: {
+    type: Number as PropType<number>,
+    default: undefined
+  },
+  /** Final CSS pixel precision for item geometry. */
+  renderPrecision: {
+    type: String as PropType<GridRenderPrecision | null>,
+    default: null,
+    validator: (value: string | null) => value == null || ['integer', 'subpixel'].includes(value)
   },
   /** Number of columns, default 12 */
   cols: {
@@ -220,6 +255,11 @@ export const basicProps = {
   autoScroll: {
     type: [Boolean, Object] as PropType<boolean | { margin?: number; speed?: number }>,
     default: false
+  },
+  /** Drag activation distance in px; default mouse/pen 4px, touch/coarse 8px. */
+  dragActivationDistance: {
+    type: [Number, Object] as PropType<GridDragActivationDistance>,
+    default: undefined
   },
   /** Allow dropping elements from outside, requires @drop and @dropDragOver handlers */
   isDroppable: {

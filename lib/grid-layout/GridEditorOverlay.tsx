@@ -1,15 +1,18 @@
 import { h, type VNode } from "vue";
 import clsx from "clsx";
-import { calcGridColWidth } from "../calculateUtils";
+import { applyRenderPrecision, calcGridColWidth } from "../calculateUtils";
 import type { Layout, LayoutItem } from "../utils";
 import type { Kv } from "../type";
 import type { GridEditorGuide, GridEditorGuideState } from "../editor";
+import type { GridEditorPlacementSession } from "../editor/placementSession";
+import type { GridRenderPrecision } from "../grid-height";
 
 type GridEditorOverlayGeometryInput = {
   width: number;
   margin: number[];
   containerPadding: number[];
   rowHeight: number;
+  renderPrecision?: GridRenderPrecision;
   cols: number;
   maxRows: number;
 };
@@ -21,6 +24,7 @@ export function createGridEditorOverlayGeometry({
   margin,
   containerPadding,
   rowHeight,
+  renderPrecision = "integer",
   cols,
   maxRows
 }: GridEditorOverlayGeometryInput) {
@@ -33,12 +37,13 @@ export function createGridEditorOverlayGeometry({
     maxRows,
     rowHeight
   });
-  const gridLineXPx = (value: number) => padding[0] + value * (colWidth + margin[0]);
-  const gridLineYPx = (value: number) => padding[1] + value * (rowHeight + margin[1]);
-  const centerXPx = (value: number) => padding[0] + value * (colWidth + margin[0]) - margin[0] / 2;
-  const centerYPx = (value: number) => padding[1] + value * (rowHeight + margin[1]) - margin[1] / 2;
-  const rightEdgePx = (value: number) => gridLineXPx(value) - margin[0];
-  const bottomEdgePx = (value: number) => gridLineYPx(value) - margin[1];
+  const format = (value: number) => applyRenderPrecision(value, renderPrecision);
+  const gridLineXPx = (value: number) => format(padding[0] + value * (colWidth + margin[0]));
+  const gridLineYPx = (value: number) => format(padding[1] + value * (rowHeight + margin[1]));
+  const centerXPx = (value: number) => format(padding[0] + value * (colWidth + margin[0]) - margin[0] / 2);
+  const centerYPx = (value: number) => format(padding[1] + value * (rowHeight + margin[1]) - margin[1] / 2);
+  const rightEdgePx = (value: number) => format(gridLineXPx(value) - margin[0]);
+  const bottomEdgePx = (value: number) => format(gridLineYPx(value) - margin[1]);
   const guideXPx = (guide: GridEditorGuide) => {
     if (guide.kind === "right") return rightEdgePx(guide.position);
     if (guide.kind === "center-x") return centerXPx(guide.position);
@@ -65,10 +70,10 @@ export function createGridEditorOverlayGeometry({
     start: bottomEdgePx(start),
     end: gridLineYPx(end)
   });
-  const itemLeftPx = (value: number) => padding[0] + value * (colWidth + margin[0]);
-  const itemTopPx = (value: number) => padding[1] + value * (rowHeight + margin[1]);
-  const itemWidthPx = (value: number) => Math.max(0, value * colWidth + Math.max(0, value - 1) * margin[0]);
-  const itemHeightPx = (value: number) => Math.max(0, value * rowHeight + Math.max(0, value - 1) * margin[1]);
+  const itemLeftPx = (value: number) => format(padding[0] + value * (colWidth + margin[0]));
+  const itemTopPx = (value: number) => format(padding[1] + value * (rowHeight + margin[1]));
+  const itemWidthPx = (value: number) => format(Math.max(0, value * colWidth + Math.max(0, value - 1) * margin[0]));
+  const itemHeightPx = (value: number) => format(Math.max(0, value * rowHeight + Math.max(0, value - 1) * margin[1]));
   return {
     padding,
     colWidth,
@@ -91,6 +96,7 @@ type RenderGridEditorOverlayOptions = {
   enabled: boolean;
   geometry: GridEditorOverlayGeometry;
   guideState?: GridEditorGuideState;
+  placementSession?: GridEditorPlacementSession | null;
   itemMap: Map<string, LayoutItem>;
   layout: Layout;
 };
@@ -99,10 +105,11 @@ export function renderGridEditorOverlay({
   enabled,
   geometry,
   guideState,
+  placementSession,
   itemMap,
   layout
 }: RenderGridEditorOverlayOptions): VNode[] {
-  if (!enabled || !guideState) return [];
+  if (!enabled) return [];
 
   const {
     guideXPx,
@@ -118,6 +125,7 @@ export function renderGridEditorOverlay({
   } = geometry;
 
   const guideNodes = (): VNode[] => {
+    if (!guideState) return [];
     const displayGuides = guideState.displayGuides || guideState.guides;
     const guideStyle = (guide: GridEditorGuide): Kv => {
       const display = guide.display;
@@ -216,6 +224,7 @@ export function renderGridEditorOverlay({
   };
 
   const spacingChipNodes = (): VNode[] => {
+    if (!guideState) return [];
     const chips = guideState.spacingChips || [];
     if (chips.length === 0) return [];
     return chips.map(chip => {
@@ -251,6 +260,7 @@ export function renderGridEditorOverlay({
   };
 
   const measurementHudNode = (): VNode | null => {
+    if (!guideState) return null;
     const hud = guideState.measurementHud;
     if (!hud) return null;
     const left = itemLeftPx(hud.position.x) + itemWidthPx(hud.size.w);
@@ -288,6 +298,7 @@ export function renderGridEditorOverlay({
   };
 
   const anchorEdgeNodes = (): VNode[] => {
+    if (!guideState) return [];
     const anchors = guideState.anchorEdges || [];
     if (anchors.length === 0) return [];
     const nodes: VNode[] = [];
@@ -327,7 +338,94 @@ export function renderGridEditorOverlay({
     return nodes;
   };
 
+  const placementGhostNodes = (): VNode[] => {
+    if (!placementSession) return [];
+    return placementSession.ghostItems.map(ghost => {
+      const item = ghost.item;
+      const blocked = ghost.state === "blocked" || placementSession.phase === "blocked";
+      return h("div", {
+        key: `placement-ghost:${placementSession.id}:${ghost.id}`,
+        class: clsx(
+          "vue-grid-editor-placement-ghost",
+          `vue-grid-editor-placement-ghost-${ghost.state}`,
+          {
+            "vue-grid-editor-placement-ghost-blocked": blocked,
+            "vue-grid-editor-placement-ghost-committing": ghost.state === "committing"
+          }
+        ),
+        style: {
+          left: `${itemLeftPx(item.x)}px`,
+          top: `${itemTopPx(item.y)}px`,
+          width: `${itemWidthPx(item.w)}px`,
+          height: `${itemHeightPx(item.h)}px`
+        },
+        "data-placement-session-id": placementSession.id,
+        "data-placement-source": placementSession.source,
+        "data-placement-item-id": ghost.id,
+        "data-placement-state": blocked ? "blocked" : ghost.state,
+        "data-placement-x": String(item.x),
+        "data-placement-y": String(item.y),
+        "data-placement-w": String(item.w),
+        "data-placement-h": String(item.h),
+        "aria-hidden": "true"
+      });
+    });
+  };
+
+  const placementAffectedNodes = (): VNode[] => {
+    if (!placementSession) return [];
+    return placementSession.affectedOutlines.map(outline => {
+      const item = outline.after;
+      return h("div", {
+        key: `placement-affected:${placementSession.id}:${outline.id}:${outline.kind}`,
+        class: clsx(
+          "vue-grid-editor-placement-affected",
+          `vue-grid-editor-placement-affected-${outline.kind}`
+        ),
+        style: {
+          left: `${itemLeftPx(item.x)}px`,
+          top: `${itemTopPx(item.y)}px`,
+          width: `${itemWidthPx(item.w)}px`,
+          height: `${itemHeightPx(item.h)}px`
+        },
+        "data-placement-session-id": placementSession.id,
+        "data-placement-source": placementSession.source,
+        "data-placement-affected-id": outline.id,
+        "data-placement-outline-kind": outline.kind,
+        "aria-hidden": "true"
+      });
+    });
+  };
+
+  const placementHudNode = (): VNode | null => {
+    if (!placementSession) return null;
+    const first = placementSession.ghostItems[0]?.item;
+    if (!first && !placementSession.blocked) return null;
+    const left = first ? itemLeftPx(first.x) + itemWidthPx(first.w) : 0;
+    const top = first ? itemTopPx(first.y) : 0;
+    const blocked = placementSession.blocked;
+    const label = blocked
+      ? blocked.message || `Placement blocked by ${blocked.reason}.`
+      : `${placementSession.ghostItems.length} item${placementSession.ghostItems.length === 1 ? "" : "s"}`;
+    return h("div", {
+      key: `placement-hud:${placementSession.id}`,
+      class: clsx(
+        "vue-grid-editor-placement-hud",
+        { "vue-grid-editor-placement-hud-blocked": Boolean(blocked) }
+      ),
+      style: { left: `${left}px`, top: `${top}px` },
+      "data-placement-session-id": placementSession.id,
+      "data-placement-source": placementSession.source,
+      "data-placement-state": blocked ? "blocked" : placementSession.phase,
+      role: "status",
+      "aria-live": "polite"
+    }, label);
+  };
+
   return [
+    ...placementAffectedNodes(),
+    ...placementGhostNodes(),
+    placementHudNode(),
     ...anchorEdgeNodes(),
     ...guideNodes(),
     ...spacingChipNodes(),
