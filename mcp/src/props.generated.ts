@@ -97,6 +97,101 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     }
   },
   {
+    "name": "heightMode",
+    "component": "VueGridLayout",
+    "definedIn": "basicProps",
+    "description": "Runtime height mode. Explicit values take precedence over legacy autoSize.",
+    "vueRuntimeTypes": [
+      "String"
+    ],
+    "tsType": "GridHeightMode | null",
+    "default": "null",
+    "hasDefault": true,
+    "defaultIsFactory": false,
+    "required": null,
+    "validator": "(value: string | null) => value == null || ['auto', 'scroll', 'fit', 'fixed'].includes(value)",
+    "sourceType": "String as PropType<GridHeightMode | null>",
+    "source": {
+      "file": "lib/VueGridLayoutPropTypes.ts"
+    }
+  },
+  {
+    "name": "containerHeight",
+    "component": "VueGridLayout",
+    "definedIn": "basicProps",
+    "description": "Controlled grid container height in px for fixed, scroll, and fit modes.",
+    "vueRuntimeTypes": [
+      "Number"
+    ],
+    "tsType": "number | null",
+    "default": "null",
+    "hasDefault": true,
+    "defaultIsFactory": false,
+    "required": null,
+    "validator": null,
+    "sourceType": "Number as PropType<number | null>",
+    "source": {
+      "file": "lib/VueGridLayoutPropTypes.ts"
+    }
+  },
+  {
+    "name": "autoMeasureContainerHeight",
+    "component": "VueGridLayout",
+    "definedIn": "basicProps",
+    "description": "Measure the grid root parent content box when no controlled containerHeight is provided.",
+    "vueRuntimeTypes": [
+      "Boolean"
+    ],
+    "tsType": "boolean",
+    "default": "false",
+    "hasDefault": true,
+    "defaultIsFactory": false,
+    "required": null,
+    "validator": null,
+    "sourceType": "Boolean as PropType<boolean>",
+    "source": {
+      "file": "lib/VueGridLayoutPropTypes.ts"
+    }
+  },
+  {
+    "name": "minRowHeight",
+    "component": "VueGridLayout",
+    "definedIn": "basicProps",
+    "description": "Minimum usable row height for fit mode before falling back to scroll.",
+    "vueRuntimeTypes": [
+      "Number"
+    ],
+    "tsType": "number",
+    "default": "undefined",
+    "hasDefault": true,
+    "defaultIsFactory": false,
+    "required": null,
+    "validator": null,
+    "sourceType": "Number as PropType<number>",
+    "source": {
+      "file": "lib/VueGridLayoutPropTypes.ts"
+    }
+  },
+  {
+    "name": "renderPrecision",
+    "component": "VueGridLayout",
+    "definedIn": "basicProps",
+    "description": "Final CSS pixel precision for item geometry.",
+    "vueRuntimeTypes": [
+      "String"
+    ],
+    "tsType": "GridRenderPrecision | null",
+    "default": "null",
+    "hasDefault": true,
+    "defaultIsFactory": false,
+    "required": null,
+    "validator": "(value: string | null) => value == null || ['integer', 'subpixel'].includes(value)",
+    "sourceType": "String as PropType<GridRenderPrecision | null>",
+    "source": {
+      "file": "lib/VueGridLayoutPropTypes.ts"
+    }
+  },
+  {
     "name": "cols",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
@@ -440,6 +535,26 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     }
   },
   {
+    "name": "dragActivationDistance",
+    "component": "VueGridLayout",
+    "definedIn": "basicProps",
+    "description": "Drag activation distance in px; default mouse/pen 4px, touch/coarse 8px.",
+    "vueRuntimeTypes": [
+      "Number",
+      "Object"
+    ],
+    "tsType": "GridDragActivationDistance",
+    "default": "undefined",
+    "hasDefault": true,
+    "defaultIsFactory": false,
+    "required": null,
+    "validator": null,
+    "sourceType": "[Number, Object] as PropType<GridDragActivationDistance>",
+    "source": {
+      "file": "lib/VueGridLayoutPropTypes.ts"
+    }
+  },
+  {
     "name": "isDroppable",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
@@ -517,45 +632,6 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     }
   },
   {
-    "name": "historyStore",
-    "component": "VueGridLayout",
-    "definedIn": "basicProps",
-    "description": "Pinia history store instance for undo/redo functionality",
-    "vueRuntimeTypes": [
-      "Object"
-    ],
-    "tsType": "GridHistoryStore",
-    "default": "null",
-    "hasDefault": true,
-    "defaultIsFactory": false,
-    "required": null,
-    "validator": null,
-    "sourceType": "Object as PropType<GridHistoryStore>",
-    "source": {
-      "file": "lib/VueGridLayoutPropTypes.ts"
-    }
-  },
-  {
-    "name": "persistence",
-    "component": "VueGridLayout",
-    "definedIn": "basicProps",
-    "description": "Durable save/load persistence configuration",
-    "vueRuntimeTypes": [
-      "Boolean",
-      "Object"
-    ],
-    "tsType": "GridLayoutPersistenceProp",
-    "default": "false",
-    "hasDefault": true,
-    "defaultIsFactory": false,
-    "required": null,
-    "validator": null,
-    "sourceType": "[Boolean, Object] as PropType<GridLayoutPersistenceProp>",
-    "source": {
-      "file": "lib/VueGridLayoutPropTypes.ts"
-    }
-  },
-  {
     "name": "layoutEngine",
     "component": "VueGridLayout",
     "definedIn": "basicProps",
@@ -571,26 +647,6 @@ export const VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     "required": null,
     "validator": null,
     "sourceType": "[Boolean, Object] as PropType<false | GridLayoutEngineProp>",
-    "source": {
-      "file": "lib/VueGridLayoutPropTypes.ts"
-    }
-  },
-  {
-    "name": "editor",
-    "component": "VueGridLayout",
-    "definedIn": "basicProps",
-    "description": "Headless professional editor controller/options. Disabled by default.",
-    "vueRuntimeTypes": [
-      "Boolean",
-      "Object"
-    ],
-    "tsType": "false | GridEditorProp",
-    "default": "false",
-    "hasDefault": true,
-    "defaultIsFactory": false,
-    "required": null,
-    "validator": null,
-    "sourceType": "[Boolean, Object] as PropType<false | GridEditorProp>",
     "source": {
       "file": "lib/VueGridLayoutPropTypes.ts"
     }
@@ -829,26 +885,6 @@ export const RESPONSIVE_VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     }
   },
   {
-    "name": "persistence",
-    "component": "ResponsiveVueGridLayout",
-    "definedIn": "defineComponent.props",
-    "description": "Durable save/load persistence configuration for all breakpoint layouts",
-    "vueRuntimeTypes": [
-      "Boolean",
-      "Object"
-    ],
-    "tsType": "ResponsiveGridLayoutPersistenceProp",
-    "default": "false",
-    "hasDefault": true,
-    "defaultIsFactory": false,
-    "required": null,
-    "validator": null,
-    "sourceType": "[Boolean, Object] as PropType<ResponsiveGridLayoutPersistenceProp>",
-    "source": {
-      "file": "lib/ResponsiveVueGridLayout.tsx"
-    }
-  },
-  {
     "name": "layoutEngine",
     "component": "ResponsiveVueGridLayout",
     "definedIn": "defineComponent.props",
@@ -869,21 +905,21 @@ export const RESPONSIVE_VUE_GRID_LAYOUT_PROPS: VueGridLayoutProp[] = [
     }
   },
   {
-    "name": "editor",
+    "name": "dragActivationDistance",
     "component": "ResponsiveVueGridLayout",
     "definedIn": "defineComponent.props",
-    "description": "Headless professional editor controller/options. Disabled by default.",
+    "description": "Drag activation distance passed through to the inner grid.",
     "vueRuntimeTypes": [
-      "Boolean",
+      "Number",
       "Object"
     ],
-    "tsType": "false | GridEditorProp",
-    "default": "false",
+    "tsType": "GridDragActivationDistance",
+    "default": "undefined",
     "hasDefault": true,
     "defaultIsFactory": false,
     "required": null,
     "validator": null,
-    "sourceType": "[Boolean, Object] as PropType<false | GridEditorProp>",
+    "sourceType": "[Number, Object] as PropType<GridDragActivationDistance>",
     "source": {
       "file": "lib/ResponsiveVueGridLayout.tsx"
     }

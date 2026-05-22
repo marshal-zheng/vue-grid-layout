@@ -7,7 +7,7 @@
  * - lib/VueGridLayoutPropTypes.ts (VueGridLayout)
  * - lib/ResponsiveVueGridLayout.tsx (Responsive)
  * - lib/WidthProvider.tsx (WidthProvider)
- * - typings/index.d.ts (类型定义)
+ * - dist/types/*.d.ts（公开入口类型定义；未构建时工具回退到源码类型）
  */
 
 import type { VueGridLayoutProp } from './props.generated.js'
@@ -102,7 +102,6 @@ const PREFERRED_VGL_ORDER = [
   'droppingItem',
   'resizeHandles',
   'resizeHandle',
-  'historyStore',
   'innerRef',
 ]
 
@@ -158,7 +157,7 @@ const TYPE_OTHER_TYPES = [
 
 export const DOCS = `# @marsio/vue-grid-layout
 
-Vue 3 的可拖拽、可缩放网格布局组件，支持响应式断点、自动宽度测量以及历史撤销/重做。
+Vue 3 的可拖拽、可缩放网格布局组件。2.0 root 是 lean core；响应式、编辑、持久化、历史和 dashboard 能力通过显式 subpath 按需导入。
 
 **仅支持 Vue 3，不依赖 jQuery。**
 
@@ -185,14 +184,7 @@ pnpm add @marsio/vue-grid-layout
 import {
   // 组件
   VueGridLayout,              // 核心网格布局组件（默认导出）
-  Responsive,                 // 响应式布局组件（别名 ResponsiveVueGridLayout）
   WidthProvider,              // 宽度自动测量 HOC
-
-  // 历史管理
-  useGridHistoryStore,        // Pinia 历史 store hook
-  createGridHistoryStore,     // 创建历史 store
-  bindKeyboardShortcuts,      // 绑定键盘快捷键
-  history,                    // 历史工具集合
 
   // 工具函数
   findFirstFit,               // 查找第一个可用位置
@@ -203,6 +195,16 @@ import {
 
 // 默认导出
 import VueGridLayout from '@marsio/vue-grid-layout'
+
+import { ResponsiveVueGridLayout } from '@marsio/vue-grid-layout/responsive'
+import { EditorGridLayout, EditorResponsiveGridLayout } from '@marsio/vue-grid-layout/editor'
+import { PersistentGridLayout, PersistentResponsiveGridLayout } from '@marsio/vue-grid-layout/persistence'
+
+import {
+  useGridHistoryStore,
+  createGridHistoryStore,
+  bindKeyboardShortcuts
+} from '@marsio/vue-grid-layout/history'
 \`\`\`
 
 ---
@@ -211,8 +213,10 @@ import VueGridLayout from '@marsio/vue-grid-layout'
 
 | 组件 | 作用 |
 |------|------|
-| \`VueGridLayout\` | 核心网格容器，管理布局、拖拽、缩放、碰撞与自动滚动 |
-| \`Responsive\` (别名 \`ResponsiveVueGridLayout\`) | 根据断点自动切换布局与列数 |
+| \`VueGridLayout\` | lean 核心网格容器，管理基础布局、拖拽、缩放、碰撞与自动滚动 |
+| \`ResponsiveVueGridLayout\` | 从 \`@marsio/vue-grid-layout/responsive\` 导入的 lean 响应式组件 |
+| \`EditorGridLayout\` / \`EditorResponsiveGridLayout\` | 从 \`./editor\` 导入的编辑薄 wrapper |
+| \`PersistentGridLayout\` / \`PersistentResponsiveGridLayout\` | 从 \`./persistence\` 导入的持久化薄 wrapper |
 | \`WidthProvider\` | HOC，监听容器尺寸并将 \`width\` 注入给包裹的布局组件 |
 
 ---
@@ -268,7 +272,7 @@ ${vueGridLayoutPropsTable}
 
 响应式网格布局，根据断点自动切换布局。
 
-### Props（${responsivePropsCount} 个，继承 VueGridLayout 大部分 props）
+### Props（${responsivePropsCount} 个，lean responsive props）
 
 ${responsivePropsTable}
 
@@ -306,10 +310,11 @@ ${widthProviderPropsTable}
 ### 使用方式
 
 \`\`\`ts
-import { WidthProvider, Responsive } from '@marsio/vue-grid-layout'
+import { WidthProvider } from '@marsio/vue-grid-layout'
+import { ResponsiveVueGridLayout } from '@marsio/vue-grid-layout/responsive'
 
 // 包裹响应式组件
-const ResponsiveGridLayout = WidthProvider(Responsive)
+const ResponsiveGridLayout = WidthProvider(ResponsiveVueGridLayout)
 
 // 或包裹基础组件
 const AutoWidthLayout = WidthProvider(VueGridLayout)
@@ -421,7 +426,7 @@ const AutoWidthLayout = WidthProvider(VueGridLayout)
 ## 工具函数
 
 \`\`\`ts
-import { findFirstFit, findNearestFit } from '@marsio/vue-grid-layout'
+import { findFirstFit, findNearestFit } from '@marsio/vue-grid-layout/core'
 
 // 查找第一个可用位置
 const pos = findFirstFit(layout, { w: 2, h: 2 }, cols, maxRows)

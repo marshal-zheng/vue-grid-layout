@@ -14,7 +14,8 @@ const INPUT_FILES = {
   gridProps: path.join(projectRoot, 'lib/VueGridLayoutPropTypes.ts'),
   responsive: path.join(projectRoot, 'lib/ResponsiveVueGridLayout.tsx'),
   widthProvider: path.join(projectRoot, 'lib/WidthProvider.tsx'),
-  typings: path.join(projectRoot, 'typings/index.d.ts'),
+  typings: path.join(projectRoot, 'dist/types/index.d.ts'),
+  legacyTypings: path.join(projectRoot, 'typings/index.d.ts'),
 }
 
 const COMPONENTS = [
@@ -48,8 +49,127 @@ const TYPE_TARGETS = [
 const OUTPUT_FILE = path.join(root, 'src/props.generated.ts')
 const OUTPUT_TYPES_FILE = path.join(root, 'src/types.generated.ts')
 
+const SUPPLEMENTAL_TYPE_DEFS = {
+  AutoScrollOptions: 'export type AutoScrollOptions = { margin?: number; speed?: number };',
+  GridLayoutInteractionEventProps: `export type GridLayoutInteractionEventProps = {
+    onDragStart?: ItemCallback;
+    onDrag?: ItemCallback;
+    onDragStop?: ItemCallback;
+    onResizeStart?: ItemCallback;
+    onResize?: ItemCallback;
+    onResizeStop?: ItemCallback;
+    onDrop?: (layout: Layout, e: Event, item?: LayoutItem) => void;
+    onDropDragOver?: (e: DragEvent) => { w?: number; h?: number } | false;
+  };`,
+  VueGridLayoutProps: `export type VueGridLayoutProps = GridLayoutInteractionEventProps & {
+    class?: string;
+    style?: CSSProperties;
+    width?: number;
+    autoSize?: boolean;
+    heightMode?: GridHeightMode | null;
+    containerHeight?: number | null;
+    autoMeasureContainerHeight?: boolean;
+    minRowHeight?: number;
+    renderPrecision?: GridRenderPrecision | null;
+    autoScroll?: boolean | AutoScrollOptions;
+    dragActivationDistance?: GridDragActivationDistance;
+    cols?: number;
+    draggableCancel?: string;
+    draggableHandle?: string;
+    verticalCompact?: boolean;
+    compactType?: CompactType;
+    modelValue?: Layout;
+    margin?: [number, number];
+    containerPadding?: [number, number] | null;
+    rowHeight?: number;
+    maxRows?: number;
+    isBounded?: boolean;
+    isDraggable?: boolean;
+    isResizable?: boolean;
+    isDroppable?: boolean;
+    dropStrategy?: "cursor" | "auto";
+    preventCollision?: boolean;
+    useCSSTransforms?: boolean;
+    transformScale?: number;
+    droppingItem?: { i: string; w: number; h: number };
+    resizeHandles?: ResizeHandleAxis[];
+    resizeHandle?: ResizeHandle;
+    allowOverlap?: boolean;
+    layoutEngine?: false | GridLayoutEngineProp;
+    innerRef?: Ref<HTMLElement | null>;
+    onLayoutChange?: (layout: Layout) => void;
+    onHeightRuntimeChange?: (runtime: GridHeightRuntime) => void;
+  };`,
+  ResponsiveProps: `export type ResponsiveProps = GridLayoutInteractionEventProps & {
+    breakpoint?: string | null;
+    breakpoints?: Record<string, number>;
+    cols?: Record<string, number>;
+    layouts?: Record<string, Layout>;
+    width?: number;
+    margin?: Record<string, [number, number]> | [number, number];
+    containerPadding?:
+      | Record<string, [number, number] | null>
+      | [number, number]
+      | null;
+    allowOverlap?: boolean;
+    verticalCompact?: boolean;
+    compactType?: CompactType;
+    layoutEngine?: false | GridLayoutEngineProp;
+    dragActivationDistance?: GridDragActivationDistance;
+    onLayoutChange?: (currentLayout: Layout, allLayouts: Record<string, Layout>) => void;
+    "onUpdate:layouts"?: (layouts: Record<string, Layout>) => void;
+    onBreakpointChange?: (newBreakpoint: string, newCols: number) => void;
+    onWidthChange?: (
+      containerWidth: number,
+      margin: [number, number] | null,
+      cols: number,
+      containerPadding: [number, number] | null
+    ) => void;
+  };`,
+  WidthProviderProps: `export type WidthProviderProps = {
+    measureBeforeMount?: boolean;
+    class?: string;
+    style?: CSSProperties;
+  };`,
+  ItemCallback: `export type ItemCallback = (
+    layout: Layout,
+    oldItem?: LayoutItem | null,
+    newItem?: LayoutItem | null,
+    placeholder?: LayoutItem,
+    event?: Event,
+    element?: HTMLElement
+  ) => void;`,
+}
+
 function read(filePath) {
   return fs.readFileSync(filePath, 'utf8')
+}
+
+function readableTypeFile() {
+  if (fs.existsSync(INPUT_FILES.typings)) return INPUT_FILES.typings
+  if (fs.existsSync(INPUT_FILES.legacyTypings)) return INPUT_FILES.legacyTypings
+  throw new Error('No generated public types found. Run npm run build before generating MCP props.')
+}
+
+function readableTypeFiles() {
+  const generated = [
+    'dist/types/lib/utils.d.ts',
+    'dist/types/lib/VueGridLayoutPropTypes.d.ts',
+    'dist/types/lib/ResponsiveVueGridLayout.d.ts',
+    'dist/types/lib/WidthProvider.d.ts',
+    'dist/types/lib/history.d.ts',
+  ].map(file => path.join(projectRoot, file)).filter(file => fs.existsSync(file))
+  const sourceFallback = [
+    'lib/utils.ts',
+    'lib/VueGridLayoutPropTypes.ts',
+    'lib/ResponsiveVueGridLayout.tsx',
+    'lib/WidthProvider.tsx',
+    'lib/history.ts',
+  ].map(file => path.join(projectRoot, file)).filter(file => fs.existsSync(file))
+  const legacyFallback = [INPUT_FILES.legacyTypings].filter(file => fs.existsSync(file))
+  if (generated.length) return generated.concat(legacyFallback)
+  if (sourceFallback.length) return sourceFallback.concat(legacyFallback)
+  return [readableTypeFile()]
 }
 
 function compact(text) {
@@ -321,7 +441,7 @@ function main() {
   const gridPropsFile = parseSourceFile(INPUT_FILES.gridProps)
   const responsiveFile = parseSourceFile(INPUT_FILES.responsive)
   const widthProviderFile = parseSourceFile(INPUT_FILES.widthProvider)
-  const typingsFile = parseSourceFile(INPUT_FILES.typings)
+  const typingsFiles = readableTypeFiles().map(parseSourceFile)
 
   const varDecls = buildVarDecls([gridPropsFile, responsiveFile, widthProviderFile])
 
@@ -356,9 +476,16 @@ function main() {
 
   const typeDefs = {}
   for (const name of TYPE_TARGETS) {
-    const node = findTypeLikeDeclaration(typingsFile, name)
-    if (!node) throw new Error(`Type not found: ${name} (in ${typingsFile.fileName})`)
-    typeDefs[name] = node.getText(typingsFile).trim()
+    const match = typingsFiles
+      .map(file => ({ file, node: findTypeLikeDeclaration(file, name) }))
+      .find(result => result.node)
+    if (match?.node) {
+      typeDefs[name] = match.node.getText(match.file).trim()
+    } else if (SUPPLEMENTAL_TYPE_DEFS[name]) {
+      typeDefs[name] = SUPPLEMENTAL_TYPE_DEFS[name]
+    } else {
+      throw new Error(`Type not found: ${name} (in generated public types or fallback source types)`)
+    }
   }
 
   const typesHeader = `/*\n * This file is generated by scripts/generate-props.js.\n * Do not edit manually.\n */\n\n`

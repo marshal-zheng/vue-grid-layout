@@ -293,7 +293,8 @@ const layout2 = reactive([])
 
 <script setup>
 import { reactive, onMounted } from 'vue'
-import { WidthProvider, Responsive } from '@marsio/vue-grid-layout'
+import { WidthProvider } from '@marsio/vue-grid-layout'
+import { ResponsiveVueGridLayout as Responsive } from '@marsio/vue-grid-layout/responsive'
 
 const ResponsiveVueGridLayout = WidthProvider(Responsive)
 
@@ -562,7 +563,8 @@ body { padding: 20px; }
 
 <script setup>
 import { reactive, onMounted } from 'vue'
-import { WidthProvider, Responsive } from '@marsio/vue-grid-layout'
+import { WidthProvider } from '@marsio/vue-grid-layout'
+import { ResponsiveVueGridLayout as Responsive } from '@marsio/vue-grid-layout/responsive'
 
 const ResponsiveVueGridLayout = WidthProvider(Responsive)
 

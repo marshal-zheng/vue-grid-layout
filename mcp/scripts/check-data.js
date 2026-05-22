@@ -24,7 +24,7 @@ const COMPONENT_SOURCES = {
   },
   ResponsiveVueGridLayout: {
     file: path.join(projectRoot, 'lib/ResponsiveVueGridLayout.tsx'),
-    marker: 'props:',
+    marker: 'export const responsiveGridLayoutProps',
   },
   WidthProvider: {
     file: path.join(projectRoot, 'lib/WidthProvider.tsx'),
