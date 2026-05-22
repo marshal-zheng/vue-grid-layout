@@ -49,6 +49,7 @@ import type {
   DashboardEditorShellCommitContext,
   DashboardEditorShellCommitPlacementOptions,
   DashboardEditorShellAvailability,
+  DashboardEditorShellBlockedReason,
   DashboardEditorShellDiagnostic,
   DashboardEditorShellDocumentChangeEvent,
   DashboardEditorShellDropPayload,
@@ -711,7 +712,7 @@ export function useDashboardEditorShell(
   const blockedActionResult = (
     actionType: DashboardEditorShellActionType,
     source: DashboardEditorShellActionSource,
-    reason: string,
+    reason: DashboardEditorShellBlockedReason,
     itemIds: string[] = [],
     diagnostics: DashboardEditorShellDiagnostic[] = [],
     actionId = createDashboardEditorShellActionId(actionType)

@@ -16,6 +16,7 @@ import type {
   GridEditorCommandResult,
   GridEditorCommitPlacementInput,
   GridEditorConflict,
+  GridEditorBlockedReason,
   GridEditorController,
   GridEditorMode,
   GridEditorSelectionState,
@@ -77,6 +78,7 @@ export type DashboardEditorShellActionSource =
   | "lifecycle";
 
 export type DashboardEditorShellBlockedReason =
+  | GridEditorBlockedReason
   | "mode-readonly"
   | "capability"
   | "locked"

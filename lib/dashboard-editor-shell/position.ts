@@ -3,6 +3,7 @@ import type { Layout, LayoutItem } from "../utils";
 import type {
   DashboardEditorShellDiagnostic,
   DashboardEditorShellListInsertion,
+  DashboardEditorShellBlockedReason,
   DashboardEditorShellPositionHelperInput,
   DashboardEditorShellPositionInput,
   DashboardEditorShellPositionResult,
@@ -48,7 +49,7 @@ const ok = (
 });
 
 const blocked = (
-  reason: string,
+  reason: DashboardEditorShellBlockedReason,
   message: string,
   diagnostics: DashboardEditorShellDiagnostic[] = []
 ): DashboardEditorShellPositionResult => ({
@@ -306,7 +307,7 @@ export const resolveShellPosition = (
     "position-fallback-origin",
     "info",
     "No pointer, selection, menu, pointer, viewport or caller fallback was available; using origin.",
-    { source: "none", recoverable: true }
+    { details: { positionSource: "none" }, recoverable: true }
   ));
   return finish({ x: 0, y: 0, source: "none", cols, rowHeight: getRowHeight(runtime) });
 };
