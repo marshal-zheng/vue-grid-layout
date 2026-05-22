@@ -4,16 +4,12 @@ import type {
   DashboardGridRuntimeProjection,
   DashboardGridSettings,
   DashboardResponsiveMode,
-  DashboardResponsiveVueGridLayoutProps,
   DashboardResponsiveProfileEvent,
   DashboardResponsiveProfileResult,
   DashboardResponsiveRuntime,
   DashboardResponsiveWriteResult,
   DashboardHeightOptionOverrides,
   DashboardTargetView,
-  GridHeightRuntime,
-  GridRenderPrecision,
-  GridHeightMode,
   DashboardImportResult,
   DashboardItemLayout,
   DashboardLayoutDocument,
@@ -24,29 +20,34 @@ import type {
   ResolvedDashboardGridSettings,
   ResolveDashboardResponsiveProfileOptions,
   ThingsBoardDashboardLayoutLike,
-  ResolveGridHeightRuntimeOptions,
   WriteDashboardResponsiveRuntimeOptions,
   WriteDashboardRuntimeOptions
-} from '@marsio/vue-grid-layout'
+} from '@marsio/vue-grid-layout/dashboard'
+import type {
+  GridHeightRuntime,
+  GridRenderPrecision,
+  GridHeightMode,
+  ResolveGridHeightRuntimeOptions
+} from '@marsio/vue-grid-layout/core'
 import {
   DashboardResponsiveVueGridLayout,
   DASHBOARD_HEIGHT_DIAGNOSTIC_SOURCE,
   DASHBOARD_SCHEMA_VERSION,
-  GRID_HEIGHT_DIAGNOSTIC_CODES,
-  dashboard,
-  dashboardResponsive,
   createDashboardDocumentFromResponsiveLayouts,
   createDashboardHeightDiagnostic,
   isDashboardHeightDiagnostic,
   projectDashboardLayoutDocument,
   resolveDashboardHeightOptions,
   resolveDashboardResponsiveProfile,
-  resolveGridHeightRuntime,
   serializeDashboardLayoutDocument,
   useDashboardResponsiveProfileModel,
   writeDashboardResponsiveRuntimeToDocument,
   writeDashboardRuntimeToDocument
-} from '@marsio/vue-grid-layout'
+} from '@marsio/vue-grid-layout/dashboard'
+import {
+  GRID_HEIGHT_DIAGNOSTIC_CODES,
+  resolveGridHeightRuntime
+} from '@marsio/vue-grid-layout/core'
 
 const item: DashboardItemLayout = {
   col: 0,
@@ -179,7 +180,7 @@ const migratedResponsive = createDashboardDocumentFromResponsiveLayouts({
 })
 const targetView: DashboardTargetView = 'desktop'
 const responsiveMode: DashboardResponsiveMode = 'view'
-const responsiveComponentProps: DashboardResponsiveVueGridLayoutProps = {
+const responsiveComponentProps = {
   document: doc,
   width: 320,
   breakpoints: { mobile: 0 },
@@ -193,8 +194,6 @@ const responsiveModelFactory: typeof useDashboardResponsiveProfileModel = useDas
 
 void DASHBOARD_SCHEMA_VERSION
 void GRID_HEIGHT_DIAGNOSTIC_CODES
-void dashboard
-void dashboardResponsive
 void DashboardResponsiveVueGridLayout
 void DASHBOARD_HEIGHT_DIAGNOSTIC_SOURCE
 void createDashboardHeightDiagnostic

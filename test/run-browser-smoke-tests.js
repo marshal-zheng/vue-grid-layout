@@ -2,7 +2,7 @@
 
 const { runBrowserSmoke } = require('./vite-browser-smoke');
 
-runBrowserSmoke({ demos: ['dashboard-runtime', 'migration'] }).catch(error => {
+runBrowserSmoke().catch(error => {
   console.error(error);
   process.exit(1);
 });

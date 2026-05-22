@@ -1,5 +1,4 @@
 import {
-  dashboardEditorShell,
   getEventGridPosition,
   useDashboardEditorShell,
   type DashboardEditorShellActionResult,
@@ -10,8 +9,9 @@ import {
   type DashboardEditorShellPlacementStrategy,
   type DashboardEditorShellReferenceAdapter,
   type DashboardEditorShellWidgetAdapter
-} from '@marsio/vue-grid-layout'
-import type { GridEditorPlacementSummary, LayoutItem } from '@marsio/vue-grid-layout'
+} from '@marsio/vue-grid-layout/dashboard-editor-shell'
+import type { GridEditorPlacementSummary } from '@marsio/vue-grid-layout/editor'
+import type { LayoutItem } from '@marsio/vue-grid-layout/core'
 
 const widgetAdapter: DashboardEditorShellWidgetAdapter = {
   prepareAddWidget: ctx => ({
@@ -97,4 +97,4 @@ void cutResult
 void dropResult
 void placementSummary
 void position
-void dashboardEditorShell.useDashboardEditorShell
+void getEventGridPosition

@@ -965,11 +965,10 @@ function testStandaloneMenuBuilders() {
 }
 
 function testPublicRuntimeNamespace() {
-  const cjs = require('../lib/cjs')
-  assert.equal(typeof cjs.dashboardEditorShell.useDashboardEditorShell, 'function')
-  assert.equal(typeof cjs.useDashboardEditorShell, 'function')
-  assert.equal(typeof cjs.getEventGridPosition, 'function')
-  assert.equal(typeof cjs.runDashboardEditorShellTransaction, 'function')
+  const shellEntry = require('../lib/entries/dashboard-editor-shell')
+  assert.equal(typeof shellEntry.useDashboardEditorShell, 'function')
+  assert.equal(typeof shellEntry.getEventGridPosition, 'function')
+  assert.equal(typeof shellEntry.runDashboardEditorShellTransaction, 'function')
 }
 
 function testShellRuntimeDiagnosticsShape() {

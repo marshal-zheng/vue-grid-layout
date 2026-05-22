@@ -27,5 +27,4 @@ run(path.join(bin, 'tsc'), ['--noEmit', '--pretty', 'false']);
 run(path.join(bin, 'babel'), ['--out-dir', path.join(tmp, 'lib'), '--extensions', '.ts,.tsx', './lib']);
 run(path.join(bin, 'babel'), ['--out-dir', path.join(tmp, 'test'), '--extensions', '.ts,.tsx', './test']);
 run(process.execPath, [path.join(tmp, 'test', 'dashboard-editor-shell-core.test.js')]);
-run(process.execPath, ['script.js', '--action=build']);
 run(process.execPath, [path.join(root, 'test', 'dashboard-editor-shell-browser.test.js')]);

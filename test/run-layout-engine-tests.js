@@ -23,7 +23,6 @@ const run = (command, args) => {
 fs.rmSync(tmp, { recursive: true, force: true });
 fs.mkdirSync(tmp, { recursive: true });
 
-run(process.execPath, ['script.js', '--action=build']);
 run(path.join(bin, 'babel'), ['--out-dir', path.join(tmp, 'lib'), '--extensions', '.ts,.tsx', './lib']);
 run(path.join(bin, 'babel'), ['--out-dir', path.join(tmp, 'test'), '--extensions', '.ts,.tsx', './test']);
 run(process.execPath, [path.join(tmp, 'test', 'layout-engine-core.test.js')]);

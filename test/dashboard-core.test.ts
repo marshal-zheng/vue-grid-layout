@@ -972,18 +972,18 @@ function testResponsiveWriteBackHandlesMissingDocument() {
 }
 
 function testPublicRuntimeNamespace() {
-  const cjs = require('../lib/cjs')
-  assert.equal(cjs.DASHBOARD_SCHEMA_VERSION, DASHBOARD_SCHEMA_VERSION)
-  assert.equal(typeof cjs.dashboard.projectDashboardLayoutDocument, 'function')
-  assert.equal(typeof cjs.dashboard.migrateDashboardLayoutSettings, 'function')
-  assert.equal(typeof cjs.dashboardResponsive.resolveDashboardResponsiveProfile, 'function')
-  assert.equal(typeof cjs.migrateDashboardLayoutSettings, 'function')
-  assert.equal(typeof cjs.dashboardMigration.repairDashboardLayoutCollisions, 'function')
-  assert.equal(typeof cjs.migrateLayoutSettings, 'function')
-  assert.equal(typeof cjs.resolveGridHeightRuntime, 'function')
-  assert.equal(typeof cjs.resolveDashboardHeightOptions, 'function')
-  assert.equal(cjs.GRID_HEIGHT_DIAGNOSTIC_CODES.missingContainerHeight, 'missing-container-height')
-  assert.equal(typeof cjs.DashboardResponsiveVueGridLayout, 'object')
+  const dashboardEntry = require('../lib/entries/dashboard')
+  const layoutEngineEntry = require('../lib/entries/layout-engine')
+  const coreEntry = require('../lib/entries/core')
+  assert.equal(dashboardEntry.DASHBOARD_SCHEMA_VERSION, DASHBOARD_SCHEMA_VERSION)
+  assert.equal(typeof dashboardEntry.projectDashboardLayoutDocument, 'function')
+  assert.equal(typeof dashboardEntry.migrateDashboardLayoutSettings, 'function')
+  assert.equal(typeof dashboardEntry.resolveDashboardResponsiveProfile, 'function')
+  assert.equal(typeof layoutEngineEntry.migrateLayoutSettings, 'function')
+  assert.equal(typeof coreEntry.resolveGridHeightRuntime, 'function')
+  assert.equal(typeof dashboardEntry.resolveDashboardHeightOptions, 'function')
+  assert.equal(coreEntry.GRID_HEIGHT_DIAGNOSTIC_CODES.missingContainerHeight, 'missing-container-height')
+  assert.equal(typeof dashboardEntry.DashboardResponsiveVueGridLayout, 'object')
 }
 
 async function main() {
