@@ -9,6 +9,7 @@ import {
   moveElement,
   withLayoutItem
 } from "../utils";
+import { calcGridColWidth } from "../calculateUtils";
 import type {
   GridDragEvent,
   GridResizeEvent,
@@ -25,7 +26,8 @@ import type {
   GridInteractionModelCommitters,
   GridInteractionBlockedReason
 } from "./gridInteractionTypes";
-import type { LayoutOperationResult } from "../layout-engine";
+import type { LayoutOperationResult, LayoutResizeConstraint } from "../layout-engine";
+import type { GridItemResizeMetrics } from "../item-capabilities";
 import { useGridInteractionMachine } from "./useGridInteractionMachine";
 
 const LARGE_LAYOUT_THRESHOLD = 200;
@@ -79,6 +81,7 @@ export function useGridDragResizeInteractions({
   let activeDragHasMoved = false;
   let activeDragInteractionId: string | null = null;
   let activeResizeInteractionId: string | null = null;
+  let activeResizeConstraint: LayoutResizeConstraint | undefined;
 
   const getLayoutEngineProp = () => engineBridge.getLayoutEngineProp();
   const isLegacyLayoutEngine = () => engineBridge.isLegacyLayoutEngine();
@@ -120,6 +123,37 @@ export function useGridDragResizeInteractions({
 
   const shouldUseWorkerForCurrentLayout = () =>
     state.layout.length >= (getLayoutEngineProp()?.scheduler?.auto?.workerMinItems || 1000);
+
+  const getResizeMetrics = (): GridItemResizeMetrics | undefined => {
+    const width = props.width;
+    const padding = props.containerPadding || props.margin;
+    if (
+      typeof width !== "number" ||
+      !Number.isFinite(width) ||
+      width <= 0 ||
+      props.cols <= 0 ||
+      props.rowHeight <= 0
+    ) {
+      return undefined;
+    }
+    const colWidth = calcGridColWidth({
+      containerWidth: width,
+      cols: props.cols,
+      margin: props.margin,
+      containerPadding: padding,
+      rowHeight: props.rowHeight,
+      maxRows: props.maxRows,
+      renderPrecision: props.renderPrecision || undefined
+    });
+    if (!Number.isFinite(colWidth) || colWidth <= 0) return undefined;
+    return {
+      colWidth,
+      rowHeight: props.rowHeight,
+      margin: [props.margin[0], props.margin[1]],
+      containerPadding: [padding[0], padding[1]],
+      renderPrecision: props.renderPrecision || "integer"
+    };
+  };
 
   const clearDragBlockedFeedback = () => {
     dragBlockedReason.value = null;
@@ -176,6 +210,7 @@ export function useGridDragResizeInteractions({
     activeDragHasMoved = false;
     activeDragInteractionId = null;
     activeResizeInteractionId = null;
+    activeResizeConstraint = undefined;
     interactionMachine.reset("clear-active-interaction");
   };
 
@@ -237,6 +272,7 @@ export function useGridDragResizeInteractions({
     editor.clearGuides();
     state.oldLayout = null;
     interactionMachine.reset("resize-cleanup");
+    activeResizeConstraint = undefined;
   };
 
   const onResizeStart = (i: string, w: number, h: number, { e, node, handle }: GridResizeEvent) => {
@@ -255,6 +291,7 @@ export function useGridDragResizeInteractions({
     });
     if (!hasEffect(startTransition.effects, "EMIT_RESIZE_START")) return;
     activeResizeInteractionId = resizeInteractionId;
+    activeResizeConstraint = undefined;
     syncHistory(layout, "replace");
     activeResizeId.value = i;
     resizeBlocked.value = false;
@@ -296,12 +333,43 @@ export function useGridDragResizeInteractions({
         layout,
         resizeHandle
       );
+      const resizeIntent = editor.resolveResizeIntent?.({
+        id: i,
+        item: l,
+        layout,
+        handle: resizeHandle,
+        rawCandidate: snapped,
+        metrics: getResizeMetrics(),
+        phase: "preview"
+      });
+      if (resizeIntent?.kind === "blocked") {
+        resizeBlocked.value = true;
+        state.activeDrag = markRaw({
+          w: l.w,
+          h: l.h,
+          x: l.x,
+          y: l.y,
+          static: true,
+          i
+        });
+        editor.updateIntelligence(i, l, l, resizeHandle);
+        return;
+      }
+      const resolvedCandidate = resizeIntent?.kind === "allowed" ? resizeIntent.candidate : snapped;
+      activeResizeConstraint = resizeIntent?.kind === "allowed"
+        ? resizeIntent.constraint
+        : activeResizeConstraint;
       let previewEffect: Extract<GridInteractionEffect, { type: "PREVIEW_RESIZE" }> | undefined;
       if (activeResizeInteractionId) {
         const transition = interactionMachine.dispatch({
           type: "MOVE_RESIZE",
           interactionId: activeResizeInteractionId,
-          geometry: { x: snapped.x, y: snapped.y, w: snapped.w, h: snapped.h }
+          geometry: {
+            x: resolvedCandidate.x,
+            y: resolvedCandidate.y,
+            w: resolvedCandidate.w,
+            h: resolvedCandidate.h
+          }
         });
         previewEffect = hasEffect(transition.effects, "PREVIEW_RESIZE");
         if (!previewEffect) return;
@@ -312,11 +380,12 @@ export function useGridDragResizeInteractions({
         {
           type: "resize",
           id: i,
-          w: snapped.w,
-          h: snapped.h,
-          x: snapped.x,
-          y: snapped.y,
-          handle: resizeHandle
+          w: resolvedCandidate.w,
+          h: resolvedCandidate.h,
+          x: resolvedCandidate.x,
+          y: resolvedCandidate.y,
+          handle: resizeHandle,
+          constraint: activeResizeConstraint
         },
         result => {
           if (result.status === "stale") return;
@@ -615,8 +684,27 @@ export function useGridDragResizeInteractions({
     }
 
     if (!isLegacyLayoutEngine()) {
-      const commitGeometry = stopGeometry;
+      let commitGeometry = stopGeometry;
       const committedBefore = engineBridge.getCommitted();
+      const resizeIntent = editor.resolveResizeIntent?.({
+        id: i,
+        item: l,
+        layout,
+        handle: resizeHandle,
+        rawCandidate: commitGeometry,
+        metrics: getResizeMetrics(),
+        phase: "commit"
+      });
+      if (resizeIntent?.kind === "blocked") {
+        resizeBlocked.value = true;
+        eventBridge.emitResizeStop(layout, oldResizeItem, l, undefined, e, node);
+        cleanupResizeInteraction();
+        return;
+      }
+      if (resizeIntent?.kind === "allowed") {
+        commitGeometry = resizeIntent.candidate;
+        activeResizeConstraint = resizeIntent.constraint || activeResizeConstraint;
+      }
       runEngineCommit(
         coreResizeCommitEffect.requestId,
         {
@@ -626,7 +714,8 @@ export function useGridDragResizeInteractions({
           h: commitGeometry.h,
           x: commitGeometry.x,
           y: commitGeometry.y,
-          handle: handle as ResizeHandleAxis
+          handle: handle as ResizeHandleAxis,
+          constraint: activeResizeConstraint
         },
         result => {
           void (async () => {
@@ -669,6 +758,7 @@ export function useGridDragResizeInteractions({
             activeResizeId.value = null;
             resizeBlocked.value = false;
             activeResizeInteractionId = null;
+            activeResizeConstraint = undefined;
             autoScroll.reset();
             state.oldLayout = null;
             return;
@@ -684,6 +774,7 @@ export function useGridDragResizeInteractions({
           activeResizeId.value = null;
           resizeBlocked.value = false;
           activeResizeInteractionId = null;
+          activeResizeConstraint = undefined;
           autoScroll.reset();
           editor.clearGuides();
           state.oldLayout = null;
@@ -735,6 +826,7 @@ export function useGridDragResizeInteractions({
     activeResizeId.value = null;
     resizeBlocked.value = false;
     activeResizeInteractionId = null;
+    activeResizeConstraint = undefined;
     autoScroll.reset();
     editor.clearGuides();
 

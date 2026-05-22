@@ -1,14 +1,15 @@
-import { r as si } from "./resolve-C3SqJijI.mjs";
-import { F as Ve } from "./commands-Clty3hlM.mjs";
-import { m as ai, r as di, t as li } from "./migration-qxxmsuZ8.mjs";
-const ie = 1, te = /* @__PURE__ */ new Set(["__proto__", "prototype", "constructor"]), ci = ["s", "w", "e", "n", "sw", "nw", "se", "ne"], ui = [
+import { r as ci } from "./resolve-C3SqJijI.mjs";
+import { F as Ce } from "./commands-Q0wgqPfi.mjs";
+import { j as ui, m as fi, r as gi, t as mi } from "./migration-CPonYzEY.mjs";
+const oe = 1, ne = /* @__PURE__ */ new Set(["__proto__", "prototype", "constructor"]), hi = ["s", "w", "e", "n", "sw", "nw", "se", "ne"], pi = [
   "desktopHide",
   "mobileHide",
   "mobileHeight",
-  "mobileOrder",
+  "mobileOrder"
+], yi = [
   "preserveAspectRatio",
   "aspectRatio"
-], ee = [
+], re = [
   "col",
   "row",
   "sizeX",
@@ -28,7 +29,7 @@ const ie = 1, te = /* @__PURE__ */ new Set(["__proto__", "prototype", "construct
   "mobileOrder",
   "preserveAspectRatio",
   "aspectRatio"
-], ce = [
+], me = [
   "columns",
   "minColumns",
   "margin",
@@ -48,33 +49,33 @@ const ie = 1, te = /* @__PURE__ */ new Set(["__proto__", "prototype", "construct
   "backgroundColor",
   "backgroundSizeMode",
   "backgroundImageUrl"
-], fi = [
+], bi = [
   "widgets",
   "gridSettings",
   "breakpoints"
-], gi = [
+], wi = [
   "widgetLayouts",
   "widgets",
   "gridSettings"
-], q = (e, i) => Object.prototype.hasOwnProperty.call(e, i), I = (e) => {
+], ee = (e, i) => Object.prototype.hasOwnProperty.call(e, i), I = (e) => {
   if (!e || typeof e != "object" || Array.isArray(e)) return !1;
   const i = Object.getPrototypeOf(e);
   return i === Object.prototype || i === null;
-}, mi = (e) => I(e), Z = (e) => typeof e == "number" && Number.isFinite(e), hi = (e) => Number.isInteger(e) && e > 0, U = (e) => typeof e == "string" && e.trim() !== "", pi = (e) => {
+}, vi = (e) => I(e), ie = (e) => typeof e == "number" && Number.isFinite(e), Ii = (e) => Number.isInteger(e) && e > 0, Z = (e) => typeof e == "string" && e.trim() !== "", ki = (e) => {
   const i = Date.parse(e);
   return Number.isFinite(i);
-}, yi = (e) => typeof e == "string" && ci.indexOf(e) !== -1, bi = (e) => e === "auto" || e === "scroll" || e === "fit" || e === "fixed", wi = (e) => e === "integer" || e === "subpixel", h = (e, i, t, r = {}) => ({
+}, $i = (e) => typeof e == "string" && hi.indexOf(e) !== -1, Si = (e) => e === "auto" || e === "scroll" || e === "fit" || e === "fixed", Di = (e) => e === "integer" || e === "subpixel", h = (e, i, t, r = {}) => ({
   code: e,
   level: i,
   message: t,
   ...r
-}), P = (e, i, t = {}) => ({
+}), M = (e, i, t = {}) => ({
   code: e,
   message: i,
   ...t
-}), be = (e, i) => {
+}), ke = (e, i) => {
   const t = i.find((r) => r.level === "error");
-  return P("validation", e, {
+  return M("validation", e, {
     path: t == null ? void 0 : t.path,
     details: i
   });
@@ -101,7 +102,7 @@ const ie = 1, te = /* @__PURE__ */ new Set(["__proto__", "prototype", "construct
   if (r.indexOf(e) !== -1) return n("Dashboard JSON fields must not contain circular references.");
   const s = {}, a = r.concat(e);
   for (const l of Object.keys(e)) {
-    if (te.has(l)) {
+    if (ne.has(l)) {
       const f = h("unsafe-key", i === "sanitize" ? "warning" : "error", "Dashboard JSON fields contain a reserved key.", {
         path: `${t}.${l}`
       });
@@ -113,57 +114,57 @@ const ie = 1, te = /* @__PURE__ */ new Set(["__proto__", "prototype", "construct
     typeof d.value != "undefined" && (s[l] = d.value);
   }
   return { ok: !0, value: s, diagnostics: o };
-}, vi = (e, i, t) => {
+}, Hi = (e, i, t) => {
   const r = L(e, i, t);
   if (!r.ok) return r;
-  if (!mi(r.value)) {
+  if (!vi(r.value)) {
     const o = h("non-json-extension", i === "sanitize" ? "warning" : "error", "Dashboard field must be a JSON-safe object.", { path: t });
     return i === "sanitize" ? { ok: !0, value: {}, diagnostics: r.diagnostics.concat(o) } : { ok: !1, diagnostics: r.diagnostics.concat(o) };
   }
   return { ok: !0, value: r.value, diagnostics: r.diagnostics };
-}, pt = (e, i = {}) => {
+}, $t = (e, i = {}) => {
   var r;
   const t = L(e, (r = i.validation) != null ? r : "strict", "value");
-  if (!t.ok) throw be("Dashboard JSON value could not be cloned.", t.diagnostics);
+  if (!t.ok) throw ke("Dashboard JSON value could not be cloned.", t.diagnostics);
   return t.value;
-}, re = (e, i = "strict") => {
+}, se = (e, i = "strict") => {
   const t = L(e, i, "document");
-  if (!t.ok) throw be("Dashboard document could not be cloned.", t.diagnostics);
+  if (!t.ok) throw ke("Dashboard document could not be cloned.", t.diagnostics);
   return t.value;
-}, Ii = () => {
+}, zi = () => {
   const e = typeof globalThis != "undefined" ? globalThis.crypto : void 0;
   return e && typeof e.randomUUID == "function" ? e.randomUUID() : `dashboard-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-}, ki = () => `rev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`, $i = (e) => {
+}, Mi = () => `rev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`, Pi = (e) => {
   if (typeof e != "string") return { ok: !0, value: e };
   try {
     return { ok: !0, value: JSON.parse(e) };
   } catch (i) {
     return {
       ok: !1,
-      error: P("invalid-json", "Dashboard persistence payload is not valid JSON.", { cause: i })
+      error: M("invalid-json", "Dashboard persistence payload is not valid JSON.", { cause: i })
     };
   }
 }, E = (e, i, t) => {
   typeof t != "undefined" && (e[i] = t);
-}, J = (e, i, t, r, o, n = {}) => {
+}, q = (e, i, t, r, o, n = {}) => {
   const s = e[t];
-  return typeof s == "undefined" ? n.required ? h("invalid-item-geometry", "error", `${r}.${t} is required.`, { path: `${r}.${t}` }) : null : Z(s) ? typeof n.min == "number" && s < n.min ? o === "sanitize" && typeof n.clampMin == "number" ? (i[t] = Math.max(n.clampMin, s), h("invalid-item-geometry", "warning", `Clamped ${r}.${t}.`, { path: `${r}.${t}` })) : h("invalid-item-geometry", "error", `${r}.${t} is outside the supported range.`, { path: `${r}.${t}` }) : (i[t] = s, null) : h("invalid-item-geometry", "error", `${r}.${t} must be a finite number.`, { path: `${r}.${t}` });
-}, ue = (e, i, t, r, o) => {
+  return typeof s == "undefined" ? n.required ? h("invalid-item-geometry", "error", `${r}.${t} is required.`, { path: `${r}.${t}` }) : null : ie(s) ? typeof n.min == "number" && s < n.min ? o === "sanitize" && typeof n.clampMin == "number" ? (i[t] = Math.max(n.clampMin, s), h("invalid-item-geometry", "warning", `Clamped ${r}.${t}.`, { path: `${r}.${t}` })) : h("invalid-item-geometry", "error", `${r}.${t} is outside the supported range.`, { path: `${r}.${t}` }) : (i[t] = s, null) : h("invalid-item-geometry", "error", `${r}.${t} must be a finite number.`, { path: `${r}.${t}` });
+}, he = (e, i, t, r, o) => {
   const n = e[t];
-  return typeof n == "undefined" ? null : !Z(n) || n <= 0 ? o === "sanitize" ? (delete i[t], h("item-field-dropped", "warning", `Dropped invalid ${t}.`, { path: `${r}.${t}` })) : h("validation", "error", `${r}.${t} must be a finite positive number.`, { path: `${r}.${t}` }) : (i[t] = n, null);
-}, Te = (e, i, t, r, o) => typeof e[t] == "undefined" ? null : typeof e[t] != "boolean" ? o === "sanitize" ? (delete i[t], h("item-field-dropped", "warning", `Dropped invalid ${t}.`, { path: `${r}.${t}` })) : h("validation", "error", `${r}.${t} must be a boolean.`, { path: `${r}.${t}` }) : (i[t] = e[t], null), fe = (e, i, t, r, o) => typeof e[t] == "undefined" ? null : typeof e[t] != "string" ? o === "sanitize" ? (delete i[t], h("item-field-dropped", "warning", `Dropped invalid ${t}.`, { path: `${r}.${t}` })) : h("validation", "error", `${r}.${t} must be a string.`, { path: `${r}.${t}` }) : (i[t] = e[t], null), C = (e, i, t, r, o) => {
+  return typeof n == "undefined" ? null : !ie(n) || n <= 0 ? o === "sanitize" ? (delete i[t], h("item-field-dropped", "warning", `Dropped invalid ${t}.`, { path: `${r}.${t}` })) : h("validation", "error", `${r}.${t} must be a finite positive number.`, { path: `${r}.${t}` }) : (i[t] = n, null);
+}, Ye = (e, i, t, r, o) => typeof e[t] == "undefined" ? null : typeof e[t] != "boolean" ? o === "sanitize" ? (delete i[t], h("item-field-dropped", "warning", `Dropped invalid ${t}.`, { path: `${r}.${t}` })) : h("validation", "error", `${r}.${t} must be a boolean.`, { path: `${r}.${t}` }) : (i[t] = e[t], null), pe = (e, i, t, r, o) => typeof e[t] == "undefined" ? null : typeof e[t] != "string" ? o === "sanitize" ? (delete i[t], h("item-field-dropped", "warning", `Dropped invalid ${t}.`, { path: `${r}.${t}` })) : h("validation", "error", `${r}.${t} must be a string.`, { path: `${r}.${t}` }) : (i[t] = e[t], null), J = (e, i, t, r, o) => {
   if (typeof e[t] == "undefined") return [];
-  const n = vi(e[t], o, `${r}.${t}`);
+  const n = Hi(e[t], o, `${r}.${t}`);
   return n.ok && (i[t] = n.value), n.diagnostics;
-}, j = (e, i) => {
+}, x = (e, i) => {
   i && e.push(i);
-}, A = (e) => e.find((i) => i.level === "error"), Si = (e, i, t, r) => {
+}, N = (e) => e.find((i) => i.level === "error"), Ei = (e, i, t, r) => {
   if (typeof e.resizeHandles == "undefined") return null;
   if (!Array.isArray(e.resizeHandles))
     return r === "sanitize" ? (delete i.resizeHandles, h("item-field-dropped", "warning", "Dropped invalid resizeHandles.", { path: `${t}.resizeHandles` })) : h("validation", "error", `${t}.resizeHandles must be an array.`, { path: `${t}.resizeHandles` });
-  const o = e.resizeHandles.filter(yi);
+  const o = e.resizeHandles.filter($i);
   return o.length !== e.resizeHandles.length && r !== "sanitize" ? h("validation", "error", `${t}.resizeHandles contains an invalid handle.`, { path: `${t}.resizeHandles` }) : (o.length > 0 && (i.resizeHandles = o), o.length !== e.resizeHandles.length ? h("item-field-cleaned", "warning", "Removed invalid resize handle values.", { path: `${t}.resizeHandles` }) : null);
-}, ge = (e, i, t, r) => {
+}, ye = (e, i, t, r) => {
   const o = L(e, t, i);
   if (!o.ok) return { ok: !1, diagnostics: o.diagnostics };
   if (!I(o.value))
@@ -172,20 +173,20 @@ const ie = 1, te = /* @__PURE__ */ new Set(["__proto__", "prototype", "construct
       diagnostics: o.diagnostics.concat(h("validation", "error", `${i} must be an object.`, { path: i }))
     };
   const n = o.value, s = { ...n }, a = o.diagnostics.slice();
-  j(a, J(n, s, "col", i, t, { required: r, min: 0, clampMin: 0 })), j(a, J(n, s, "row", i, t, { required: r, min: 0, clampMin: 0 })), j(a, J(n, s, "sizeX", i, t, { required: r, min: 1, clampMin: 1 })), j(a, J(n, s, "sizeY", i, t, { required: r, min: 1, clampMin: 1 }));
+  x(a, q(n, s, "col", i, t, { required: r, min: 0, clampMin: 0 })), x(a, q(n, s, "row", i, t, { required: r, min: 0, clampMin: 0 })), x(a, q(n, s, "sizeX", i, t, { required: r, min: 1, clampMin: 1 })), x(a, q(n, s, "sizeY", i, t, { required: r, min: 1, clampMin: 1 }));
   for (const d of ["minSizeX", "minSizeY", "maxSizeX", "maxSizeY", "mobileHeight", "aspectRatio"])
-    j(a, ue(n, s, d, i, t));
-  typeof n.mobileOrder != "undefined" && j(a, J(n, s, "mobileOrder", i, t));
+    x(a, he(n, s, d, i, t));
+  typeof n.mobileOrder != "undefined" && x(a, q(n, s, "mobileOrder", i, t));
   for (const d of ["static", "draggable", "resizable", "bounded", "desktopHide", "mobileHide", "preserveAspectRatio"])
-    j(a, Te(n, s, d, i, t));
-  return j(a, Si(n, s, i, t)), a.push(...C(n, s, "extensions", i, t)), A(a) ? { ok: !1, diagnostics: a } : { ok: !0, item: s, diagnostics: a };
-}, $e = (e, i, t) => {
-  if (!Array.isArray(e) || e.length !== 2 || !Z(e[0]) || !Z(e[1])) {
+    x(a, Ye(n, s, d, i, t));
+  return x(a, Ei(n, s, i, t)), a.push(...J(n, s, "extensions", i, t)), N(a) ? { ok: !1, diagnostics: a } : { ok: !0, item: s, diagnostics: a };
+}, ze = (e, i, t) => {
+  if (!Array.isArray(e) || e.length !== 2 || !ie(e[0]) || !ie(e[1])) {
     const r = h("validation", t === "sanitize" ? "warning" : "error", `${i} must be a two-number tuple.`, { path: i });
     return t === "sanitize" ? { ok: !0, diagnostics: [r] } : { ok: !1, diagnostics: [r] };
   }
   return { ok: !0, value: [e[0], e[1]], diagnostics: [] };
-}, me = (e, i, t) => {
+}, be = (e, i, t) => {
   if (typeof e == "undefined") return { ok: !0, settings: void 0, diagnostics: [] };
   const r = L(e, t, i);
   if (!r.ok) return { ok: !1, diagnostics: r.diagnostics };
@@ -195,39 +196,39 @@ const ie = 1, te = /* @__PURE__ */ new Set(["__proto__", "prototype", "construct
   }
   const o = r.value, n = { ...o }, s = r.diagnostics.slice();
   for (const a of ["columns", "minColumns", "rowHeight", "mobileRowHeight", "minRowHeight"])
-    j(s, ue(o, n, a, i, t));
+    x(s, he(o, n, a, i, t));
   for (const a of ["outerMargin", "autoFillHeight", "mobileAutoFillHeight", "mobileDisplayLayoutFirst"])
-    j(s, Te(o, n, a, i, t));
+    x(s, Ye(o, n, a, i, t));
   for (const a of ["backgroundColor", "backgroundSizeMode", "backgroundImageUrl"])
-    j(s, fe(o, n, a, i, t));
+    x(s, pe(o, n, a, i, t));
   if (typeof o.margin != "undefined")
-    if (Z(o.margin))
+    if (ie(o.margin))
       n.margin = o.margin;
     else {
-      const a = $e(o.margin, `${i}.margin`, t);
+      const a = ze(o.margin, `${i}.margin`, t);
       if (s.push(...a.diagnostics), !a.ok) return { ok: !1, diagnostics: s };
       a.value ? n.margin = a.value : delete n.margin;
     }
   if (typeof o.containerPadding != "undefined") {
-    const a = $e(o.containerPadding, `${i}.containerPadding`, t);
+    const a = ze(o.containerPadding, `${i}.containerPadding`, t);
     if (s.push(...a.diagnostics), !a.ok) return { ok: !1, diagnostics: s };
     a.value ? n.containerPadding = a.value : delete n.containerPadding;
   }
   typeof o.viewFormat != "undefined" && o.viewFormat !== "grid" && o.viewFormat !== "list" && (t === "sanitize" ? (s.push(h("item-field-dropped", "warning", "Dropped invalid viewFormat.", { path: `${i}.viewFormat` })), delete n.viewFormat) : s.push(h("validation", "error", `${i}.viewFormat must be "grid" or "list".`, { path: `${i}.viewFormat` })));
   for (const a of ["heightMode", "mobileHeightMode"])
-    typeof o[a] != "undefined" && !bi(o[a]) && (t === "sanitize" ? (s.push(h("item-field-dropped", "warning", `Dropped invalid ${a}.`, { path: `${i}.${a}` })), delete n[a]) : s.push(h("validation", "error", `${i}.${a} must be "auto", "scroll", "fit", or "fixed".`, { path: `${i}.${a}` })));
-  if (typeof o.renderPrecision != "undefined" && !wi(o.renderPrecision) && (t === "sanitize" ? (s.push(h("item-field-dropped", "warning", "Dropped invalid renderPrecision.", { path: `${i}.renderPrecision` })), delete n.renderPrecision) : s.push(h("validation", "error", `${i}.renderPrecision must be "integer" or "subpixel".`, { path: `${i}.renderPrecision` }))), typeof o.layoutDimension != "undefined")
+    typeof o[a] != "undefined" && !Si(o[a]) && (t === "sanitize" ? (s.push(h("item-field-dropped", "warning", `Dropped invalid ${a}.`, { path: `${i}.${a}` })), delete n[a]) : s.push(h("validation", "error", `${i}.${a} must be "auto", "scroll", "fit", or "fixed".`, { path: `${i}.${a}` })));
+  if (typeof o.renderPrecision != "undefined" && !Di(o.renderPrecision) && (t === "sanitize" ? (s.push(h("item-field-dropped", "warning", "Dropped invalid renderPrecision.", { path: `${i}.renderPrecision` })), delete n.renderPrecision) : s.push(h("validation", "error", `${i}.renderPrecision must be "integer" or "subpixel".`, { path: `${i}.renderPrecision` }))), typeof o.layoutDimension != "undefined")
     if (!I(o.layoutDimension))
       t === "sanitize" ? (s.push(h("item-field-dropped", "warning", "Dropped invalid layoutDimension.", { path: `${i}.layoutDimension` })), delete n.layoutDimension) : s.push(h("validation", "error", `${i}.layoutDimension must be an object.`, { path: `${i}.layoutDimension` }));
     else {
       const a = { ...o.layoutDimension };
       typeof a.type != "undefined" && a.type !== "percentage" && a.type !== "fixed" && (t === "sanitize" ? (s.push(h("item-field-dropped", "warning", "Dropped invalid layoutDimension.type.", { path: `${i}.layoutDimension.type` })), delete a.type) : s.push(h("validation", "error", `${i}.layoutDimension.type is invalid.`, { path: `${i}.layoutDimension.type` })));
       for (const l of ["fixedWidth", "leftWidthPercentage"])
-        j(s, ue(a, a, l, `${i}.layoutDimension`, t));
-      j(s, fe(a, a, "fixedLayout", `${i}.layoutDimension`, t)), n.layoutDimension = a;
+        x(s, he(a, a, l, `${i}.layoutDimension`, t));
+      x(s, pe(a, a, "fixedLayout", `${i}.layoutDimension`, t)), n.layoutDimension = a;
     }
-  return s.push(...C(o, n, "extensions", i, t)), A(s) ? { ok: !1, diagnostics: s } : { ok: !0, settings: n, diagnostics: s };
-}, Ne = (e) => e.map((i) => ({ i, x: 0, y: 0, w: 1, h: 1 })), Se = (e, i, t, r) => {
+  return s.push(...J(o, n, "extensions", i, t)), N(s) ? { ok: !1, diagnostics: s } : { ok: !0, settings: n, diagnostics: s };
+}, Xe = (e) => e.map((i) => ({ i, x: 0, y: 0, w: 1, h: 1 })), Me = (e, i, t, r) => {
   if (typeof e == "undefined") return { ok: !0, editor: void 0, diagnostics: [] };
   const o = L(e, t, i);
   if (!o.ok) return { ok: !1, diagnostics: o.diagnostics };
@@ -236,9 +237,9 @@ const ie = 1, te = /* @__PURE__ */ new Set(["__proto__", "prototype", "construct
     return t === "sanitize" ? { ok: !0, diagnostics: o.diagnostics.concat(l) } : { ok: !1, diagnostics: o.diagnostics.concat(l) };
   }
   const n = o.value, s = { ...n }, a = o.diagnostics.slice();
-  if (hi(n.version) || (t === "sanitize" ? (a.push(h("item-field-cleaned", "warning", "Defaulted invalid editor version.", { path: `${i}.version` })), s.version = 1) : a.push(h("validation", "error", `${i}.version must be a positive integer.`, { path: `${i}.version` }))), typeof n.updatedAt != "undefined" && j(a, fe(n, s, "updatedAt", i, t)), typeof n.editorMetaById != "undefined") {
-    const l = Ve(n.editorMetaById, {
-      layout: Ne(r),
+  if (Ii(n.version) || (t === "sanitize" ? (a.push(h("item-field-cleaned", "warning", "Defaulted invalid editor version.", { path: `${i}.version` })), s.version = 1) : a.push(h("validation", "error", `${i}.version must be a positive integer.`, { path: `${i}.version` }))), typeof n.updatedAt != "undefined" && x(a, pe(n, s, "updatedAt", i, t)), typeof n.editorMetaById != "undefined") {
+    const l = Ce(n.editorMetaById, {
+      layout: Xe(r),
       removeOrphans: !0
     });
     if (l.warnings.forEach((d) => {
@@ -258,8 +259,8 @@ const ie = 1, te = /* @__PURE__ */ new Set(["__proto__", "prototype", "construct
     }), !l.ok && t !== "sanitize") return { ok: !1, diagnostics: a };
     s.editorMetaById = l.value;
   }
-  return a.push(...C(n, s, "extensions", i, t)), A(a) ? { ok: !1, diagnostics: a } : { ok: !0, editor: s, diagnostics: a };
-}, Di = (e, i, t) => {
+  return a.push(...J(n, s, "extensions", i, t)), N(a) ? { ok: !1, diagnostics: a } : { ok: !0, editor: s, diagnostics: a };
+}, Oi = (e, i, t) => {
   const r = L(e, t, i);
   if (!r.ok) return { ok: !1, diagnostics: r.diagnostics };
   if (!I(r.value))
@@ -275,18 +276,18 @@ const ie = 1, te = /* @__PURE__ */ new Set(["__proto__", "prototype", "construct
     };
   const a = {};
   for (const f of Object.keys(o.widgets)) {
-    if (!U(f) || te.has(f)) {
+    if (!Z(f) || ne.has(f)) {
       s.push(h("validation", "error", "Widget ids must be safe non-empty strings.", { path: `${i}.widgets.${f}`, itemId: f }));
       continue;
     }
-    const g = ge(o.widgets[f], `${i}.widgets.${f}`, t, !0);
+    const g = ye(o.widgets[f], `${i}.widgets.${f}`, t, !0);
     s.push(...g.diagnostics.map((m) => {
       var u;
       return { ...m, itemId: (u = m.itemId) != null ? u : f };
     })), g.ok && (a[f] = g.item);
   }
   n.widgets = a;
-  const l = me(o.gridSettings, `${i}.gridSettings`, t);
+  const l = be(o.gridSettings, `${i}.gridSettings`, t);
   if (s.push(...l.diagnostics), !l.ok) return { ok: !1, diagnostics: s };
   if (l.settings ? n.gridSettings = l.settings : delete n.gridSettings, typeof o.profiles != "undefined")
     if (!I(o.profiles))
@@ -295,7 +296,7 @@ const ie = 1, te = /* @__PURE__ */ new Set(["__proto__", "prototype", "construct
       const f = {};
       for (const g of Object.keys(o.profiles)) {
         const m = `${i}.profiles.${g}`;
-        if (!U(g) || te.has(g)) {
+        if (!Z(g) || ne.has(g)) {
           s.push(h("validation", "error", "Profile ids must be safe non-empty strings.", { path: m, profileId: g }));
           continue;
         }
@@ -310,11 +311,11 @@ const ie = 1, te = /* @__PURE__ */ new Set(["__proto__", "prototype", "construct
           else {
             const k = {};
             for (const D of Object.keys(u.widgets)) {
-              const R = ge(u.widgets[D], `${m}.widgets.${D}`, t, !1);
-              s.push(...R.diagnostics.map((b) => {
+              const j = ye(u.widgets[D], `${m}.widgets.${D}`, t, !1);
+              s.push(...j.diagnostics.map((y) => {
                 var S;
-                return { ...b, itemId: (S = b.itemId) != null ? S : D, profileId: g };
-              })), R.ok && (k[D] = R.item, q(a, D) || s.push(h("unknown-item", "warning", `Profile "${g}" references an unknown widget "${D}".`, {
+                return { ...y, itemId: (S = y.itemId) != null ? S : D, profileId: g };
+              })), j.ok && (k[D] = j.item, ee(a, D) || s.push(h("unknown-item", "warning", `Profile "${g}" references an unknown widget "${D}".`, {
                 path: `${m}.widgets.${D}`,
                 itemId: D,
                 profileId: g
@@ -322,21 +323,21 @@ const ie = 1, te = /* @__PURE__ */ new Set(["__proto__", "prototype", "construct
             }
             c.widgets = k;
           }
-        const p = me(u.gridSettings, `${m}.gridSettings`, t);
+        const p = be(u.gridSettings, `${m}.gridSettings`, t);
         if (s.push(...p.diagnostics.map((k) => ({ ...k, profileId: g }))), !p.ok) return { ok: !1, diagnostics: s };
         p.settings ? c.gridSettings = p.settings : delete c.gridSettings;
-        const v = Se(u.editor, `${m}.editor`, t, Object.keys(a));
+        const v = Me(u.editor, `${m}.editor`, t, Object.keys(a));
         if (s.push(...v.diagnostics.map((k) => ({ ...k, profileId: g }))), !v.ok) return { ok: !1, diagnostics: s };
-        v.editor ? c.editor = v.editor : delete c.editor, s.push(...C(u, c, "extensions", m, t)), f[g] = c;
+        v.editor ? c.editor = v.editor : delete c.editor, s.push(...J(u, c, "extensions", m, t)), f[g] = c;
       }
       n.profiles = f;
     }
-  const d = Se(o.editor, `${i}.editor`, t, Object.keys(a));
-  return s.push(...d.diagnostics), d.ok ? (d.editor ? n.editor = d.editor : delete n.editor, s.push(...C(o, n, "extensions", i, t)), A(s) ? { ok: !1, diagnostics: s } : { ok: !0, layout: n, diagnostics: s }) : { ok: !1, diagnostics: s };
+  const d = Me(o.editor, `${i}.editor`, t, Object.keys(a));
+  return s.push(...d.diagnostics), d.ok ? (d.editor ? n.editor = d.editor : delete n.editor, s.push(...J(o, n, "extensions", i, t)), N(s) ? { ok: !1, diagnostics: s } : { ok: !0, layout: n, diagnostics: s }) : { ok: !1, diagnostics: s };
 };
-function B(e, i = {}) {
+function F(e, i = {}) {
   var m, u;
-  const t = (m = i.currentVersion) != null ? m : ie, r = (u = i.validation) != null ? u : "strict", o = L(e, r, "document"), n = o.diagnostics.slice();
+  const t = (m = i.currentVersion) != null ? m : oe, r = (u = i.validation) != null ? u : "strict", o = L(e, r, "document"), n = o.diagnostics.slice();
   if (!o.ok)
     return {
       ok: !1,
@@ -344,7 +345,7 @@ function B(e, i = {}) {
       warnings: n.filter((c) => c.level === "warning"),
       diagnostics: n,
       error: {
-        ...be("Dashboard document must contain JSON-safe values only.", n),
+        ...ke("Dashboard document must contain JSON-safe values only.", n),
         originalPayload: e
       }
     };
@@ -355,7 +356,7 @@ function B(e, i = {}) {
       originalPayload: e,
       warnings: n.filter((p) => p.level === "warning"),
       diagnostics: n.concat(c),
-      error: P("invalid-document", c.message, { path: c.path, originalPayload: e })
+      error: M("invalid-document", c.message, { path: c.path, originalPayload: e })
     };
   }
   const s = o.value, a = { ...s };
@@ -366,7 +367,7 @@ function B(e, i = {}) {
       originalPayload: e,
       warnings: n.filter((p) => p.level === "warning"),
       diagnostics: n,
-      error: P("invalid-document", c.message, { path: c.path, originalPayload: e })
+      error: M("invalid-document", c.message, { path: c.path, originalPayload: e })
     };
   }
   if (s.kind !== "dashboard-layout") {
@@ -374,51 +375,51 @@ function B(e, i = {}) {
     n.push(c);
   }
   for (const c of ["key", "revision", "sourceId", "savedAt", "primaryLayoutId"])
-    U(s[c]) || n.push(h("invalid-document", "error", `Dashboard document ${c} must be a non-empty string.`, { path: c }));
-  if (U(s.savedAt) && !pi(s.savedAt) && n.push(h("invalid-document", "error", "Dashboard document savedAt must be a valid date string.", { path: "savedAt" })), I(s.layouts) || n.push(h("invalid-document", "error", "Dashboard document layouts must be an object map.", { path: "layouts" })), A(n)) {
-    const c = A(n);
+    Z(s[c]) || n.push(h("invalid-document", "error", `Dashboard document ${c} must be a non-empty string.`, { path: c }));
+  if (Z(s.savedAt) && !ki(s.savedAt) && n.push(h("invalid-document", "error", "Dashboard document savedAt must be a valid date string.", { path: "savedAt" })), I(s.layouts) || n.push(h("invalid-document", "error", "Dashboard document layouts must be an object map.", { path: "layouts" })), N(n)) {
+    const c = N(n);
     return {
       ok: !1,
       originalPayload: e,
       warnings: n.filter((p) => p.level === "warning"),
       diagnostics: n,
-      error: P(c.code === "invalid-document" ? "invalid-document" : "validation", c.message, {
+      error: M(c.code === "invalid-document" ? "invalid-document" : "validation", c.message, {
         path: c.path,
         originalPayload: e
       })
     };
   }
   const l = s.layouts, d = s.primaryLayoutId;
-  if (!q(l, d)) {
+  if (!ee(l, d)) {
     const c = h("invalid-document", "error", "Dashboard primaryLayoutId must point to an existing layout.", { path: "primaryLayoutId", layoutId: d });
     return n.push(c), {
       ok: !1,
       originalPayload: e,
       warnings: n.filter((p) => p.level === "warning"),
       diagnostics: n,
-      error: P("invalid-document", c.message, { path: c.path, originalPayload: e })
+      error: M("invalid-document", c.message, { path: c.path, originalPayload: e })
     };
   }
   const f = {};
   for (const c of Object.keys(l)) {
-    if (!U(c) || te.has(c)) {
+    if (!Z(c) || ne.has(c)) {
       n.push(h("invalid-document", "error", "Layout ids must be safe non-empty strings.", { path: `layouts.${c}`, layoutId: c }));
       continue;
     }
-    const p = Di(l[c], `layouts.${c}`, r);
+    const p = Oi(l[c], `layouts.${c}`, r);
     n.push(...p.diagnostics.map((v) => {
       var k;
       return { ...v, layoutId: (k = v.layoutId) != null ? k : c };
     })), p.ok && (f[c] = p.layout);
   }
-  if (typeof s.meta != "undefined" ? n.push(...C(s, a, "meta", "document", r)) : delete a.meta, A(n)) {
-    const c = A(n);
+  if (typeof s.meta != "undefined" ? n.push(...J(s, a, "meta", "document", r)) : delete a.meta, N(n)) {
+    const c = N(n);
     return {
       ok: !1,
       originalPayload: e,
       warnings: n.filter((p) => p.level === "warning"),
       diagnostics: n,
-      error: P(c.code === "invalid-document" ? "invalid-document" : "validation", c.message, {
+      error: M(c.code === "invalid-document" ? "invalid-document" : "validation", c.message, {
         path: c.path,
         details: c.details,
         originalPayload: e
@@ -443,11 +444,11 @@ function B(e, i = {}) {
     diagnostics: n
   };
 }
-function _e(e, i) {
+function Ge(e, i) {
   var m, u, c, p;
-  const t = (m = i.now) != null ? m : () => /* @__PURE__ */ new Date(), r = (u = i.revision) != null ? u : ki, o = t().toISOString(), n = (c = i.sourceId) != null ? c : I(e) && typeof e.sourceId == "string" ? e.sourceId : Ii(), s = I(e) && e.kind === "dashboard-layout" && I(e.layouts), a = s && typeof e.primaryLayoutId == "string" ? e.primaryLayoutId : "default", l = s ? e.layouts : { [a]: e }, d = (p = i.meta) != null ? p : s ? e.meta : void 0, f = {
+  const t = (m = i.now) != null ? m : () => /* @__PURE__ */ new Date(), r = (u = i.revision) != null ? u : Mi, o = t().toISOString(), n = (c = i.sourceId) != null ? c : I(e) && typeof e.sourceId == "string" ? e.sourceId : zi(), s = I(e) && e.kind === "dashboard-layout" && I(e.layouts), a = s && typeof e.primaryLayoutId == "string" ? e.primaryLayoutId : "default", l = s ? e.layouts : { [a]: e }, d = (p = i.meta) != null ? p : s ? e.meta : void 0, f = {
     ...s ? e : {},
-    dashboardSchemaVersion: ie,
+    dashboardSchemaVersion: oe,
     kind: "dashboard-layout",
     key: i.key,
     revision: r(),
@@ -456,24 +457,24 @@ function _e(e, i) {
     primaryLayoutId: a,
     layouts: l,
     ...d ? { meta: d } : {}
-  }, g = B(f, {
-    currentVersion: ie,
+  }, g = F(f, {
+    currentVersion: oe,
     validation: "strict"
   });
   if (!g.ok) throw g.error;
   return g.document;
 }
-function Hi(e, i = {}) {
+function Ri(e, i = {}) {
   var f, g, m;
-  const t = (f = i.currentVersion) != null ? f : ie, r = (g = i.migrations) != null ? g : {}, o = e, n = [], s = [];
+  const t = (f = i.currentVersion) != null ? f : oe, r = (g = i.migrations) != null ? g : {}, o = e, n = [], s = [];
   if (!I(e) || !Number.isInteger(e.dashboardSchemaVersion))
-    return { ok: !1, error: P("invalid-document", "Document has no numeric dashboardSchemaVersion.", {
+    return { ok: !1, error: M("invalid-document", "Document has no numeric dashboardSchemaVersion.", {
       path: "dashboardSchemaVersion",
       originalPayload: o
     }), originalPayload: o, migrations: n, warnings: [], diagnostics: s };
   let a = e.dashboardSchemaVersion;
   if (a > t)
-    return { ok: !1, error: P("invalid-document", `Dashboard schema version ${a} is newer than supported ${t}.`, {
+    return { ok: !1, error: M("invalid-document", `Dashboard schema version ${a} is newer than supported ${t}.`, {
       path: "dashboardSchemaVersion",
       originalPayload: o
     }), originalPayload: o, migrations: n, warnings: [], diagnostics: s };
@@ -488,7 +489,7 @@ function Hi(e, i = {}) {
         migrations: n,
         warnings: s.filter((p) => p.level === "warning"),
         diagnostics: s,
-        error: P("migration-missing", c.message, { originalPayload: o })
+        error: M("migration-missing", c.message, { originalPayload: o })
       };
     }
     try {
@@ -501,7 +502,7 @@ function Hi(e, i = {}) {
         migrations: n,
         warnings: s.filter((v) => v.level === "warning"),
         diagnostics: s,
-        error: P("migration-failed", p.message, { cause: c, originalPayload: o })
+        error: M("migration-failed", p.message, { cause: c, originalPayload: o })
       };
     }
     if (!I(l) || l.dashboardSchemaVersion !== a + 1) {
@@ -512,12 +513,12 @@ function Hi(e, i = {}) {
         migrations: n,
         warnings: s.filter((p) => p.level === "warning"),
         diagnostics: s,
-        error: P("migration-failed", c.message, { originalPayload: o })
+        error: M("migration-failed", c.message, { originalPayload: o })
       };
     }
     n.push({ fromVersion: a, toVersion: a + 1 }), a += 1;
   }
-  const d = B(l, {
+  const d = F(l, {
     currentVersion: t,
     validation: (m = i.validation) != null ? m : "strict"
   });
@@ -534,26 +535,26 @@ function Hi(e, i = {}) {
     migrations: n,
     warnings: s.filter((u) => u.level === "warning"),
     diagnostics: s,
-    error: n.length > 0 ? P("migration-failed", "Dashboard migration result failed validation.", {
+    error: n.length > 0 ? M("migration-failed", "Dashboard migration result failed validation.", {
       cause: d.error,
       originalPayload: o
     }) : d.error
   };
 }
-function yt(e, i = {}) {
+function St(e, i = {}) {
   var o;
-  const t = $i(e);
+  const t = Pi(e);
   if (!t.ok)
     return {
       ok: !1,
       error: t.error,
-      fallback: i.fallback ? re(i.fallback, "strict") : void 0,
+      fallback: i.fallback ? se(i.fallback, "strict") : void 0,
       originalPayload: e,
       migrations: [],
       warnings: [],
       diagnostics: []
     };
-  const r = Hi(t.value, {
+  const r = Ri(t.value, {
     currentVersion: i.currentVersion,
     migrations: i.migrations,
     validation: (o = i.validation) != null ? o : "strict"
@@ -567,14 +568,14 @@ function yt(e, i = {}) {
   } : {
     ok: !1,
     error: r.error,
-    fallback: i.fallback ? re(i.fallback, "strict") : void 0,
+    fallback: i.fallback ? se(i.fallback, "strict") : void 0,
     originalPayload: r.originalPayload,
     migrations: r.migrations,
     warnings: r.warnings,
     diagnostics: r.diagnostics
   };
 }
-const zi = (e) => {
+const ji = (e) => {
   var i, t, r, o, n, s, a, l;
   return {
     ...e || {},
@@ -590,7 +591,7 @@ const zi = (e) => {
     minRowHeight: e == null ? void 0 : e.minRowHeight,
     renderPrecision: (l = e == null ? void 0 : e.renderPrecision) != null ? l : "integer"
   };
-}, Mi = (e, i) => {
+}, xi = (e, i) => {
   const t = {
     i: e,
     x: i.col,
@@ -599,11 +600,26 @@ const zi = (e) => {
     h: i.sizeY
   };
   return E(t, "minW", i.minSizeX), E(t, "minH", i.minSizeY), E(t, "maxW", i.maxSizeX), E(t, "maxH", i.maxSizeY), E(t, "static", i.static), E(t, "isDraggable", i.draggable), E(t, "isResizable", i.resizable), E(t, "isBounded", i.bounded), i.resizeHandles && (t.resizeHandles = i.resizeHandles.slice()), t;
-}, Pi = (e, i) => ({
+}, Bi = (e, i) => ({
   ...e,
   ...i || {}
-}), Oi = (e, i) => e.y !== i.y ? e.y - i.y : e.x !== i.x ? e.x - i.x : e.i < i.i ? -1 : e.i > i.i ? 1 : 0, We = (e, i, t) => {
-  const r = Ve(e, { layout: i, removeOrphans: !0 });
+}), Pe = (e) => {
+  if (!e) return;
+  const i = {};
+  return E(i, "static", e.static), E(i, "draggable", e.draggable), E(i, "resizable", e.resizable), E(i, "bounded", e.bounded), e.resizeHandles && (i.resizeHandles = e.resizeHandles.slice()), E(i, "preserveAspectRatio", e.preserveAspectRatio), E(i, "aspectRatio", e.aspectRatio), Object.keys(i).length > 0 ? i : void 0;
+}, Fi = (e, i) => h(
+  e.code,
+  e.level,
+  e.message,
+  {
+    layoutId: i.layoutId,
+    profileId: i.profileId || void 0,
+    itemId: i.itemId,
+    path: e.field ? `layouts.${i.layoutId}.widgets.${i.itemId}.${e.field}` : void 0,
+    details: e.details
+  }
+), Ai = (e, i) => e.y !== i.y ? e.y - i.y : e.x !== i.x ? e.x - i.x : e.i < i.i ? -1 : e.i > i.i ? 1 : 0, Ue = (e, i, t) => {
+  const r = Ce(e, { layout: i, removeOrphans: !0 });
   return r.warnings.forEach((o) => {
     t.push(h(
       o.code === "orphan-meta" ? "orphan-editor-meta" : o.code,
@@ -615,70 +631,91 @@ const zi = (e) => {
     t.push(h(o.code, "warning", o.message, { path: o.path }));
   }), r.value;
 };
-function Ye(e, i = {}) {
-  var v, k, D, R, b, S, H;
-  const t = B(e, { validation: (v = i.validation) != null ? v : "strict" }), r = t.diagnostics.slice();
+function Je(e, i = {}) {
+  var D, j, y, S, H, P, O;
+  const t = F(e, { validation: (D = i.validation) != null ? D : "strict" }), r = t.diagnostics.slice();
   if (!t.ok)
     return { ok: !1, error: t.error, originalPayload: t.originalPayload, diagnostics: r };
   const o = t.document;
-  let n = !1, s = (k = i.layoutId) != null ? k : o.primaryLayoutId;
+  let n = !1, s = (j = i.layoutId) != null ? j : o.primaryLayoutId;
   if (s !== o.primaryLayoutId && !i.allowNonPrimary && (r.push(h("deferred-layout-slot", "info", "Only the primary dashboard layout is projected in this version.", {
     layoutId: s
   })), s = o.primaryLayoutId, n = !0), !o.layouts[s]) {
-    const y = P("invalid-document", `Dashboard layout "${s}" was not found.`, {
+    const w = M("invalid-document", `Dashboard layout "${s}" was not found.`, {
       path: `layouts.${s}`
     });
-    return r.push(h("invalid-document", "error", y.message, { layoutId: s, path: y.path })), { ok: !1, error: y, originalPayload: e, diagnostics: r };
+    return r.push(h("invalid-document", "error", w.message, { layoutId: s, path: w.path })), { ok: !1, error: w, originalPayload: e, diagnostics: r };
   }
-  Object.keys(o.layouts).forEach((y) => {
-    y !== s && y !== o.primaryLayoutId && r.push(h("deferred-layout-slot", "info", "Non-primary dashboard layout slot is preserved but not projected.", { layoutId: y }));
+  Object.keys(o.layouts).forEach((w) => {
+    w !== s && w !== o.primaryLayoutId && r.push(h("deferred-layout-slot", "info", "Non-primary dashboard layout slot is preserved but not projected.", { layoutId: w }));
   });
-  const a = o.layouts[s], l = i.profileId && ((D = a.profiles) != null && D[i.profileId]) ? i.profileId : null;
+  const a = o.layouts[s], l = i.profileId && ((y = a.profiles) != null && y[i.profileId]) ? i.profileId : null;
   i.profileId && !l && (r.push(h("profile-fallback", "warning", `Dashboard profile "${i.profileId}" was not found; projected primary layout.`, {
     layoutId: s,
     profileId: i.profileId
   })), n = !0);
-  const d = l ? (R = a.profiles) == null ? void 0 : R[l] : void 0;
-  d != null && d.widgets && Object.keys(d.widgets).forEach((y) => {
-    q(a.widgets, y) || r.push(h("unknown-item", "warning", `Profile "${l}" contains unknown widget "${y}".`, {
+  const d = l ? (S = a.profiles) == null ? void 0 : S[l] : void 0;
+  d != null && d.widgets && Object.keys(d.widgets).forEach((w) => {
+    ee(a.widgets, w) || r.push(h("unknown-item", "warning", `Profile "${l}" contains unknown widget "${w}".`, {
       layoutId: s,
       profileId: l || void 0,
-      itemId: y,
-      path: `layouts.${s}.profiles.${l}.widgets.${y}`
+      itemId: w,
+      path: `layouts.${s}.profiles.${l}.widgets.${w}`
     }));
   });
-  const f = (b = i.targetView) != null ? b : "desktop", g = [], m = {
-    ...((S = a.editor) == null ? void 0 : S.editorMetaById) || {}
+  const f = (H = i.targetView) != null ? H : "desktop", g = [], m = {}, u = {}, c = {
+    ...((P = a.editor) == null ? void 0 : P.editorMetaById) || {}
   };
-  (H = d == null ? void 0 : d.editor) != null && H.editorMetaById && Object.keys(d.editor.editorMetaById).forEach((y) => {
-    var z, O;
-    m[y] = {
-      ...m[y] || {},
-      ...(O = (z = d.editor) == null ? void 0 : z.editorMetaById) == null ? void 0 : O[y]
+  (O = d == null ? void 0 : d.editor) != null && O.editorMetaById && Object.keys(d.editor.editorMetaById).forEach((w) => {
+    var b, B;
+    c[w] = {
+      ...c[w] || {},
+      ...(B = (b = d.editor) == null ? void 0 : b.editorMetaById) == null ? void 0 : B[w]
     };
-  }), Object.keys(a.widgets).forEach((y) => {
-    var F;
-    const z = Pi(a.widgets[y], (F = d == null ? void 0 : d.widgets) == null ? void 0 : F[y]);
-    g.push(Mi(y, z));
-    const O = { ...m[y] || {} };
-    (f === "mobile" ? z.mobileHide === !0 : z.desktopHide === !0) ? (O.visible === !0 && r.push(h("editor-capability-conflict", "warning", "Dashboard visibility overrides editor metadata.", {
+  }), Object.keys(a.widgets).forEach((w) => {
+    var De, He;
+    const b = a.widgets[w], B = (De = d == null ? void 0 : d.widgets) == null ? void 0 : De[w], R = Bi(a.widgets[w], (He = d == null ? void 0 : d.widgets) == null ? void 0 : He[w]), T = xi(w, R);
+    g.push(T);
+    const A = { ...c[w] || {} };
+    (f === "mobile" ? R.mobileHide === !0 : R.desktopHide === !0) ? (A.visible === !0 && r.push(h("editor-capability-conflict", "warning", "Dashboard visibility overrides editor metadata.", {
       layoutId: s,
       profileId: l || void 0,
-      itemId: y
-    })), O.visible = !1) : typeof O.visible == "undefined" && (O.visible = !0), z.resizable === !1 && (O.resizable === !0 && r.push(h("editor-capability-conflict", "warning", "Dashboard resizable=false overrides editor metadata.", {
+      itemId: w
+    })), A.visible = !1) : typeof A.visible == "undefined" && (A.visible = !0), R.resizable === !1 && (A.resizable === !0 && r.push(h("editor-capability-conflict", "warning", "Dashboard resizable=false overrides editor metadata.", {
       layoutId: s,
       profileId: l || void 0,
-      itemId: y
-    })), O.resizable = !1), m[y] = O, ui.forEach((x) => {
-      typeof z[x] != "undefined" && r.push(h("unsupported-field", "info", `${x} is preserved in the dashboard document but not written to LayoutItem.`, {
+      itemId: w
+    })), A.resizable = !1), c[w] = A;
+    const Y = ui({
+      item: T,
+      dashboard: Pe(b),
+      profile: Pe(B),
+      editor: A,
+      preserveUnknownFields: !0
+    });
+    m[w] = Y, Y.aspectRatio && (u[w] = Y.aspectRatio), Y.diagnostics.forEach((V) => {
+      r.push(Fi(V, {
+        layoutId: s,
+        profileId: l,
+        itemId: w
+      }));
+    }), pi.forEach((V) => {
+      typeof R[V] != "undefined" && r.push(h("unsupported-field", "info", `${V} is preserved in the dashboard document but not written to LayoutItem.`, {
         layoutId: s,
         profileId: l || void 0,
-        itemId: y,
-        path: `layouts.${s}.widgets.${y}.${x}`
+        itemId: w,
+        path: `layouts.${s}.widgets.${w}.${V}`
+      }));
+    }), yi.forEach((V) => {
+      typeof R[V] != "undefined" && r.push(h("item-capability.sidecar-projected", "info", `${V} was projected through capability sidecar and not written to LayoutItem.`, {
+        layoutId: s,
+        profileId: l || void 0,
+        itemId: w,
+        path: `layouts.${s}.widgets.${w}.${V}`
       }));
     });
-  }), g.sort(Oi);
-  const u = We(m, g, r), c = zi({
+  }), g.sort(Ai);
+  const p = Ue(c, g, r), v = ji({
     ...a.gridSettings || {},
     ...(d == null ? void 0 : d.gridSettings) || {}
   });
@@ -688,23 +725,25 @@ function Ye(e, i = {}) {
     path: d != null && d.gridSettings ? `layouts.${s}.profiles.${l}.gridSettings` : `layouts.${s}.gridSettings`
   })), { ok: !0, projection: {
     layout: g,
-    gridSettings: c,
-    editorMetaById: u,
+    gridSettings: v,
+    editorMetaById: p,
+    capabilitiesById: m,
+    resizeConstraintsById: Object.keys(u).length > 0 ? u : void 0,
     layoutId: s,
     profileId: l,
     fallbackApplied: n,
     diagnostics: r
   }, diagnostics: r };
 }
-const De = (e) => {
+const Ee = (e) => {
   const i = {
     col: e.x,
     row: e.y,
     sizeX: e.w,
     sizeY: e.h
   };
-  return E(i, "minSizeX", e.minW), E(i, "minSizeY", e.minH), E(i, "maxSizeX", e.maxW), E(i, "maxSizeY", e.maxH), E(i, "static", e.static), E(i, "draggable", e.isDraggable), E(i, "resizable", e.isResizable), E(i, "bounded", e.isBounded), e.resizeHandles && (i.resizeHandles = e.resizeHandles.slice()), i;
-}, He = (e, i) => {
+  return E(i, "minSizeX", e.minW), E(i, "minSizeY", e.minH), E(i, "maxSizeX", e.maxW), E(i, "maxSizeY", e.maxH), i;
+}, Oe = (e, i) => {
   if (!e && !i) return;
   const t = {};
   return Object.keys(e || {}).forEach((r) => {
@@ -715,20 +754,20 @@ const De = (e) => {
       ...i[r]
     };
   }), t;
-}, Ei = (e) => {
+}, Li = (e) => {
   if (!e) return null;
   const i = new Set(e.filter(Boolean));
   return (t) => i.has(t);
-}, ze = (e, i) => {
+}, Re = (e, i) => {
   if (!e || !i) return e;
   const t = new Set(i.filter(Boolean)), r = {};
   return Object.keys(e).forEach((o) => {
     t.has(o) && (r[o] = e[o]);
   }), Object.keys(r).length > 0 ? r : void 0;
-}, Ri = (e) => (e.editor = e.editor || { version: 1 }, e.editor);
-function Ce(e, i, t = {}) {
-  var c, p, v, k, D, R;
-  const r = B(e, { validation: (c = t.validation) != null ? c : "strict" }), o = r.diagnostics.slice(), n = r.ok ? r.document : re(e, "sanitize");
+}, Vi = (e) => (e.editor = e.editor || { version: 1 }, e.editor);
+function Ke(e, i, t = {}) {
+  var c, p, v, k, D, j;
+  const r = F(e, { validation: (c = t.validation) != null ? c : "strict" }), o = r.diagnostics.slice(), n = r.ok ? r.document : se(e, "sanitize");
   if (!r.ok)
     return {
       ok: !1,
@@ -737,12 +776,12 @@ function Ce(e, i, t = {}) {
       originalPayload: r.originalPayload,
       diagnostics: o
     };
-  const s = re(n, "strict"), a = (p = t.layoutId) != null ? p : s.primaryLayoutId, l = s.layouts[a];
+  const s = se(n, "strict"), a = (p = t.layoutId) != null ? p : s.primaryLayoutId, l = s.layouts[a];
   if (!l) {
-    const b = h("invalid-document", "error", `Dashboard layout "${a}" was not found.`, { layoutId: a });
-    return o.push(b), {
+    const y = h("invalid-document", "error", `Dashboard layout "${a}" was not found.`, { layoutId: a });
+    return o.push(y), {
       ok: !1,
-      error: P("invalid-document", b.message, { path: `layouts.${a}` }),
+      error: M("invalid-document", y.message, { path: `layouts.${a}` }),
       document: s,
       diagnostics: o
     };
@@ -751,13 +790,13 @@ function Ce(e, i, t = {}) {
   if (t.profileId) {
     if (l.profiles = l.profiles || {}, !l.profiles[t.profileId]) {
       if (!t.createMissingProfile) {
-        const b = h("profile-fallback", "error", `Dashboard profile "${t.profileId}" was not found.`, {
+        const y = h("profile-fallback", "error", `Dashboard profile "${t.profileId}" was not found.`, {
           layoutId: a,
           profileId: t.profileId
         });
-        return o.push(b), {
+        return o.push(y), {
           ok: !1,
-          error: P("validation", b.message, { path: `layouts.${a}.profiles.${t.profileId}` }),
+          error: M("validation", y.message, { path: `layouts.${a}.profiles.${t.profileId}` }),
           document: s,
           diagnostics: o
         };
@@ -767,43 +806,43 @@ function Ce(e, i, t = {}) {
     l.profiles[t.profileId].widgets = l.profiles[t.profileId].widgets || {}, d = l.profiles[t.profileId].widgets;
   } else
     d = l.widgets;
-  const f = Ei(t.writeItemIds), g = new Set(i.layout.map((b) => b.i));
-  t.removeMissingItems && ((v = t.writeItemIds) != null && v.length) && t.writeItemIds.filter(Boolean).forEach((b) => {
+  const f = Li(t.writeItemIds), g = new Set(i.layout.map((y) => y.i));
+  t.removeMissingItems && ((v = t.writeItemIds) != null && v.length) && t.writeItemIds.filter(Boolean).forEach((y) => {
     var S;
-    g.has(b) || (delete l.widgets[b], delete d[b], Object.values(l.profiles || {}).forEach((H) => {
-      var y;
-      H.widgets && delete H.widgets[b], (y = H.editor) != null && y.editorMetaById && delete H.editor.editorMetaById[b];
-    }), (S = l.editor) != null && S.editorMetaById && delete l.editor.editorMetaById[b]);
+    g.has(y) || (delete l.widgets[y], delete d[y], Object.values(l.profiles || {}).forEach((H) => {
+      var P;
+      H.widgets && delete H.widgets[y], (P = H.editor) != null && P.editorMetaById && delete H.editor.editorMetaById[y];
+    }), (S = l.editor) != null && S.editorMetaById && delete l.editor.editorMetaById[y]);
   });
-  for (const b of i.layout) {
-    const S = b.i;
+  for (const y of i.layout) {
+    const S = y.i;
     if (f && !f(S)) continue;
-    const H = q(l.widgets, S);
+    const H = ee(l.widgets, S);
     if (!H && !t.createMissingItems) {
-      const z = h("unknown-item", "error", `Runtime layout contains unknown dashboard widget "${S}".`, {
+      const O = h("unknown-item", "error", `Runtime layout contains unknown dashboard widget "${S}".`, {
         layoutId: a,
         profileId: t.profileId,
         itemId: S
       });
-      return o.push(z), {
+      return o.push(O), {
         ok: !1,
-        error: P("unknown-item", z.message, { details: { itemId: S } }),
+        error: M("unknown-item", O.message, { details: { itemId: S } }),
         document: s,
         diagnostics: o
       };
     }
-    H || (l.widgets[S] = De(b));
-    const y = d[S] || {};
+    H || (l.widgets[S] = Ee(y));
+    const P = d[S] || {};
     d[S] = {
-      ...y,
-      ...De(b)
+      ...P,
+      ...Ee(y)
     };
   }
   if (i.gridSettings)
     if (t.profileId) {
-      const b = (k = l.profiles) == null ? void 0 : k[t.profileId];
-      b && (b.gridSettings = {
-        ...b.gridSettings || {},
+      const y = (k = l.profiles) == null ? void 0 : k[t.profileId];
+      y && (y.gridSettings = {
+        ...y.gridSettings || {},
         ...i.gridSettings
       });
     } else
@@ -811,29 +850,29 @@ function Ce(e, i, t = {}) {
         ...l.gridSettings || {},
         ...i.gridSettings
       };
-  const m = He(
-    ze(t.editorMetaById, t.writeItemIds),
-    ze(i.editorMetaById, t.writeItemIds)
+  const m = Oe(
+    Re(t.editorMetaById, t.writeItemIds),
+    Re(i.editorMetaById, t.writeItemIds)
   );
   if (m) {
-    const b = t.profileId ? (D = l.profiles) == null ? void 0 : D[t.profileId] : l, S = Ri(b);
-    S.editorMetaById = He(S.editorMetaById, m), Object.keys(m).forEach((H) => {
-      if (!q(l.widgets, H)) {
+    const y = t.profileId ? (D = l.profiles) == null ? void 0 : D[t.profileId] : l, S = Vi(y);
+    S.editorMetaById = Oe(S.editorMetaById, m), Object.keys(m).forEach((H) => {
+      if (!ee(l.widgets, H)) {
         o.push(h("orphan-editor-meta", "warning", `Editor metadata references unknown widget "${H}".`, {
           layoutId: a,
           itemId: H
         }));
         return;
       }
-      const y = m[H], z = t.profileId ? d[H] || {} : l.widgets[H];
-      typeof y.resizable == "boolean" && (z.resizable = y.resizable, d[H] = z), t.targetView && typeof y.visible == "boolean" && (t.targetView === "mobile" ? z.mobileHide = y.visible === !1 : z.desktopHide = y.visible === !1, d[H] = z);
-    }), S.editorMetaById = We(
+      const P = m[H], O = t.profileId ? d[H] || {} : l.widgets[H];
+      typeof P.resizable == "boolean" && (O.resizable = P.resizable, d[H] = O), t.targetView && typeof P.visible == "boolean" && (t.targetView === "mobile" ? O.mobileHide = P.visible === !1 : O.desktopHide = P.visible === !1, d[H] = O);
+    }), S.editorMetaById = Ue(
       S.editorMetaById || {},
-      Ne(Object.keys(l.widgets)),
+      Xe(Object.keys(l.widgets)),
       o
     );
   }
-  const u = B(s, { validation: (R = t.validation) != null ? R : "strict" });
+  const u = F(s, { validation: (j = t.validation) != null ? j : "strict" });
   return o.push(...u.diagnostics), u.ok ? {
     ok: !0,
     document: u.document,
@@ -846,24 +885,24 @@ function Ce(e, i, t = {}) {
     diagnostics: o
   };
 }
-const Xe = (e, i) => {
+const qe = (e, i) => {
   const t = {};
   return i.forEach((r) => {
     typeof e[r] != "undefined" && (t[r] = e[r]);
   }), t;
-}, W = (e, i) => {
+}, G = (e, i) => {
   const t = {};
   return Object.keys(e).forEach((r) => {
     i.indexOf(r) === -1 && (t[r] = e[r]);
   }), t;
-}, oe = (e, i, t, r) => {
+}, ae = (e, i, t, r) => {
   if (Object.keys(e).length === 0) return;
   const o = L(e, "sanitize", `${t}.extensions.thingsBoard`);
   if (i.push(...o.diagnostics), i.push(h("unsupported-field", "warning", r, { path: t })), !(!o.ok || !I(o.value) || Object.keys(o.value).length === 0))
     return o.value;
-}, Me = (e, i, t) => {
+}, je = (e, i, t) => {
   if (!I(e)) return;
-  const r = Xe(e, ce), o = W(e, ce), n = oe(
+  const r = qe(e, me), o = G(e, me), n = ae(
     o,
     i,
     t,
@@ -873,15 +912,15 @@ const Xe = (e, i) => {
     ...r.extensions || {},
     thingsBoard: n
   });
-  const s = me(r, t, "sanitize");
+  const s = be(r, t, "sanitize");
   return i.push(...s.diagnostics), s.ok ? s.settings : void 0;
-}, Pe = (e, i, t, r) => {
+}, xe = (e, i, t, r) => {
   if (!I(e))
     return i.push(h("invalid-item-geometry", "error", "ThingsBoard widget must be an object.", { path: t })), null;
-  const o = I(e.layout) ? e.layout : e, n = Xe(o, ee), s = I(e.layout) ? W(o, ee) : {}, a = I(e.layout) ? {
-    ...W(e, ["layout"]),
+  const o = I(e.layout) ? e.layout : e, n = qe(o, re), s = I(e.layout) ? G(o, re) : {}, a = I(e.layout) ? {
+    ...G(e, ["layout"]),
     ...Object.keys(s).length > 0 ? { layout: s } : {}
-  } : W(e, ee), l = oe(
+  } : G(e, re), l = ae(
     a,
     i,
     t,
@@ -891,10 +930,10 @@ const Xe = (e, i) => {
     ...n.extensions || {},
     thingsBoard: l
   });
-  const d = ge(n, t, "sanitize", r);
+  const d = ye(n, t, "sanitize", r);
   return i.push(...d.diagnostics), d.ok ? d.item : null;
 };
-function bt(e, i = {}) {
+function Dt(e, i = {}) {
   var d;
   const t = [];
   if (!I(e))
@@ -902,17 +941,17 @@ function bt(e, i = {}) {
       ok: !1,
       originalPayload: e,
       diagnostics: t,
-      error: P("invalid-document", "ThingsBoard dashboard layout must be an object.")
+      error: M("invalid-document", "ThingsBoard dashboard layout must be an object.")
     };
   const r = {}, o = I(e.widgets) ? e.widgets : {};
   Object.keys(o).forEach((f) => {
-    const g = Pe(o[f], t, `widgets.${f}`, !0);
+    const g = xe(o[f], t, `widgets.${f}`, !0);
     g && (r[f] = g);
   });
   const n = {
     widgets: r,
-    ...e.gridSettings ? { gridSettings: Me(e.gridSettings, t, "gridSettings") } : {}
-  }, s = W(e, fi), a = oe(
+    ...e.gridSettings ? { gridSettings: je(e.gridSettings, t, "gridSettings") } : {}
+  }, s = G(e, bi), a = ae(
     s,
     t,
     "document",
@@ -927,23 +966,23 @@ function bt(e, i = {}) {
     if (!I(l[f])) return;
     const g = l[f], m = I(g.widgetLayouts) ? g.widgetLayouts : I(g.widgets) ? g.widgets : {}, u = {};
     Object.keys(m).forEach((p) => {
-      const v = Pe(m[p], t, `breakpoints.${f}.widgetLayouts.${p}`, !1);
+      const v = xe(m[p], t, `breakpoints.${f}.widgetLayouts.${p}`, !1);
       v && (u[p] = v);
     });
-    const c = oe(
-      W(g, gi),
+    const c = ae(
+      G(g, wi),
       t,
       `breakpoints.${f}`,
       "ThingsBoard breakpoint business fields were preserved in extensions."
     );
     n.profiles = n.profiles || {}, n.profiles[f] = {
       widgets: u,
-      ...g.gridSettings ? { gridSettings: Me(g.gridSettings, t, `breakpoints.${f}.gridSettings`) } : {},
+      ...g.gridSettings ? { gridSettings: je(g.gridSettings, t, `breakpoints.${f}.gridSettings`) } : {},
       ...c ? { extensions: { thingsBoard: c } } : {}
     };
   });
   try {
-    return { ok: !0, document: _e(n, {
+    return { ok: !0, document: Ge(n, {
       key: (d = i.key) != null ? d : "thingsboard-dashboard",
       sourceId: i.sourceId,
       meta: i.meta,
@@ -955,33 +994,33 @@ function bt(e, i = {}) {
       ok: !1,
       originalPayload: e,
       diagnostics: t,
-      error: P("validation", "Imported ThingsBoard dashboard layout failed validation.", { cause: f })
+      error: M("validation", "Imported ThingsBoard dashboard layout failed validation.", { cause: f })
     };
   }
 }
-const Oe = (e) => {
+const Be = (e) => {
   var t;
   if (!e) return;
   const i = {};
   return I((t = e.extensions) == null ? void 0 : t.thingsBoard) && Object.keys(e.extensions.thingsBoard).forEach((r) => {
     var o;
     i[r] = ((o = e.extensions) == null ? void 0 : o.thingsBoard)[r];
-  }), ce.forEach((r) => {
+  }), me.forEach((r) => {
     typeof e[r] != "undefined" && (i[r] = e[r]);
   }), i;
-}, Ee = (e) => {
+}, Fe = (e) => {
   var t;
   const i = {};
   return I((t = e.extensions) == null ? void 0 : t.thingsBoard) && Object.keys(e.extensions.thingsBoard).forEach((r) => {
     var o;
     i[r] = ((o = e.extensions) == null ? void 0 : o.thingsBoard)[r];
-  }), ee.forEach((r) => {
+  }), re.forEach((r) => {
     typeof e[r] != "undefined" && (i[r] = e[r]);
   }), i;
 };
-function wt(e, i = {}) {
+function Ht(e, i = {}) {
   var d, f;
-  const t = B(e), r = t.diagnostics.slice();
+  const t = F(e), r = t.diagnostics.slice();
   if (!t.ok) return { ok: !1, error: t.error, diagnostics: r };
   const o = t.document, n = (d = i.layoutId) != null ? d : o.primaryLayoutId, s = o.layouts[n];
   if (!s) {
@@ -989,56 +1028,56 @@ function wt(e, i = {}) {
     return r.push(g), {
       ok: !1,
       diagnostics: r,
-      error: P("invalid-document", g.message, { path: `layouts.${n}` })
+      error: M("invalid-document", g.message, { path: `layouts.${n}` })
     };
   }
   const a = {};
   Object.keys(s.widgets).forEach((g) => {
-    a[g] = Ee(s.widgets[g]);
+    a[g] = Fe(s.widgets[g]);
   });
   const l = {};
   return Object.keys(s.profiles || {}).forEach((g) => {
     var c;
     const m = s.profiles[g], u = {};
     Object.keys(m.widgets || {}).forEach((p) => {
-      u[p] = Ee(m.widgets[p]);
+      u[p] = Fe(m.widgets[p]);
     }), l[g] = {
       ...I((c = m.extensions) == null ? void 0 : c.thingsBoard) ? m.extensions.thingsBoard : {},
       widgetLayouts: u,
-      ...m.gridSettings ? { gridSettings: Oe(m.gridSettings) } : {}
+      ...m.gridSettings ? { gridSettings: Be(m.gridSettings) } : {}
     };
   }), {
     ok: !0,
     value: {
       ...I((f = s.extensions) == null ? void 0 : f.thingsBoard) ? s.extensions.thingsBoard : {},
       widgets: a,
-      ...s.gridSettings ? { gridSettings: Oe(s.gridSettings) } : {},
+      ...s.gridSettings ? { gridSettings: Be(s.gridSettings) } : {},
       ...Object.keys(l).length > 0 ? { breakpoints: l } : {}
     },
     diagnostics: r
   };
 }
-const le = "default", Re = 12, ne = 10, he = [0, 0], xe = 150, Ge = "grid-height-runtime", xi = [
+const fe = "default", Ae = 12, de = 10, we = [0, 0], Le = 150, Ze = "grid-height-runtime", Ti = [
   "preserveAspectRatio",
   "aspectRatio"
-], ji = [
+], Ni = [
   "mobileDisplayLayoutFirst",
   "layoutDimension",
   "backgroundColor",
   "backgroundSizeMode",
   "backgroundImageUrl"
-], N = (e, i) => Object.prototype.hasOwnProperty.call(e, i), M = (e) => typeof e == "number" && Number.isFinite(e), V = (e) => {
+], C = (e, i) => Object.prototype.hasOwnProperty.call(e, i), z = (e) => typeof e == "number" && Number.isFinite(e), _ = (e) => {
   if (!e || typeof e != "object" || Array.isArray(e)) return !1;
   const i = Object.getPrototypeOf(e);
   return i === Object.prototype || i === null;
-}, T = (e, i) => M(e) && e > 0 ? Math.floor(e) : i, Q = (e) => Array.isArray(e) && e.length === 2 && M(e[0]) && M(e[1]), pe = (e) => {
+}, W = (e, i) => z(e) && e > 0 ? Math.floor(e) : i, te = (e) => Array.isArray(e) && e.length === 2 && z(e[0]) && z(e[1]), ve = (e) => {
   const i = JSON.stringify(e);
   return typeof i == "undefined" ? e : JSON.parse(i);
-}, ye = (e) => e.map((i) => ({ ...i })), Bi = (e) => {
+}, Ie = (e) => e.map((i) => ({ ...i })), _i = (e) => {
   if (!e) return null;
   const i = new Set(e.filter(Boolean));
   return (t) => i.has(t);
-}, se = (e) => e === "auto" || e === "scroll" || e === "fit" || e === "fixed", Fi = (e) => e === "integer" || e === "subpixel", Li = (e, i = [ne, ne]) => Q(e) ? [e[0], e[1]] : M(e) ? [e, e] : [i[0], i[1]], Y = (e, i, t = {}) => ({
+}, le = (e) => e === "auto" || e === "scroll" || e === "fit" || e === "fixed", Wi = (e) => e === "integer" || e === "subpixel", Ci = (e, i = [de, de]) => te(e) ? [e[0], e[1]] : z(e) ? [e, e] : [i[0], i[1]], U = (e, i, t = {}) => ({
   code: e,
   message: i,
   ...t
@@ -1051,10 +1090,10 @@ function $(e, i, t, r = {}) {
     ...r
   };
 }
-function vt(e) {
-  return V(e.details) && e.details.source === Ge;
+function zt(e) {
+  return _(e.details) && e.details.source === Ze;
 }
-function Ai(e, i) {
+function Yi(e, i) {
   return {
     code: e.code,
     level: e.level,
@@ -1065,21 +1104,21 @@ function Ai(e, i) {
     layoutId: e.layoutId || i.layoutId,
     targetView: e.targetView || i.targetView,
     details: {
-      ...V(e.details) ? e.details : { value: e.details },
-      source: Ge,
+      ..._(e.details) ? e.details : { value: e.details },
+      source: Ze,
       prop: e.prop
     }
   };
 }
-const Vi = (e, i) => Object.prototype.hasOwnProperty.call(e, i), Ti = (e, i, t, r) => {
-  const o = Vi(t, "rowHeight") ? t.rowHeight : i.rowHeight;
-  return si({
+const Xi = (e, i) => Object.prototype.hasOwnProperty.call(e, i), Gi = (e, i, t, r) => {
+  const o = Xi(t, "rowHeight") ? t.rowHeight : i.rowHeight;
+  return ci({
     layout: e,
     heightMode: t.heightMode,
     rowHeight: o,
     minRowHeight: t.minRowHeight,
-    margin: Li(i.margin),
-    containerPadding: i.containerPadding || he,
+    margin: Ci(i.margin),
+    containerPadding: i.containerPadding || we,
     containerHeight: t.containerHeight,
     autoMeasureContainerHeight: t.autoMeasureContainerHeight,
     renderPrecision: t.renderPrecision,
@@ -1090,13 +1129,13 @@ const Vi = (e, i) => Object.prototype.hasOwnProperty.call(e, i), Ti = (e, i, t, 
       targetView: r.targetView
     }
   });
-}, Je = (e) => Object.keys(e || {}).filter((i) => M(e[i])).sort((i, t) => {
+}, Qe = (e) => Object.keys(e || {}).filter((i) => z(e[i])).sort((i, t) => {
   const r = e[i] - e[t];
   return r !== 0 ? r : i.localeCompare(t);
-}), Ni = (e, i) => {
-  const t = e.breakpoints || {}, r = Je(t);
+}), Ui = (e, i) => {
+  const t = e.breakpoints || {}, r = Qe(t);
   if (e.breakpoint)
-    return N(t, e.breakpoint) || i.push($(
+    return C(t, e.breakpoint) || i.push($(
       "invalid-breakpoint",
       "warning",
       `Breakpoint "${e.breakpoint}" is not present in the breakpoint map.`,
@@ -1108,8 +1147,8 @@ const Vi = (e, i) => Object.prototype.hasOwnProperty.call(e, i), Ti = (e, i, t, 
       "warning",
       "No breakpoints were provided; default dashboard layout will be used.",
       { details: { width: e.width } }
-    )), le;
-  if (!M(e.width))
+    )), fe;
+  if (!z(e.width))
     return i.push($(
       "invalid-breakpoint",
       "warning",
@@ -1122,7 +1161,7 @@ const Vi = (e, i) => Object.prototype.hasOwnProperty.call(e, i), Ti = (e, i, t, 
     e.width > t[s] && (o = s);
   }
   return o;
-}, _i = (e) => e === "desktop" || e === "mobile", Wi = (e, i, t) => {
+}, Ji = (e) => e === "desktop" || e === "mobile", Ki = (e, i, t) => {
   if (i.targetView)
     return { targetView: i.targetView, source: "explicit" };
   const r = i.targetViewRule;
@@ -1133,7 +1172,7 @@ const Vi = (e, i) => Object.prototype.hasOwnProperty.call(e, i), Ti = (e, i, t, 
         requestedBreakpoint: e,
         breakpoints: i.breakpoints || {}
       });
-      if (_i(n))
+      if (Ji(n))
         return { targetView: n, source: "resolver" };
     } catch (n) {
       t.push($(
@@ -1145,7 +1184,7 @@ const Vi = (e, i) => Object.prototype.hasOwnProperty.call(e, i), Ti = (e, i, t, 
     }
   if (Array.isArray(r == null ? void 0 : r.mobileBreakpointIds) && r.mobileBreakpointIds.indexOf(e) !== -1)
     return { targetView: "mobile", source: "breakpoint-id" };
-  if (M(r == null ? void 0 : r.mobileMaxWidth) && M(i.width) && i.width <= r.mobileMaxWidth)
+  if (z(r == null ? void 0 : r.mobileMaxWidth) && z(i.width) && i.width <= r.mobileMaxWidth)
     return { targetView: "mobile", source: "width" };
   const o = e === "xs" || e === "xxs" ? "mobile" : "desktop";
   return t.push($(
@@ -1154,17 +1193,17 @@ const Vi = (e, i) => Object.prototype.hasOwnProperty.call(e, i), Ti = (e, i, t, 
     "Target view was inferred by the built-in default rule.",
     { details: { requestedBreakpoint: e, targetView: o } }
   )), { targetView: o, source: "default" };
-}, Yi = (e, i, t, r) => M(e) || Q(e) ? e : (i.push($(
+}, qi = (e, i, t, r) => z(e) || te(e) ? e : (i.push($(
   "settings-default",
   "info",
   "Dashboard grid setting margin was missing; default value was used.",
-  { layoutId: t, profileId: r || void 0, path: "gridSettings.margin", details: { value: ne } }
-)), ne), Ci = (e, i, t, r) => Q(e) ? [e[0], e[1]] : (i.push($(
+  { layoutId: t, profileId: r || void 0, path: "gridSettings.margin", details: { value: de } }
+)), de), Zi = (e, i, t, r) => te(e) ? [e[0], e[1]] : (i.push($(
   "settings-default",
   "info",
   "Dashboard grid setting containerPadding was missing; default value was used.",
-  { layoutId: t, profileId: r || void 0, path: "gridSettings.containerPadding", details: { value: he } }
-)), he.slice()), Xi = (e, i, t, r, o) => {
+  { layoutId: t, profileId: r || void 0, path: "gridSettings.containerPadding", details: { value: we } }
+)), we.slice()), Qi = (e, i, t, r, o) => {
   var s, a, l;
   const n = {
     ...e || {},
@@ -1174,33 +1213,33 @@ const Vi = (e, i) => Object.prototype.hasOwnProperty.call(e, i), Ti = (e, i, t, 
     "settings-default",
     "info",
     "Dashboard grid setting columns was missing; default value was used.",
-    { layoutId: r, profileId: o || void 0, path: "gridSettings.columns", details: { value: Re } }
+    { layoutId: r, profileId: o || void 0, path: "gridSettings.columns", details: { value: Ae } }
   )), typeof n.rowHeight == "undefined" && t.push($(
     "settings-default",
     "info",
     "Dashboard grid setting rowHeight was missing; default value was used.",
-    { layoutId: r, profileId: o || void 0, path: "gridSettings.rowHeight", details: { value: xe } }
+    { layoutId: r, profileId: o || void 0, path: "gridSettings.rowHeight", details: { value: Le } }
   )), {
     ...n,
-    columns: T(n.columns, Re),
-    minColumns: T(n.minColumns, 1),
-    margin: Yi(n.margin, t, r, o),
+    columns: W(n.columns, Ae),
+    minColumns: W(n.minColumns, 1),
+    margin: qi(n.margin, t, r, o),
     outerMargin: (s = n.outerMargin) != null ? s : !0,
-    containerPadding: Ci(n.containerPadding, t, r, o),
+    containerPadding: Zi(n.containerPadding, t, r, o),
     viewFormat: n.viewFormat === "list" ? "list" : "grid",
-    rowHeight: T(n.rowHeight, xe),
+    rowHeight: W(n.rowHeight, Le),
     autoFillHeight: (a = n.autoFillHeight) != null ? a : !1,
-    heightMode: se(n.heightMode) ? n.heightMode : void 0,
-    mobileHeightMode: se(n.mobileHeightMode) ? n.mobileHeightMode : void 0,
-    minRowHeight: M(n.minRowHeight) && n.minRowHeight > 0 ? n.minRowHeight : void 0,
-    mobileRowHeight: M(n.mobileRowHeight) && n.mobileRowHeight > 0 ? Math.floor(n.mobileRowHeight) : void 0,
+    heightMode: le(n.heightMode) ? n.heightMode : void 0,
+    mobileHeightMode: le(n.mobileHeightMode) ? n.mobileHeightMode : void 0,
+    minRowHeight: z(n.minRowHeight) && n.minRowHeight > 0 ? n.minRowHeight : void 0,
+    mobileRowHeight: z(n.mobileRowHeight) && n.mobileRowHeight > 0 ? Math.floor(n.mobileRowHeight) : void 0,
     mobileAutoFillHeight: (l = n.mobileAutoFillHeight) != null ? l : !1,
-    renderPrecision: Fi(n.renderPrecision) ? n.renderPrecision : "integer"
+    renderPrecision: Wi(n.renderPrecision) ? n.renderPrecision : "integer"
   };
-}, _ = (e = {}, i) => Object.prototype.hasOwnProperty.call(e, i);
-function Gi(e, i) {
+}, X = (e = {}, i) => Object.prototype.hasOwnProperty.call(e, i);
+function et(e, i) {
   var c, p, v;
-  const t = i.diagnostics, r = i.profileId ? `layouts.${i.layoutId}.profiles.${i.profileId}.gridSettings` : `layouts.${i.layoutId}.gridSettings`, o = i.targetView === "mobile", n = e.mobileAutoFillHeight === !0, s = e.autoFillHeight === !0, a = o && se(e.mobileHeightMode), l = se(e.heightMode);
+  const t = i.diagnostics, r = i.profileId ? `layouts.${i.layoutId}.profiles.${i.profileId}.gridSettings` : `layouts.${i.layoutId}.gridSettings`, o = i.targetView === "mobile", n = e.mobileAutoFillHeight === !0, s = e.autoFillHeight === !0, a = o && le(e.mobileHeightMode), l = le(e.heightMode);
   l && s && e.heightMode !== "fit" && t.push($(
     "mode-alias-conflict",
     "warning",
@@ -1224,15 +1263,15 @@ function Gi(e, i) {
       details: { mobileHeightMode: e.mobileHeightMode, mobileAutoFillHeight: e.mobileAutoFillHeight }
     }
   ));
-  const f = a ? e.mobileHeightMode : l ? e.heightMode : (o && !a && n || !l && s ? "fit" : void 0) || "auto", g = o && M(e.mobileRowHeight) && e.mobileRowHeight > 0 ? e.mobileRowHeight : e.rowHeight, m = {
+  const f = a ? e.mobileHeightMode : l ? e.heightMode : (o && !a && n || !l && s ? "fit" : void 0) || "auto", g = o && z(e.mobileRowHeight) && e.mobileRowHeight > 0 ? e.mobileRowHeight : e.rowHeight, m = {
     heightMode: f,
     rowHeight: g,
     minRowHeight: e.minRowHeight,
     renderPrecision: e.renderPrecision || "integer"
   }, u = i.explicit;
-  return _(u, "heightMode") && (m.heightMode = (c = u == null ? void 0 : u.heightMode) != null ? c : null), _(u, "rowHeight") && (m.rowHeight = u == null ? void 0 : u.rowHeight), _(u, "minRowHeight") && (m.minRowHeight = u == null ? void 0 : u.minRowHeight), _(u, "containerHeight") && (m.containerHeight = (p = u == null ? void 0 : u.containerHeight) != null ? p : null), _(u, "autoMeasureContainerHeight") && (m.autoMeasureContainerHeight = u == null ? void 0 : u.autoMeasureContainerHeight), _(u, "renderPrecision") && (m.renderPrecision = (v = u == null ? void 0 : u.renderPrecision) != null ? v : null), m;
+  return X(u, "heightMode") && (m.heightMode = (c = u == null ? void 0 : u.heightMode) != null ? c : null), X(u, "rowHeight") && (m.rowHeight = u == null ? void 0 : u.rowHeight), X(u, "minRowHeight") && (m.minRowHeight = u == null ? void 0 : u.minRowHeight), X(u, "containerHeight") && (m.containerHeight = (p = u == null ? void 0 : u.containerHeight) != null ? p : null), X(u, "autoMeasureContainerHeight") && (m.autoMeasureContainerHeight = u == null ? void 0 : u.autoMeasureContainerHeight), X(u, "renderPrecision") && (m.renderPrecision = (v = u == null ? void 0 : u.renderPrecision) != null ? v : null), m;
 }
-const Ue = (e, i) => {
+const ei = (e, i) => {
   const t = {
     i: e,
     x: i.col,
@@ -1241,24 +1280,24 @@ const Ue = (e, i) => {
     h: i.sizeY
   };
   return typeof i.minSizeX != "undefined" && (t.minW = i.minSizeX), typeof i.minSizeY != "undefined" && (t.minH = i.minSizeY), typeof i.maxSizeX != "undefined" && (t.maxW = i.maxSizeX), typeof i.maxSizeY != "undefined" && (t.maxH = i.maxSizeY), typeof i.static != "undefined" && (t.static = i.static), typeof i.draggable != "undefined" && (t.isDraggable = i.draggable), typeof i.resizable != "undefined" && (t.isResizable = i.resizable), typeof i.bounded != "undefined" && (t.isBounded = i.bounded), i.resizeHandles && (t.resizeHandles = i.resizeHandles.slice()), t;
-}, ae = (e, i) => e.y !== i.y ? e.y - i.y : e.x !== i.x ? e.x - i.x : e.i < i.i ? -1 : e.i > i.i ? 1 : 0, Ke = (e, i) => e.item.row !== i.item.row ? e.item.row - i.item.row : e.item.col !== i.item.col ? e.item.col - i.item.col : e.id < i.id ? -1 : e.id > i.id ? 1 : 0, je = (e) => M(e) && e >= 0, Ji = (e, i, t) => {
+}, ce = (e, i) => e.y !== i.y ? e.y - i.y : e.x !== i.x ? e.x - i.x : e.i < i.i ? -1 : e.i > i.i ? 1 : 0, ii = (e, i) => e.item.row !== i.item.row ? e.item.row - i.item.row : e.item.col !== i.item.col ? e.item.col - i.item.col : e.id < i.id ? -1 : e.id > i.id ? 1 : 0, Ve = (e) => z(e) && e >= 0, it = (e, i, t) => {
   if (e === "mobile") {
-    const r = i.item.mobileOrder, o = t.item.mobileOrder, n = je(r), s = je(o);
+    const r = i.item.mobileOrder, o = t.item.mobileOrder, n = Ve(r), s = Ve(o);
     if (n && s && r !== o) return r - o;
     if (n !== s) return n ? -1 : 1;
   }
-  return Ke(i, t);
-}, Ui = (e, i) => ({
+  return ii(i, t);
+}, tt = (e, i) => ({
   ...e,
   ...i || {}
-}), Ki = (e) => ({
-  col: T(e.col, 0),
-  row: T(e.row, 0),
-  sizeX: T(e.sizeX, 1),
-  sizeY: T(e.sizeY, 1),
+}), rt = (e) => ({
+  col: W(e.col, 0),
+  row: W(e.row, 0),
+  sizeX: W(e.sizeX, 1),
+  sizeY: W(e.sizeY, 1),
   ...e
-}), qe = (e, i) => i === "mobile" ? e.mobileHide === !0 : e.desktopHide === !0, qi = (e, i, t, r, o) => {
-  e && (ji.forEach((n) => {
+}), ti = (e, i) => i === "mobile" ? e.mobileHide === !0 : e.desktopHide === !0, ot = (e, i, t, r, o) => {
+  e && (Ni.forEach((n) => {
     t && typeof t[n] != "undefined" && o.push($(
       "unsupported-profile-field",
       "info",
@@ -1266,11 +1305,11 @@ const Ue = (e, i) => {
       { layoutId: i, profileId: e, path: `layouts.${i}.profiles.${e}.gridSettings.${n}` }
     ));
   }), r.forEach((n) => {
-    xi.forEach((s) => {
+    Ti.forEach((s) => {
       typeof n.item[s] != "undefined" && o.push($(
-        "unsupported-profile-field",
+        "item-capability.sidecar-projected",
         "info",
-        `Profile item field ${s} is preserved but not directly mapped to LayoutItem in this version.`,
+        `Profile item field ${s} was projected through capability sidecar and not written to LayoutItem.`,
         {
           layoutId: i,
           profileId: e,
@@ -1280,14 +1319,14 @@ const Ue = (e, i) => {
       ));
     });
   }));
-}, Zi = (e, i, t, r, o) => {
+}, nt = (e, i, t, r, o) => {
   var a;
   const n = i ? (a = e.profiles) == null ? void 0 : a[i] : void 0, s = {};
   return Object.keys(e.widgets).sort().forEach((l) => {
     var d;
-    s[l] = Ui(e.widgets[l], (d = n == null ? void 0 : n.widgets) == null ? void 0 : d[l]);
+    s[l] = tt(e.widgets[l], (d = n == null ? void 0 : n.widgets) == null ? void 0 : d[l]);
   }), n != null && n.widgets && Object.keys(n.widgets).sort().forEach((l) => {
-    N(e.widgets, l) || (r.push($(
+    C(e.widgets, l) || (r.push($(
       "unknown-profile-item",
       "warning",
       `Dashboard profile "${i}" contains unknown widget "${l}".`,
@@ -1297,9 +1336,9 @@ const Ue = (e, i) => {
         itemId: l,
         path: `layouts.${o}.profiles.${i}.widgets.${l}`
       }
-    )), t.allowUnknownProfileItems && (s[l] = Ki(n.widgets[l])));
-  }), Object.keys(s).map((l) => ({ id: l, item: s[l] })).sort(Ke);
-}, we = (e, i) => {
+    )), t.allowUnknownProfileItems && (s[l] = rt(n.widgets[l])));
+  }), Object.keys(s).map((l) => ({ id: l, item: s[l] })).sort(ii);
+}, $e = (e, i) => {
   const t = {};
   return Object.keys(e || {}).forEach((r) => {
     t[r] = { ...e[r] };
@@ -1309,14 +1348,14 @@ const Ue = (e, i) => {
       ...i[r]
     };
   }), t;
-}, Qi = (e, i, t, r) => {
-  const o = [], n = e.map((d) => d.id), s = [], a = we(r, void 0);
+}, st = (e, i, t, r) => {
+  const o = [], n = e.map((d) => d.id), s = [], a = $e(r, void 0);
   e.forEach((d) => {
-    const f = qe(d.item, i);
+    const f = ti(d.item, i);
     f && o.push(d.id);
     const g = { ...a[d.id] || {} };
-    f ? g.visible = !1 : typeof g.visible == "undefined" && (g.visible = !0), a[d.id] = g, !(t === "view" && f) && s.push(Ue(d.id, d.item));
-  }), s.sort(ae);
+    f ? g.visible = !1 : typeof g.visible == "undefined" && (g.visible = !0), a[d.id] = g, !(t === "view" && f) && s.push(ei(d.id, d.item));
+  }), s.sort(ce);
   const l = t === "view" ? n.filter((d) => o.indexOf(d) === -1) : n.slice();
   return {
     layout: s,
@@ -1326,12 +1365,12 @@ const Ue = (e, i) => {
     hiddenItemIds: o,
     editorMetaById: a
   };
-}, et = (e, i, t, r, o) => i === "mobile" && M(e.item.mobileHeight) && e.item.mobileHeight > 0 ? (t.push($(
+}, at = (e, i, t, r, o) => i === "mobile" && z(e.item.mobileHeight) && e.item.mobileHeight > 0 ? (t.push($(
   "list-height-source",
   "info",
   "Mobile list item height was derived from mobileHeight.",
   { layoutId: r, profileId: o || void 0, itemId: e.id, details: { source: "mobileHeight" } }
-)), Math.floor(e.item.mobileHeight)) : M(e.item.sizeY) && e.item.sizeY > 0 ? (t.push($(
+)), Math.floor(e.item.mobileHeight)) : z(e.item.sizeY) && e.item.sizeY > 0 ? (t.push($(
   "list-height-source",
   "info",
   "List item height was derived from sizeY.",
@@ -1341,17 +1380,17 @@ const Ue = (e, i) => {
   "warning",
   "List item height was invalid; default height 1 was used.",
   { layoutId: r, profileId: o || void 0, itemId: e.id, details: { source: "default" } }
-)), 1), it = (e, i, t, r, o, n, s, a) => {
-  const l = e.slice().sort((p, v) => Ji(i, p, v)), d = [], f = l.map((p) => p.id), g = [], m = we(o, void 0);
+)), 1), dt = (e, i, t, r, o, n, s, a) => {
+  const l = e.slice().sort((p, v) => it(i, p, v)), d = [], f = l.map((p) => p.id), g = [], m = $e(o, void 0);
   let u = 0;
   l.forEach((p) => {
-    const v = qe(p.item, i);
+    const v = ti(p.item, i);
     v && d.push(p.id);
     const k = { ...m[p.id] || {} };
     v ? k.visible = !1 : typeof k.visible == "undefined" && (k.visible = !0), m[p.id] = k;
-    const D = et(p, i, n, s, a);
+    const D = at(p, i, n, s, a);
     t === "view" && v || (g.push({
-      ...Ue(p.id, p.item),
+      ...ei(p.id, p.item),
       x: 0,
       y: u,
       w: r,
@@ -1367,22 +1406,22 @@ const Ue = (e, i) => {
     hiddenItemIds: d,
     editorMetaById: m
   };
-}, tt = (e) => V(e) && typeof e.primaryLayoutId == "string" ? e.primaryLayoutId : null, Ze = (e, i) => `layouts.${e}.profiles.${i}`, rt = (e, i, t) => {
+}, lt = (e) => _(e) && typeof e.primaryLayoutId == "string" ? e.primaryLayoutId : null, ri = (e, i) => `layouts.${e}.profiles.${i}`, ct = (e, i, t) => {
   var o;
-  const r = Ze(i, t);
+  const r = ri(i, t);
   return e.profileId === t || e.path === r || !!((o = e.path) != null && o.startsWith(`${r}.`));
-}, ot = (e, i, t) => {
+}, ut = (e, i, t) => {
   try {
-    const r = pe(e);
-    if (!V(r) || !V(r.layouts)) return null;
+    const r = ve(e);
+    if (!_(r) || !_(r.layouts)) return null;
     const o = r.layouts[i];
-    return !V(o) || !V(o.profiles) || !N(o.profiles, t) ? null : (delete o.profiles[t], Object.keys(o.profiles).length === 0 && delete o.profiles, r);
+    return !_(o) || !_(o.profiles) || !C(o.profiles, t) ? null : (delete o.profiles[t], Object.keys(o.profiles).length === 0 && delete o.profiles, r);
   } catch (r) {
     return null;
   }
-}, nt = (e, i, t, r) => {
+}, ft = (e, i, t, r) => {
   var f, g;
-  const o = B(e, { validation: (f = t.validation) != null ? f : "strict" });
+  const o = F(e, { validation: (f = t.validation) != null ? f : "strict" });
   if (o.ok)
     return r.push(...o.diagnostics), {
       ok: !0,
@@ -1390,9 +1429,9 @@ const Ue = (e, i) => {
       invalidProfileFallback: !1,
       profileFallbackReported: !1
     };
-  const n = tt(e), s = t.layoutId && t.layoutId === n ? t.layoutId : n, d = !!(s && i !== le) && o.diagnostics.some((m) => rt(m, s, i)) ? ot(e, s, i) : null;
+  const n = lt(e), s = t.layoutId && t.layoutId === n ? t.layoutId : n, d = !!(s && i !== fe) && o.diagnostics.some((m) => ct(m, s, i)) ? ut(e, s, i) : null;
   if (d) {
-    const m = B(d, { validation: (g = t.validation) != null ? g : "strict" });
+    const m = F(d, { validation: (g = t.validation) != null ? g : "strict" });
     if (m.ok)
       return r.push($(
         "profile-fallback",
@@ -1401,7 +1440,7 @@ const Ue = (e, i) => {
         {
           layoutId: s,
           profileId: i,
-          path: Ze(s, i),
+          path: ri(s, i),
           details: {
             reason: o.error.message,
             diagnostics: o.diagnostics
@@ -1421,9 +1460,9 @@ const Ue = (e, i) => {
     { path: o.error.path, details: o.error.details }
   )), { ok: !1, error: o.error };
 };
-function It(e, i) {
-  var y, z, O, w, F, x, G, Ie, ke;
-  const t = [], r = Ni(i, t), o = i.mode || "view", n = Wi(r, i, t), s = nt(
+function Mt(e, i) {
+  var P, O, w, b, B, R, T, A, ge;
+  const t = [], r = Ui(i, t), o = i.mode || "view", n = Ki(r, i, t), s = ft(
     e,
     r,
     i,
@@ -1434,18 +1473,18 @@ function It(e, i) {
   const a = s.document;
   let l = s.invalidProfileFallback, d = i.layoutId || a.primaryLayoutId;
   d !== a.primaryLayoutId && (l = !0, d = a.primaryLayoutId);
-  const f = a.layouts[d], g = (y = f.profiles) == null ? void 0 : y[r], m = g ? r : null;
+  const f = a.layouts[d], g = (P = f.profiles) == null ? void 0 : P[r], m = g ? r : null;
   g || (l = !0, s.profileFallbackReported || t.push($(
     "profile-fallback",
     "warning",
     `Dashboard profile "${r}" was not found; resolved primary layout.`,
     { layoutId: d, profileId: r, path: `layouts.${d}.profiles.${r}` }
   )));
-  const u = Ye(a, {
+  const u = Je(a, {
     layoutId: d,
     profileId: m || void 0,
     targetView: n.targetView,
-    validation: (z = i.validation) != null ? z : "strict"
+    validation: (O = i.validation) != null ? O : "strict"
   });
   if (!u.ok)
     return t.push(...u.diagnostics), t.push($(
@@ -1455,24 +1494,24 @@ function It(e, i) {
       { path: u.error.path, details: u.error.details }
     )), { ok: !1, error: u.error, diagnostics: t };
   t.push(...u.diagnostics);
-  const c = Zi(f, m, i, t, d), p = Xi(
+  const c = nt(f, m, i, t, d), p = Qi(
     f.gridSettings,
-    m ? (w = (O = f.profiles) == null ? void 0 : O[m]) == null ? void 0 : w.gridSettings : void 0,
+    m ? (b = (w = f.profiles) == null ? void 0 : w[m]) == null ? void 0 : b.gridSettings : void 0,
     t,
     d,
     m
   );
-  qi(
+  ot(
     m,
     d,
-    m ? (x = (F = f.profiles) == null ? void 0 : F[m]) == null ? void 0 : x.gridSettings : void 0,
+    m ? (R = (B = f.profiles) == null ? void 0 : B[m]) == null ? void 0 : R.gridSettings : void 0,
     c,
     t
   );
-  const v = we(
+  const v = $e(
     u.projection.editorMetaById,
-    m ? (ke = (Ie = (G = f.profiles) == null ? void 0 : G[m]) == null ? void 0 : Ie.editor) == null ? void 0 : ke.editorMetaById : void 0
-  ), k = p.viewFormat, D = k === "list" ? it(
+    m ? (ge = (A = (T = f.profiles) == null ? void 0 : T[m]) == null ? void 0 : A.editor) == null ? void 0 : ge.editorMetaById : void 0
+  ), k = p.viewFormat, D = k === "list" ? dt(
     c,
     n.targetView,
     o,
@@ -1481,22 +1520,22 @@ function It(e, i) {
     t,
     d,
     m
-  ) : Qi(c, n.targetView, o, v), R = Gi(p, {
+  ) : st(c, n.targetView, o, v), j = et(p, {
     targetView: n.targetView,
     diagnostics: t,
     layoutId: d,
     profileId: m
-  }), b = Ti(
+  }), y = Gi(
     D.layout,
     p,
-    R,
+    j,
     {
       layoutId: d,
       resolvedProfileId: m,
       targetView: n.targetView
     }
-  ), S = b.diagnostics.map(
-    (ni) => Ai(ni, {
+  ), S = y.diagnostics.map(
+    (Y) => Yi(Y, {
       layoutId: d,
       resolvedProfileId: m,
       targetView: n.targetView
@@ -1508,6 +1547,8 @@ function It(e, i) {
       layout: D.layout,
       gridSettings: p,
       editorMetaById: D.editorMetaById,
+      capabilitiesById: u.projection.capabilitiesById,
+      resizeConstraintsById: u.projection.resizeConstraintsById,
       layoutId: d,
       requestedBreakpoint: r,
       resolvedProfileId: m,
@@ -1515,8 +1556,8 @@ function It(e, i) {
       targetViewSource: n.source,
       mode: o,
       viewFormat: k,
-      heightOptions: R,
-      heightRuntime: b,
+      heightOptions: j,
+      heightRuntime: y,
       fallbackApplied: l || u.projection.fallbackApplied,
       allItemIds: D.allItemIds,
       activeItemIds: D.activeItemIds,
@@ -1527,41 +1568,41 @@ function It(e, i) {
     diagnostics: t
   };
 }
-const st = (e) => ye(e).sort(ae), at = (e, i, t, r, o, n) => {
+const gt = (e) => Ie(e).sort(ce), mt = (e, i, t, r, o, n) => {
   for (let s = 0; s < e.length; s++) {
     const a = e[s];
-    if (!M(a.x) || !M(a.y) || !M(a.w) || !M(a.h) || a.w <= 0 || a.h <= 0)
-      return Y("validation", `Runtime layout item "${a.i}" has invalid geometry.`, {
+    if (!z(a.x) || !z(a.y) || !z(a.w) || !z(a.h) || a.w <= 0 || a.h <= 0)
+      return U("validation", `Runtime layout item "${a.i}" has invalid geometry.`, {
         path: `layout.${s}`,
         details: { item: a }
       });
-    if (!N(i.widgets, a.i) && !t.createMissingItems)
+    if (!C(i.widgets, a.i) && !t.createMissingItems)
       return r.push($(
         "unknown-profile-item",
         "error",
         `Runtime layout contains unknown dashboard widget "${a.i}".`,
         { layoutId: o, profileId: n || void 0, itemId: a.i }
-      )), Y("unknown-item", `Runtime layout contains unknown dashboard widget "${a.i}".`, {
+      )), U("unknown-item", `Runtime layout contains unknown dashboard widget "${a.i}".`, {
         details: { itemId: a.i }
       });
   }
   return null;
-}, Qe = (e) => {
+}, oi = (e) => {
   const i = {
     col: e.x,
     row: e.y,
     sizeX: e.w,
     sizeY: e.h
   };
-  return typeof e.minW != "undefined" && (i.minSizeX = e.minW), typeof e.minH != "undefined" && (i.minSizeY = e.minH), typeof e.maxW != "undefined" && (i.maxSizeX = e.maxW), typeof e.maxH != "undefined" && (i.maxSizeY = e.maxH), typeof e.static != "undefined" && (i.static = e.static), typeof e.isDraggable != "undefined" && (i.draggable = e.isDraggable), typeof e.isResizable != "undefined" && (i.resizable = e.isResizable), typeof e.isBounded != "undefined" && (i.bounded = e.isBounded), e.resizeHandles && (i.resizeHandles = e.resizeHandles.slice()), i;
+  return typeof e.minW != "undefined" && (i.minSizeX = e.minW), typeof e.minH != "undefined" && (i.minSizeY = e.minH), typeof e.maxW != "undefined" && (i.maxSizeX = e.maxW), typeof e.maxH != "undefined" && (i.maxSizeY = e.maxH), i;
 };
-function kt(e, i, t, r = {}) {
-  var H, y, z, O;
+function Pt(e, i, t, r = {}) {
+  var H, P, O, w;
   const o = [], n = r.mode || i.mode, s = r.targetView || i.targetView, a = r.viewFormat || i.viewFormat, l = r.requestedBreakpoint || i.requestedBreakpoint;
   let d = typeof r.resolvedProfileId != "undefined" ? r.resolvedProfileId : i.resolvedProfileId;
-  const f = B(e, { validation: (H = r.validation) != null ? H : "strict" });
+  const f = F(e, { validation: (H = r.validation) != null ? H : "strict" });
   o.push(...f.diagnostics);
-  const g = f.ok ? f.document : pe(e);
+  const g = f.ok ? f.document : ve(e);
   if (!f.ok)
     return o.push($(
       "projection-validation-failed",
@@ -1575,7 +1616,7 @@ function kt(e, i, t, r = {}) {
       originalPayload: f.originalPayload,
       diagnostics: o
     };
-  if (i.fallbackApplied && !d && l !== le) {
+  if (i.fallbackApplied && !d && l !== fe) {
     if (n === "view")
       return o.push($(
         "write-back-noop",
@@ -1588,15 +1629,15 @@ function kt(e, i, t, r = {}) {
         diagnostics: o
       };
     if (!r.createMissingProfileOnEdit) {
-      const w = $(
+      const b = $(
         "missing-profile-write-blocked",
         "error",
         `Dashboard profile "${l}" is missing; profile-scoped write-back was blocked.`,
         { layoutId: i.layoutId, profileId: l }
       );
-      return o.push(w), {
+      return o.push(b), {
         ok: !1,
-        error: Y("validation", w.message, { path: `layouts.${i.layoutId}.profiles.${l}` }),
+        error: U("validation", b.message, { path: `layouts.${i.layoutId}.profiles.${l}` }),
         document: f.document,
         diagnostics: o
       };
@@ -1604,7 +1645,7 @@ function kt(e, i, t, r = {}) {
     d = l;
   }
   if (a === "grid") {
-    const w = Ce(e, {
+    const b = Ke(e, {
       layout: t,
       editorMetaById: r.editorMetaById || i.editorMetaById
     }, {
@@ -1615,79 +1656,79 @@ function kt(e, i, t, r = {}) {
       removeMissingItems: r.removeMissingItems,
       createMissingProfile: !!r.createMissingProfileOnEdit,
       writeItemIds: r.writeItemIds,
-      validation: (y = r.validation) != null ? y : "strict"
+      validation: (P = r.validation) != null ? P : "strict"
     });
     return {
-      ...w,
-      diagnostics: o.concat(w.diagnostics)
+      ...b,
+      diagnostics: o.concat(b.diagnostics)
     };
   }
-  const m = pe(f.document), u = r.layoutId || i.layoutId || m.primaryLayoutId, c = m.layouts[u];
+  const m = ve(f.document), u = r.layoutId || i.layoutId || m.primaryLayoutId, c = m.layouts[u];
   if (!c) {
-    const w = $(
+    const b = $(
       "projection-validation-failed",
       "error",
       `Dashboard layout "${u}" was not found.`,
       { layoutId: u }
     );
-    return o.push(w), {
+    return o.push(b), {
       ok: !1,
-      error: Y("invalid-document", w.message, { path: `layouts.${u}` }),
+      error: U("invalid-document", b.message, { path: `layouts.${u}` }),
       document: m,
       diagnostics: o
     };
   }
-  const p = Bi(r.writeItemIds), v = new Set(t.map((w) => w.i)), k = st(t), D = p ? k.filter((w) => p(w.i)) : k, R = at(D, c, r, o, u, d);
-  if (R)
+  const p = _i(r.writeItemIds), v = new Set(t.map((b) => b.i)), k = gt(t), D = p ? k.filter((b) => p(b.i)) : k, j = mt(D, c, r, o, u, d);
+  if (j)
     return {
       ok: !1,
-      error: R,
+      error: j,
       document: m,
       diagnostics: o
     };
-  let b;
+  let y;
   if (d) {
     if (c.profiles = c.profiles || {}, !c.profiles[d]) {
       if (!r.createMissingProfileOnEdit) {
-        const w = $(
+        const b = $(
           "missing-profile-write-blocked",
           "error",
           `Dashboard profile "${d}" is missing; profile-scoped write-back was blocked.`,
           { layoutId: u, profileId: d }
         );
-        return o.push(w), {
+        return o.push(b), {
           ok: !1,
-          error: Y("validation", w.message, { path: `layouts.${u}.profiles.${d}` }),
+          error: U("validation", b.message, { path: `layouts.${u}.profiles.${d}` }),
           document: m,
           diagnostics: o
         };
       }
       c.profiles[d] = { widgets: {} };
     }
-    c.profiles[d].widgets = c.profiles[d].widgets || {}, b = c.profiles[d].widgets;
+    c.profiles[d].widgets = c.profiles[d].widgets || {}, y = c.profiles[d].widgets;
   } else
-    b = c.widgets;
-  r.removeMissingItems && ((z = r.writeItemIds) != null && z.length) && r.writeItemIds.filter(Boolean).forEach((w) => {
-    var F;
-    v.has(w) || (delete c.widgets[w], delete b[w], Object.values(c.profiles || {}).forEach((x) => {
-      var G;
-      x.widgets && delete x.widgets[w], (G = x.editor) != null && G.editorMetaById && delete x.editor.editorMetaById[w];
-    }), (F = c.editor) != null && F.editorMetaById && delete c.editor.editorMetaById[w]);
-  }), k.forEach((w, F) => {
-    if (p && !p(w.i)) return;
-    N(c.widgets, w.i) || (c.widgets[w.i] = Qe(w));
-    const x = b[w.i] || {};
-    s === "mobile" ? b[w.i] = {
-      ...x,
-      mobileOrder: F,
-      mobileHeight: w.h
-    } : b[w.i] = {
-      ...x,
-      row: F,
-      sizeY: w.h
+    y = c.widgets;
+  r.removeMissingItems && ((O = r.writeItemIds) != null && O.length) && r.writeItemIds.filter(Boolean).forEach((b) => {
+    var B;
+    v.has(b) || (delete c.widgets[b], delete y[b], Object.values(c.profiles || {}).forEach((R) => {
+      var T;
+      R.widgets && delete R.widgets[b], (T = R.editor) != null && T.editorMetaById && delete R.editor.editorMetaById[b];
+    }), (B = c.editor) != null && B.editorMetaById && delete c.editor.editorMetaById[b]);
+  }), k.forEach((b, B) => {
+    if (p && !p(b.i)) return;
+    C(c.widgets, b.i) || (c.widgets[b.i] = oi(b));
+    const R = y[b.i] || {};
+    s === "mobile" ? y[b.i] = {
+      ...R,
+      mobileOrder: B,
+      mobileHeight: b.h
+    } : y[b.i] = {
+      ...R,
+      row: B,
+      sizeY: b.h
     };
   });
-  const S = B(m, { validation: (O = r.validation) != null ? O : "strict" });
+  const S = F(m, { validation: (w = r.validation) != null ? w : "strict" });
   return o.push(...S.diagnostics), S.ok ? {
     ok: !0,
     document: S.document,
@@ -1700,7 +1741,7 @@ function kt(e, i, t, r = {}) {
     diagnostics: o
   };
 }
-const Be = (e, i) => e == null || Array.isArray(e) ? e : typeof e == "object" && N(e, i) ? e[i] || void 0 : e, dt = (e) => {
+const Te = (e, i) => e == null || Array.isArray(e) ? e : typeof e == "object" && C(e, i) ? e[i] || void 0 : e, ht = (e) => {
   const i = {
     col: e.x,
     row: e.y,
@@ -1708,22 +1749,22 @@ const Be = (e, i) => e == null || Array.isArray(e) ? e : typeof e == "object" &&
     sizeY: e.h
   };
   return typeof e.minW != "undefined" && (i.minSizeX = e.minW), typeof e.minH != "undefined" && (i.minSizeY = e.minH), typeof e.maxW != "undefined" && (i.maxSizeX = e.maxW), typeof e.maxH != "undefined" && (i.maxSizeY = e.maxH), typeof e.static != "undefined" && (i.static = e.static), typeof e.isDraggable != "undefined" && (i.draggable = e.isDraggable), typeof e.isResizable != "undefined" && (i.resizable = e.isResizable), typeof e.isBounded != "undefined" && (i.bounded = e.isBounded), e.resizeHandles && (i.resizeHandles = e.resizeHandles.slice()), i;
-}, lt = (e) => Qe(e), Fe = (e, i, t) => {
+}, pt = (e) => oi(e), Ne = (e, i, t) => {
   var a;
   const r = {}, o = (a = i.cols) == null ? void 0 : a[e];
-  M(o) && o > 0 ? r.columns = o : i.cols && t.push($(
+  z(o) && o > 0 ? r.columns = o : i.cols && t.push($(
     "legacy-responsive-deferred",
     "warning",
     `Responsive cols for breakpoint "${e}" are missing; dashboard default columns will apply.`,
     { profileId: e, path: `cols.${e}` }
   ));
-  const n = Be(i.margin, e);
-  (M(n) || Q(n)) && (r.margin = n);
-  const s = Be(i.containerPadding, e);
-  return Q(s) && (r.containerPadding = [s[0], s[1]]), r;
+  const n = Te(i.margin, e);
+  (z(n) || te(n)) && (r.margin = n);
+  const s = Te(i.containerPadding, e);
+  return te(s) && (r.containerPadding = [s[0], s[1]]), r;
 };
-function $t(e) {
-  const i = [], t = Je(e.breakpoints), r = Object.keys(e.layouts || {}).sort(), o = e.defaultBreakpoint || (t.length > 0 ? t[t.length - 1] : r[0] || le), n = e.layouts[o] || [];
+function Et(e) {
+  const i = [], t = Qe(e.breakpoints), r = Object.keys(e.layouts || {}).sort(), o = e.defaultBreakpoint || (t.length > 0 ? t[t.length - 1] : r[0] || fe), n = e.layouts[o] || [];
   e.layouts[o] || i.push($(
     "legacy-responsive-deferred",
     "warning",
@@ -1731,22 +1772,22 @@ function $t(e) {
     { profileId: o, path: `layouts.${o}` }
   ));
   const s = {};
-  ye(n).sort(ae).forEach((d) => {
-    s[d.i] = dt(d);
+  Ie(n).sort(ce).forEach((d) => {
+    s[d.i] = ht(d);
   });
   const a = {
     widgets: s,
-    gridSettings: Fe(o, e, i),
+    gridSettings: Ne(o, e, i),
     profiles: {}
   }, l = [];
   Object.keys(e.layouts || {}).sort((d, f) => {
-    const g = M(e.breakpoints[d]) ? e.breakpoints[d] : Number.MAX_SAFE_INTEGER, m = M(e.breakpoints[f]) ? e.breakpoints[f] : Number.MAX_SAFE_INTEGER, u = g - m;
+    const g = z(e.breakpoints[d]) ? e.breakpoints[d] : Number.MAX_SAFE_INTEGER, m = z(e.breakpoints[f]) ? e.breakpoints[f] : Number.MAX_SAFE_INTEGER, u = g - m;
     return u !== 0 ? u : d.localeCompare(f);
   }).forEach((d) => {
     if (d === o) return;
     const f = {};
-    ye(e.layouts[d] || []).sort(ae).forEach((g) => {
-      N(s, g.i) || i.push($(
+    Ie(e.layouts[d] || []).sort(ce).forEach((g) => {
+      C(s, g.i) || i.push($(
         "legacy-responsive-deferred",
         "warning",
         `Responsive layout "${d}" contains widget "${g.i}" that is absent from the default dashboard layout.`,
@@ -1759,16 +1800,16 @@ function $t(e) {
             defaultBreakpoint: o
           }
         }
-      )), f[g.i] = lt(g);
+      )), f[g.i] = pt(g);
     }), a.profiles[d] = {
       widgets: f,
-      gridSettings: Fe(d, e, i)
+      gridSettings: Ne(d, e, i)
     }, l.push(d);
   }), a.profiles && Object.keys(a.profiles).length === 0 && delete a.profiles;
   try {
     return {
       ok: !0,
-      document: _e(a, {
+      document: Ge(a, {
         key: e.key,
         sourceId: e.sourceId
       }),
@@ -1780,45 +1821,45 @@ function $t(e) {
     return {
       ok: !1,
       diagnostics: i,
-      error: Y("validation", "Responsive layouts could not be converted to a dashboard document.", { cause: d })
+      error: U("validation", "Responsive layouts could not be converted to a dashboard document.", { cause: d })
     };
   }
 }
-const de = (e) => JSON.parse(JSON.stringify(e)), K = (e, i, t = {}) => ({
+const ue = (e) => JSON.parse(JSON.stringify(e)), Q = (e, i, t = {}) => ({
   code: e,
   message: i,
   ...t
-}), X = (e, i, t, r = {}) => ({
+}), K = (e, i, t, r = {}) => ({
   code: e,
   level: i,
   message: t,
   ...r
-}), Le = (e) => ({
+}), _e = (e) => ({
   ...e,
   cols: e.columns,
   columns: e.columns,
   minColumns: e.minColumns,
   maxRows: typeof e.maxRows == "number" ? e.maxRows : void 0
-}), ct = (e, i = 12) => {
+}), yt = (e, i = 12) => {
   const t = e == null ? void 0 : e.columns;
   return typeof t == "number" && Number.isFinite(t) && t > 0 ? Math.floor(t) : i;
-}, ei = (e, i = {}) => ({
-  cols: ct(e),
+}, ni = (e, i = {}) => ({
+  cols: yt(e),
   maxRows: typeof e.maxRows == "number" ? e.maxRows : 1 / 0,
   compactType: null,
   allowOverlap: !1,
   preventCollision: !0,
   diagnostics: { debug: !0 },
   ...i
-}), Ae = (e, i) => ({
+}), We = (e, i) => ({
   ...e,
   ...i || {}
-}), ut = (e) => {
+}), bt = (e) => {
   const i = /* @__PURE__ */ new Set();
   return e.affectedIds.forEach((t) => i.add(t)), e.patches.forEach((t) => {
     t.type === "add" ? i.add(t.item.i) : t.type === "compact" ? t.affectedIds.forEach((r) => i.add(r)) : i.add(t.id);
   }), i;
-}, ft = (e, i, t) => X(
+}, wt = (e, i, t) => K(
   e.code,
   e.level,
   e.message,
@@ -1834,26 +1875,26 @@ const de = (e) => JSON.parse(JSON.stringify(e)), K = (e, i, t = {}) => ({
       details: e.details
     }
   }
-), ii = (e, i, t) => {
+), si = (e, i, t) => {
   var o;
   const r = [];
   return (((o = e.diagnostics) == null ? void 0 : o.details) || []).forEach((n) => {
-    r.push(ft(n, i, t));
-  }), e.status === "blocked" && e.blocked && r.push(X("layout-operation-blocked", "error", `Layout operation was blocked: ${e.blocked.reason}.`, {
+    r.push(wt(n, i, t));
+  }), e.status === "blocked" && e.blocked && r.push(K("layout-operation-blocked", "error", `Layout operation was blocked: ${e.blocked.reason}.`, {
     layoutId: i,
     profileId: t || void 0,
     details: e.blocked
-  })), e.status === "error" && e.error && r.push(X("layout-operation-error", "error", e.error.message, {
+  })), e.status === "error" && e.error && r.push(K("layout-operation-error", "error", e.error.message, {
     layoutId: i,
     profileId: t || void 0,
     details: e.error.cause
   })), r;
-}, ve = (e, i, t) => {
+}, Se = (e, i, t) => {
   var r, o;
   return t ? !!((o = (r = e.layouts[i]) == null ? void 0 : r.profiles) != null && o[t]) : !0;
-}, ti = (e, i, t) => {
-  const r = ut(i), o = t.profileId ? i.layout.filter((n) => r.has(n.i)) : i.layout;
-  return Ce(e, {
+}, ai = (e, i, t) => {
+  const r = bt(i), o = t.profileId ? i.layout.filter((n) => r.has(n.i)) : i.layout;
+  return Ke(e, {
     layout: o,
     gridSettings: t.nextSettings
   }, {
@@ -1862,15 +1903,15 @@ const de = (e) => JSON.parse(JSON.stringify(e)), K = (e, i, t = {}) => ({
     createMissingProfile: t.createMissingProfile,
     validation: t.validation
   });
-}, ri = (e, i) => Ye(e, {
+}, di = (e, i) => Je(e, {
   layoutId: i.layoutId,
-  profileId: ve(e, i.layoutId, i.profileId) && i.profileId || void 0,
+  profileId: Se(e, i.layoutId, i.profileId) && i.profileId || void 0,
   allowNonPrimary: !0,
   validation: i.validation
 });
-function St(e, i) {
+function Ot(e, i) {
   var p, v;
-  const t = B(e, { validation: (p = i.validation) != null ? p : "strict" }), r = t.ok ? de(t.document) : de(e), o = t.diagnostics.slice();
+  const t = F(e, { validation: (p = i.validation) != null ? p : "strict" }), r = t.ok ? ue(t.document) : ue(e), o = t.diagnostics.slice();
   if (!t.ok)
     return {
       ok: !1,
@@ -1880,28 +1921,28 @@ function St(e, i) {
     };
   const n = t.document, s = i.layoutId || n.primaryLayoutId;
   if (!n.layouts[s]) {
-    const k = X("invalid-document", "error", `Dashboard layout "${s}" was not found.`, { layoutId: s });
+    const k = K("invalid-document", "error", `Dashboard layout "${s}" was not found.`, { layoutId: s });
     return {
       ok: !1,
       document: r,
-      error: K("invalid-document", k.message, { path: `layouts.${s}` }),
+      error: Q("invalid-document", k.message, { path: `layouts.${s}` }),
       diagnostics: o.concat(k)
     };
   }
   const l = i.profileId || null;
-  if (l && !ve(n, s, l) && !i.createMissingProfile) {
-    const k = X("profile-fallback", "error", `Dashboard profile "${l}" was not found; profile migration was blocked.`, {
+  if (l && !Se(n, s, l) && !i.createMissingProfile) {
+    const k = K("profile-fallback", "error", `Dashboard profile "${l}" was not found; profile migration was blocked.`, {
       layoutId: s,
       profileId: l
     });
     return {
       ok: !1,
       document: r,
-      error: K("validation", k.message, { path: `layouts.${s}.profiles.${l}` }),
+      error: Q("validation", k.message, { path: `layouts.${s}.profiles.${l}` }),
       diagnostics: o.concat(k)
     };
   }
-  const d = ri(n, {
+  const d = di(n, {
     layoutId: s,
     profileId: l,
     createMissingProfile: i.createMissingProfile,
@@ -1914,32 +1955,32 @@ function St(e, i) {
       error: d.error,
       diagnostics: o
     };
-  const f = Ae(
+  const f = We(
     d.projection.gridSettings,
     i.previousSettings
-  ), g = Ae(
+  ), g = We(
     d.projection.gridSettings,
     i.nextSettings
   ), m = {
     ...i.nextSettings
-  }, u = ai(d.projection.layout, {
-    previousSettings: Le(f),
-    nextSettings: Le(g),
+  }, u = fi(d.projection.layout, {
+    previousSettings: _e(f),
+    nextSettings: _e(g),
     policy: i.policy,
-    engineOptions: ei(d.projection.gridSettings),
+    engineOptions: ni(d.projection.gridSettings),
     id: `dashboard-migrate-${s}${l ? `-${l}` : ""}`,
     phase: "commit",
     debug: !0
   });
-  if (o.push(...ii(u, s, l)), u.status === "blocked" || u.status === "error")
+  if (o.push(...si(u, s, l)), u.status === "blocked" || u.status === "error")
     return {
       ok: !1,
       document: r,
       operation: u,
-      error: K((u.status === "error", "validation"), ((v = u.error) == null ? void 0 : v.message) || "Dashboard layout settings migration failed."),
+      error: Q((u.status === "error", "validation"), ((v = u.error) == null ? void 0 : v.message) || "Dashboard layout settings migration failed."),
       diagnostics: o
     };
-  const c = ti(n, u, {
+  const c = ai(n, u, {
     layoutId: s,
     profileId: l,
     nextSettings: m,
@@ -1959,25 +2000,25 @@ function St(e, i) {
     diagnostics: o
   };
 }
-const oi = (e, i, t) => {
+const li = (e, i, t) => {
   var m, u;
-  const r = B(e, { validation: (m = i.validation) != null ? m : "strict" }), o = r.ok ? de(r.document) : de(e), n = r.diagnostics.slice();
+  const r = F(e, { validation: (m = i.validation) != null ? m : "strict" }), o = r.ok ? ue(r.document) : ue(e), n = r.diagnostics.slice();
   if (!r.ok)
     return { ok: !1, document: o, error: r.error, diagnostics: n };
   const s = r.document, a = i.layoutId || s.primaryLayoutId, l = i.profileId || null;
-  if (l && !ve(s, a, l) && !i.createMissingProfile) {
-    const c = X("profile-fallback", "error", `Dashboard profile "${l}" was not found; geometry operation was blocked.`, {
+  if (l && !Se(s, a, l) && !i.createMissingProfile) {
+    const c = K("profile-fallback", "error", `Dashboard profile "${l}" was not found; geometry operation was blocked.`, {
       layoutId: a,
       profileId: l
     });
     return {
       ok: !1,
       document: o,
-      error: K("validation", c.message, { path: `layouts.${a}.profiles.${l}` }),
+      error: Q("validation", c.message, { path: `layouts.${a}.profiles.${l}` }),
       diagnostics: n.concat(c)
     };
   }
-  const d = ri(s, {
+  const d = di(s, {
     layoutId: a,
     profileId: l,
     createMissingProfile: i.createMissingProfile,
@@ -1987,17 +2028,17 @@ const oi = (e, i, t) => {
     return { ok: !1, document: o, error: d.error, diagnostics: n };
   const f = t(
     d.projection.layout,
-    ei(d.projection.gridSettings)
+    ni(d.projection.gridSettings)
   );
-  if (n.push(...ii(f, a, l)), f.status === "blocked" || f.status === "error")
+  if (n.push(...si(f, a, l)), f.status === "blocked" || f.status === "error")
     return {
       ok: !1,
       document: o,
       operation: f,
-      error: K("validation", ((u = f.error) == null ? void 0 : u.message) || "Dashboard geometry operation failed."),
+      error: Q("validation", ((u = f.error) == null ? void 0 : u.message) || "Dashboard geometry operation failed."),
       diagnostics: n
     };
-  const g = ti(s, f, {
+  const g = ai(s, f, {
     layoutId: a,
     profileId: l,
     createMissingProfile: i.createMissingProfile,
@@ -2005,11 +2046,11 @@ const oi = (e, i, t) => {
   });
   return n.push(...g.diagnostics), g.ok ? { ok: !0, document: g.document, operation: f, diagnostics: n } : { ok: !1, document: o, operation: f, error: g.error, diagnostics: n };
 };
-function Dt(e, i = {}) {
-  return oi(
+function Rt(e, i = {}) {
+  return li(
     e,
     i,
-    (t, r) => di(t, {
+    (t, r) => gi(t, {
       policy: i.policy,
       engineOptions: r,
       id: "dashboard-repair",
@@ -2018,11 +2059,11 @@ function Dt(e, i = {}) {
     })
   );
 }
-function Ht(e, i) {
-  return oi(
+function jt(e, i) {
+  return li(
     e,
     i,
-    (t, r) => li(t, {
+    (t, r) => mi(t, {
       dx: i.dx,
       dy: i.dy,
       clampNegative: i.clampNegative,
@@ -2035,25 +2076,25 @@ function Ht(e, i) {
   );
 }
 export {
-  Ge as D,
-  ie as a,
-  $t as b,
-  pt as c,
-  Ai as d,
+  Ze as D,
+  oe as a,
+  Et as b,
+  $t as c,
+  Yi as d,
   $ as e,
-  yt as f,
-  wt as g,
-  vt as h,
-  bt as i,
-  St as j,
-  Gi as k,
-  It as l,
-  Hi as m,
-  Ce as n,
-  Ye as p,
-  Dt as r,
-  _e as s,
-  Ht as t,
-  B as v,
-  kt as w
+  St as f,
+  Ht as g,
+  zt as h,
+  Dt as i,
+  Ot as j,
+  et as k,
+  Mt as l,
+  Ri as m,
+  Ke as n,
+  Je as p,
+  Rt as r,
+  Ge as s,
+  jt as t,
+  F as v,
+  Pt as w
 };

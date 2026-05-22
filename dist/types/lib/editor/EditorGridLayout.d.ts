@@ -2,6 +2,7 @@ import { type PropType } from "vue";
 import type { GridLayoutPersistenceController, GridLayoutPersistenceProp } from "../persistence";
 import type { Layout } from "../utils";
 import type { GridEditorProp } from "./types";
+import type { GridItemAspectRatioConstraint, ResolvedGridItemCapability } from "../item-capabilities";
 export declare const editorGridLayoutProps: {
     editor: {
         type: PropType<false | GridEditorProp>;
@@ -10,6 +11,14 @@ export declare const editorGridLayoutProps: {
     persistence: {
         type: PropType<false | GridLayoutPersistenceProp | GridLayoutPersistenceController<Layout>>;
         default: boolean;
+    };
+    itemCapabilities: {
+        type: PropType<Record<string, ResolvedGridItemCapability> | undefined>;
+        default: undefined;
+    };
+    resizeConstraints: {
+        type: PropType<Record<string, GridItemAspectRatioConstraint> | undefined>;
+        default: undefined;
     };
     class: {
         type: PropType<string>;

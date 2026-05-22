@@ -413,6 +413,7 @@ declare const DashboardResponsiveVueGridLayout: import("vue").DefineComponent<im
     isBounded: boolean;
     verticalCompact: boolean;
     compactType: import("./utils").CompactType;
+    editor: false | GridEditorProp;
     maxRows: number;
     cols: number;
     preventCollision: boolean;
@@ -447,7 +448,6 @@ declare const DashboardResponsiveVueGridLayout: import("vue").DefineComponent<im
     validation: LayoutValidationMode;
     breakpoint: string;
     mode: DashboardResponsiveMode;
-    editor: false | GridEditorProp;
     createMissingProfileOnEdit: boolean;
     targetViewRule: DashboardTargetViewRule;
     allowUnknownProfileItems: boolean;

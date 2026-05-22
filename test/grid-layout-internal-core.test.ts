@@ -770,6 +770,136 @@ function testResizeNoopDoesNotPreviewOrCommit() {
   assert.equal(layoutChanges, 0)
 }
 
+function testResizeIntentCarriesConstraintThroughPreviewAndCommit() {
+  const layout: Layout = [{ i: 'a', x: 0, y: 0, w: 2, h: 2 }]
+  const state = {
+    layout,
+    oldLayout: null,
+    activeDrag: null,
+    oldDragItem: null,
+    oldResizeItem: null,
+    activeResize: null,
+    resizing: false
+  } as never
+  const operations: LayoutOperation[] = []
+  const constraint = {
+    aspectRatio: {
+      enabled: true,
+      ratio: 2,
+      ratioKind: 'visual-px' as const,
+      source: 'explicit' as const,
+      fallbackPolicy: 'block' as const,
+      edgeHandles: [],
+      metrics: { colWidth: 100, rowHeight: 100, margin: [0, 0] as [number, number] }
+    }
+  }
+  const interactions = useGridDragResizeInteractions({
+    props: {
+      autoScroll: false,
+      allowOverlap: false,
+      cols: 12,
+      compactType: 'vertical',
+      containerPadding: null,
+      dropStrategy: 'cursor',
+      droppingItem: { i: 'drop', w: 1, h: 1 },
+      margin: [0, 0],
+      maxRows: Infinity,
+      preventCollision: false,
+      rowHeight: 100,
+      transformScale: 1,
+      verticalCompact: true,
+      width: 1200
+    },
+    state,
+    eventBridge: {
+      emitDragStart: () => undefined,
+      emitDrag: () => undefined,
+      emitDragStop: () => undefined,
+      emitResizeStart: () => undefined,
+      emitResize: () => undefined,
+      emitResizeStop: () => undefined,
+      emitDrop: () => undefined,
+      callDropDragOver: () => undefined
+    },
+    engineBridge: {
+      getLayoutEngineProp: () => ({}),
+      isLegacyLayoutEngine: () => false,
+      reset: () => undefined,
+      start: () => undefined,
+      getCommitted: () => layout,
+      preview: (_id, operation, apply) => {
+        operations.push(operation)
+        apply({
+          id: 'preview',
+          status: 'changed',
+          layout: [{ i: 'a', x: 0, y: 0, w: 4, h: 2 }],
+          patches: [],
+          affectedIds: ['a'],
+          collisions: [],
+          placeholder: { i: 'a', x: 0, y: 0, w: 4, h: 2 }
+        })
+        return null
+      },
+      commit: (_id, operation, apply) => {
+        operations.push(operation)
+        apply({
+          id: 'commit',
+          status: 'changed',
+          layout: [{ i: 'a', x: 0, y: 0, w: 4, h: 2 }],
+          patches: [],
+          affectedIds: ['a'],
+          collisions: []
+        })
+        return null
+      }
+    } as never,
+    frameUpdate: {
+      cancel: () => undefined,
+      schedule: () => undefined,
+      resetMovedFlags: () => undefined
+    } as never,
+    autoScroll: {
+      init: () => undefined,
+      maybeScroll: () => undefined,
+      reset: () => undefined
+    } as never,
+    editor: {
+      clearGuides: () => undefined,
+      resetSnap: () => undefined,
+      snapCandidate: (_activeId, _activeItem, candidate) => candidate,
+      updateIntelligence: () => undefined,
+      resolveMoveDrag: input => ({ kind: 'single', id: input.id }),
+      resolveResizeIntent: input => ({
+        kind: 'allowed',
+        candidate: { ...input.rawCandidate, h: 2 },
+        constraint
+      }),
+      notifyMoveBlocked: () => undefined,
+      commitResize: async () => ({ status: 'changed' })
+    },
+    nextInteractionRequestId: (kind, id) => `${kind}:${id}`,
+    syncHistory: () => undefined,
+    onLayoutMaybeChanged: next => {
+      ;(state as { layout: Layout }).layout = next
+    }
+  } as never)
+
+  const resizeEvent = {
+    e: {} as MouseEvent,
+    node: {} as HTMLElement,
+    size: { width: 40, height: 40 },
+    handle: 'se'
+  } as never
+  interactions.onResizeStart('a', 2, 2, resizeEvent)
+  interactions.onResize('a', 4, 4, resizeEvent)
+  interactions.onResizeStop('a', 4, 4, resizeEvent)
+
+  assert.equal(operations.length, 2)
+  assert.equal((operations[0] as Extract<LayoutOperation, { type: 'resize' }>).h, 2)
+  assert.equal((operations[1] as Extract<LayoutOperation, { type: 'resize' }>).h, 2)
+  assert.equal(Boolean((operations[0] as Extract<LayoutOperation, { type: 'resize' }>).constraint?.aspectRatio), true)
+}
+
 function testDropNoopDoesNotRepeatPreview() {
   const previousElement = (globalThis as { Element?: unknown }).Element
   class FakeElement {
@@ -1103,6 +1233,7 @@ testGroupDragInteractionOperations()
 testGroupDragBlockedFeedback()
 testClickLikeDragDoesNotShowGuides()
 testResizeNoopDoesNotPreviewOrCommit()
+testResizeIntentCarriesConstraintThroughPreviewAndCommit()
 testDropNoopDoesNotRepeatPreview()
 testRuntimeSkipBlockedSingleAllowedGroupIntent()
 void testPointerCommandGuardRollback().then(() => {

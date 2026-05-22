@@ -312,6 +312,8 @@ Editor fundamentals:
 - Item editor metadata lives in sidecar `editorMetaById`; `locked`, `visible`, `editable`, `deletable`, `duplicatable` and `copyable` are not written into `LayoutItem` by default.
 - Multi-selection move is engine-first: dragging a selected item in a multi-selection, using keyboard arrows, or executing a multi-target `move` command submits a layout-engine `groupMove` operation. The operation preserves selected item offsets, returns per-item layout patches/diagnostics, and records one undoable history entry at commit.
 - `locked: true` is editor metadata: it blocks direct editing of that item but does not make it a physical obstacle. `static: true` belongs on the `LayoutItem`: it blocks direct movement and acts as a collision obstacle for other moving items, including group moves.
+- `resizable: false` and effective `resizeHandles` are resolved through a shared item capability layer in editor/dashboard wrappers. When `preserveAspectRatio` is enabled, edge handles are disabled by default; opt into edge handles explicitly when the product wants the opposite axis inferred during ratio resize.
+- `aspectRatio` is a visual pixel ratio (`widthPx / heightPx`), not `w / h`. Resize preview and commit use the same sidecar constraint; missing visual metrics block ratio resize unless the caller explicitly supplies a fallback policy.
 - `commandPolicy: "skip-blocked"` moves only allowed selected items and reports skipped ids; the default `"all-or-nothing"` policy blocks the whole command if any target is locked, hidden, static, missing or otherwise not movable.
 - Group move follows the same collision and bounds rules as the layout engine. `preventCollision=true` blocks group collisions with external items, `preventCollision=false` may push/compact external non-static items, `allowOverlap=true` permits overlap, and bounds/maxRows violations are reported as structured blocked results.
 - Pointer drag, resize and external drop use the same command guard before durable commit when an editor controller is present. If guard blocks, cancels, times out or the command is stale, the visual preview is rolled back to the committed layout and placeholder/guides/auto-scroll state is cleared.
@@ -695,7 +697,7 @@ if (saved.ok) {
 }
 ```
 
-The dashboard adapter is framework-independent. It does not add `useDashboardLayoutPersistence()`, component-level dashboard props, collision repair, context menus, widget palettes or business data source models. `LayoutItem` remains the generic grid runtime shape; dashboard-only fields such as `mobileOrder`, `mobileHeight`, `desktopHide`, `mobileHide`, `preserveAspectRatio` and grid settings stay in the dashboard document or sidecar diagnostics.
+The dashboard adapter is framework-independent. It does not add `useDashboardLayoutPersistence()`, component-level dashboard props, collision repair, context menus, widget palettes or business data source models. `LayoutItem` remains the generic grid runtime shape; dashboard-only fields such as `mobileOrder`, `mobileHeight`, `desktopHide`, `mobileHide`, `preserveAspectRatio`, `aspectRatio` and grid settings stay in the dashboard document or runtime sidecars (`capabilitiesById`, `resizeConstraintsById`).
 
 ## Dashboard Responsive Profiles
 
@@ -812,7 +814,7 @@ const dashboardResult = migrateDashboardLayoutSettings(document, {
 })
 ```
 
-The default repair implementation is deterministic heuristic repair: static or locked items are preserved first, movable items use nearest-fit with first-fit fallback, and diagnostics identify scaling, clamping, movement, fallback and unresolved constraints. The API is solver-ready through `customRepairSolver`, objective metadata, budget fields and solver diagnostics, but the package does not ship a full constraint solver, ILP/CP-SAT dependency, settings dialog UI, schema rewrite, height/render precision calculation, aspect-ratio resize or mobile/list ordering rewrite as part of this feature.
+The default repair implementation is deterministic heuristic repair: static or locked items are preserved first, movable items use nearest-fit with first-fit fallback, and diagnostics identify scaling, clamping, movement, fallback and unresolved constraints. The API is solver-ready through `customRepairSolver`, objective metadata, budget fields and solver diagnostics, but the package does not ship a full constraint solver, ILP/CP-SAT dependency, settings dialog UI, schema rewrite, group resize, nested grids, inter-grid drag, full Editor Kit UI, Widget Registry schema or AI/MCP dashboard assistant as part of this feature.
 
 ## Layout Engine Performance
 

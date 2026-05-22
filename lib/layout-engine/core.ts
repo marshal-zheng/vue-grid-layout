@@ -16,6 +16,10 @@ import {
   executeRepairCollisions,
   executeTranslateLayout
 } from "./migration";
+import {
+  resolveAspectRatioResizeCandidate,
+  type GridItemCapabilityDiagnostic
+} from "../item-capabilities";
 
 import type {
   CompactType,
@@ -34,7 +38,8 @@ import type {
   LayoutOperationRequest,
   LayoutOperationResult,
   LayoutOperationStatus,
-  LayoutPatch
+  LayoutPatch,
+  LayoutRepairDiagnostic
 } from "./types";
 
 const DEFAULT_MAX_ROWS = Infinity;
@@ -310,7 +315,24 @@ const makeResult = (
   indexHit: boolean,
   extra: Partial<LayoutOperationResult> = {}
 ): LayoutOperationResult => {
+  const { diagnostics: extraDiagnostics, ...resultExtra } = extra;
   const affectedIds = collectAffectedIds(patches, collisions);
+  const diagnostics = createDiagnostics(
+    request,
+    status,
+    layout,
+    patches,
+    collisions,
+    start,
+    indexHit,
+    extra.blocked?.reason
+  );
+  if (extraDiagnostics?.details) {
+    diagnostics.details = [
+      ...(diagnostics.details || []),
+      ...extraDiagnostics.details
+    ];
+  }
   const result: LayoutOperationResult = {
     id: request.id,
     status,
@@ -318,21 +340,23 @@ const makeResult = (
     patches,
     affectedIds,
     collisions,
-    diagnostics: createDiagnostics(
-      request,
-      status,
-      layout,
-      patches,
-      collisions,
-      start,
-      indexHit,
-      extra.blocked?.reason
-    ),
-    ...extra
+    diagnostics,
+    ...resultExtra
   };
   emitResultEvents(request, result);
   return result;
 };
+
+const capabilityDiagnosticsToLayoutDetails = (
+  diagnostics: GridItemCapabilityDiagnostic[]
+): LayoutRepairDiagnostic[] => diagnostics.map(item => ({
+  code: item.code,
+  level: item.level,
+  message: item.message,
+  itemId: item.itemId,
+  reason: item.field,
+  details: item.details
+}));
 
 const makeBlockedResult = (
   request: LayoutOperationRequest,
@@ -340,10 +364,14 @@ const makeBlockedResult = (
   collisions: LayoutItem[],
   start: number,
   indexHit: boolean,
-  itemIds: string[] = collisions.map(item => item.i)
+  itemIds: string[] = collisions.map(item => item.i),
+  details: LayoutRepairDiagnostic[] = []
 ): LayoutOperationResult =>
   makeResult(request, "blocked", request.layout, [], collisions, start, indexHit, {
-    blocked: { reason, itemIds }
+    blocked: { reason, itemIds },
+    diagnostics: details.length > 0
+      ? { details } as LayoutOperationResult["diagnostics"]
+      : undefined
   });
 
 const makeNoopResult = (
@@ -721,7 +749,35 @@ const normalizeResize = (
   item: LayoutItem,
   operation: Extract<LayoutOperation, { type: "resize" }>,
   options: GridLayoutEngineOptions
-): { x: number; y: number; w: number; h: number; moved: boolean; reason?: LayoutBlockedReason } => {
+): {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  moved: boolean;
+  reason?: LayoutBlockedReason;
+  details?: LayoutRepairDiagnostic[];
+} => {
+  const allowedHandles = operation.constraint?.handlePolicy?.allowedHandles;
+  if (allowedHandles && allowedHandles.indexOf(operation.handle) === -1) {
+    return {
+      x: item.x,
+      y: item.y,
+      w: item.w,
+      h: item.h,
+      moved: false,
+      reason: "handle-disabled",
+      details: [{
+        code: "item-capability.handle-disabled",
+        level: "warning",
+        message: "Resize handle is disabled by item capability policy.",
+        itemId: item.i,
+        reason: "resizeHandles",
+        details: { handle: operation.handle, allowedHandles }
+      }]
+    };
+  }
+
   let w = clamp(
     operation.w,
     typeof item.minW === "number" ? item.minW : 1,
@@ -754,6 +810,43 @@ const normalizeResize = (
     moved = true;
   }
 
+  if (operation.constraint?.aspectRatio?.enabled) {
+    const ratioResult = resolveAspectRatioResizeCandidate({
+      startItem: item,
+      rawCandidate: { ...item, x, y, w, h },
+      handle: operation.handle,
+      constraint: operation.constraint.aspectRatio,
+      bounds: {
+        cols: options.cols,
+        maxRows: options.maxRows,
+        minW: item.minW,
+        minH: item.minH,
+        maxW: item.maxW,
+        maxH: item.maxH
+      }
+    });
+    const details = capabilityDiagnosticsToLayoutDetails(ratioResult.diagnostics);
+    if (ratioResult.kind === "blocked") {
+      return {
+        x: ratioResult.candidate?.x ?? x,
+        y: ratioResult.candidate?.y ?? y,
+        w: ratioResult.candidate?.w ?? w,
+        h: ratioResult.candidate?.h ?? h,
+        moved,
+        reason: ratioResult.reason,
+        details
+      };
+    }
+    x = ratioResult.candidate.x;
+    y = ratioResult.candidate.y;
+    w = ratioResult.candidate.w;
+    h = ratioResult.candidate.h;
+    moved = moved || x !== item.x || y !== item.y;
+    if (details.length > 0) {
+      return { x, y, w, h, moved, details };
+    }
+  }
+
   if (x < 0 || y < 0) return { x, y, w, h, moved, reason: "bounds" };
   if (x + w > options.cols) return { x, y, w, h, moved, reason: "bounds" };
   if (Number.isFinite(options.maxRows) && y + h > (options.maxRows as number)) {
@@ -779,7 +872,7 @@ const executeResize = (
 
   const normalized = normalizeResize(sourceItem, operation, request.options);
   if (normalized.reason) {
-    return makeBlockedResult(request, normalized.reason, [], start, true, [operation.id]);
+    return makeBlockedResult(request, normalized.reason, [], start, true, [operation.id], normalized.details);
   }
   if (
     sourceItem.w === normalized.w &&
@@ -831,7 +924,10 @@ const executeResize = (
   const finalItem = getLayoutItem(finalLayout, operation.id) || nextItem;
   const status = patches.length === 0 || shallowLayoutEqual(request.layout, finalLayout) ? "noop" : "changed";
   return makeResult(request, status, status === "noop" ? request.layout : finalLayout, patches, collisions, start, true, {
-    placeholder: cloneLayoutItem(finalItem)
+    placeholder: cloneLayoutItem(finalItem),
+    diagnostics: normalized.details && normalized.details.length > 0
+      ? { details: normalized.details } as LayoutOperationResult["diagnostics"]
+      : undefined
   });
 };
 

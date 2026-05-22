@@ -1,6 +1,10 @@
 import type { ComputedRef, Ref } from "vue";
 import type { GridHistoryStore } from "../history";
 import type {
+  GridItemAspectRatioConstraint,
+  ResolvedGridItemCapability
+} from "../item-capabilities";
+import type {
   GridLayoutEngineOptions,
   GridLayoutEngineProp,
   LayoutDiagnostics,
@@ -21,6 +25,7 @@ import type {
   ResponsiveGridLayoutPersistenceProp
 } from "../persistence";
 import type { Layout, LayoutItem, ResizeHandleAxis } from "../utils";
+import type { GridItemCapabilityDiagnostic, GridItemCapabilitySource } from "../item-capabilities";
 
 export type GridEditorMode = "view" | "edit";
 
@@ -62,6 +67,7 @@ export type GridEditorItemMeta = {
   deletable?: boolean;
   duplicatable?: boolean;
   copyable?: boolean;
+  resizeHandles?: ResizeHandleAxis[];
   label?: string;
   data?: Record<string, unknown>;
 };
@@ -80,6 +86,7 @@ export type GridEditorResolvedCapability = {
   duplicatable: boolean;
   copyable: boolean;
   resizeHandles?: ResizeHandleAxis[];
+  diagnostics?: GridItemCapabilityDiagnostic[];
   source: {
     layoutStatic?: boolean;
     layoutDraggable?: boolean;
@@ -88,6 +95,7 @@ export type GridEditorResolvedCapability = {
     metaLocked?: boolean;
     metaVisible?: boolean;
     metaEditable?: boolean;
+    capabilitySources?: Record<string, GridItemCapabilitySource>;
   };
 };
 
@@ -194,6 +202,9 @@ export type GridEditorBlockedReason =
   | "bounds"
   | "maxRows"
   | "missing-item"
+  | "handle-disabled"
+  | "aspect-ratio"
+  | "metrics-missing"
   | "selection-count"
   | "unsupported-scope"
   | "unsupported"
@@ -1115,6 +1126,8 @@ export type UseGridEditorOptions = {
   idGenerator?: (baseId: string, existingIds: Set<string>) => string;
   pasteStrategy?: GridEditorPasteStrategy;
   commandPolicy?: GridEditorCommandPolicy;
+  itemCapabilities?: Record<string, ResolvedGridItemCapability>;
+  resizeConstraints?: Record<string, GridItemAspectRatioConstraint>;
   onEvent?: (event: GridEditorEvent) => void;
 };
 

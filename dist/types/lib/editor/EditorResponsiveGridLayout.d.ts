@@ -179,6 +179,7 @@ declare const EditorResponsiveGridLayout: import("vue").DefineComponent<import("
 }>, {
     verticalCompact: boolean;
     compactType: CompactType;
+    editor: false | GridEditorProp;
     cols: BreakpointMap;
     allowOverlap: boolean;
     breakpoints: BreakpointMap;
@@ -189,6 +190,5 @@ declare const EditorResponsiveGridLayout: import("vue").DefineComponent<import("
     layoutEngine: false | GridLayoutEngineProp;
     persistence: ResponsiveGridLayoutPersistenceProp | GridLayoutPersistenceController<PersistentLayoutsMap>;
     breakpoint: string;
-    editor: false | GridEditorProp;
 }, {}, {}, {}, string, import("vue").ComponentProvideOptions, true, {}, any>;
 export default EditorResponsiveGridLayout;

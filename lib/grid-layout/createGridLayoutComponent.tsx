@@ -282,7 +282,9 @@ export const createGridLayoutComponent = ({
       if (!itemState.visible) return null;
 
       const renderItem = itemState.previewItem || l;
-      const resizeHandlesOptions = l.resizeHandles || resizeHandles;
+      const resizeHandlesOptions = typeof itemState.resizeHandles !== "undefined"
+        ? itemState.resizeHandles
+        : l.resizeHandles || resizeHandles;
       return (
         <GridItem
           key={l.i}

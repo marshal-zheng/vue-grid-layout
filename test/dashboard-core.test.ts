@@ -267,7 +267,11 @@ function testProjection() {
   assert.equal(projection.ok && projection.projection.gridSettings.heightMode, 'auto')
   assert.equal(projection.ok && projection.projection.gridSettings.minRowHeight, 24)
   assert.equal(projection.ok && projection.projection.gridSettings.renderPrecision, 'integer')
+  assert.equal(projection.ok && projection.projection.capabilitiesById?.temperature.resizable, false)
+  assert.equal(projection.ok && projection.projection.capabilitiesById?.temperature.aspectRatio?.enabled, true)
+  assert.equal(projection.ok && projection.projection.resizeConstraintsById?.temperature.enabled, true)
   assert.ok(projection.ok && projection.projection.diagnostics.some(item => item.code === 'unsupported-field'))
+  assert.ok(projection.ok && projection.projection.diagnostics.some(item => item.code === 'item-capability.sidecar-projected'))
 
   const mobile = projectDashboardLayoutDocument(doc, { profileId: 'mobile', targetView: 'mobile' })
   assert.equal(mobile.ok, true)
@@ -279,6 +283,8 @@ function testProjection() {
   assert.equal(mobile.ok && mobile.projection.gridSettings.viewFormat, 'list')
   assert.equal(mobile.ok && mobile.projection.gridSettings.mobileHeightMode, 'scroll')
   assert.equal(mobile.ok && mobile.projection.gridSettings.renderPrecision, 'subpixel')
+  assert.equal(mobile.ok && mobile.projection.capabilitiesById?.temperature.static, false)
+  assert.equal(mobile.ok && mobile.projection.resizeConstraintsById?.temperature.enabled, true)
   assert.ok(mobile.ok && mobile.projection.diagnostics.some(item => item.code === 'unknown-item' && item.itemId === 'deferred'))
 
   const fallback = projectDashboardLayoutDocument(doc, { profileId: 'missing' })
@@ -295,7 +301,7 @@ function testWriteBack() {
   const original = cloneJson(doc)
   const runtimeLayout: Layout = [
     { i: 'temperature', x: 6, y: 7, w: 8, h: 9, minW: 3, maxH: 10, isResizable: true },
-    { i: 'pressure', x: 1, y: 2, w: 3, h: 4 }
+    { i: 'pressure', x: 1, y: 2, w: 3, h: 4, static: true, isResizable: false, resizeHandles: ['se'] }
   ]
   const runtimeMeta: GridEditorMetaById = {
     temperature: { label: 'Temperature Updated', resizable: true, visible: false, data: { unit: 'F' } },
@@ -315,6 +321,9 @@ function testWriteBack() {
   assert.equal(written.ok && written.document.layouts.default.widgets.temperature.minSizeX, 3)
   assert.equal(written.ok && written.document.layouts.default.widgets.temperature.maxSizeY, 10)
   assert.equal(written.ok && written.document.layouts.default.widgets.temperature.resizable, true)
+  assert.equal(written.ok && written.document.layouts.default.widgets.pressure.static, undefined)
+  assert.equal(written.ok && written.document.layouts.default.widgets.pressure.resizable, undefined)
+  assert.equal(written.ok && written.document.layouts.default.widgets.pressure.resizeHandles, undefined)
   assert.equal(written.ok && written.document.layouts.default.widgets.temperature.mobileHide, true)
   assert.equal(written.ok && written.document.layouts.default.gridSettings?.columns, 30)
   assert.equal(written.ok && written.document.layouts.default.editor?.editorMetaById?.pressure.locked, true)
@@ -344,12 +353,13 @@ function testWriteBack() {
   assert.equal(!unknown.ok && unknown.error.code, 'unknown-item')
 
   const created = writeDashboardRuntimeToDocument(doc, {
-    layout: [{ i: 'new-widget', x: 0, y: 0, w: 1, h: 1 }]
+    layout: [{ i: 'new-widget', x: 0, y: 0, w: 1, h: 1, isResizable: false }]
   }, {
     createMissingItems: true
   })
   assert.equal(created.ok, true)
   assert.equal(created.ok && created.document.layouts.default.widgets['new-widget'].sizeX, 1)
+  assert.equal(created.ok && created.document.layouts.default.widgets['new-widget'].resizable, undefined)
 
   const missingProfile = writeDashboardRuntimeToDocument(doc, {
     layout: [{ i: 'temperature', x: 0, y: 0, w: 1, h: 1 }]
@@ -643,6 +653,8 @@ function testResponsiveProfileResolverAndVisibility() {
   ))
   assert.deepEqual(mobile.ok && mobile.runtime.renderItemIds, ['pressure'])
   assert.deepEqual(mobile.ok && mobile.runtime.hiddenItemIds, ['temperature'])
+  assert.equal(mobile.ok && mobile.runtime.capabilitiesById?.temperature.aspectRatio?.enabled, true)
+  assert.equal(mobile.ok && mobile.runtime.resizeConstraintsById?.temperature.enabled, true)
   const pressure = mobile.ok && mobile.runtime.layout.find(item => item.i === 'pressure')
   assert.equal(pressure && pressure.x, 0)
   assert.equal(pressure && pressure.w, 24)

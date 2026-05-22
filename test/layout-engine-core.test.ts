@@ -9,6 +9,8 @@ import {
   migrateLayoutSettings,
   placeLayoutItems,
   repairLayoutCollisions,
+  resolveGridItemAspectRatioConstraint,
+  resolveGridItemCapability,
   rowColumnOccupancyStrategy,
   translateLayout,
   workerLayoutExecutor
@@ -23,7 +25,8 @@ import {
   getAllCollisions,
   getLayoutItem,
   moveElement,
-  type Layout
+  type Layout,
+  type ResizeHandleAxis
 } from '../lib/utils'
 import { basicProps } from '../lib/VueGridLayoutPropTypes'
 import ResponsiveVueGridLayout from '../lib/ResponsiveVueGridLayout'
@@ -430,6 +433,238 @@ function testResizeDropResponsive() {
   })
   assert.ok(['changed', 'noop'].includes(responsive.status))
   assert.ok(responsive.layout.every(item => item.x + item.w <= 6))
+}
+
+function testItemCapabilityResolverAndAspectRatioHelpers() {
+  const capability = resolveGridItemCapability({
+    item: {
+      i: 'video',
+      x: 0,
+      y: 0,
+      w: 2,
+      h: 2,
+      isResizable: true,
+      resizeHandles: ['e', 'se', 's']
+    },
+    dashboard: {
+      preserveAspectRatio: true,
+      aspectRatio: 16 / 9
+    },
+    editor: {
+      resizeHandles: ['e', 'se']
+    },
+    defaults: {
+      resizeHandles: ['e', 'se', 's', 'sw']
+    }
+  })
+  assert.equal(capability.resizable, true)
+  assert.deepEqual(capability.resizeHandles, ['se'])
+  assert.equal(capability.aspectRatio?.ratio, 16 / 9)
+  assert.equal(capability.resizeConstraint?.handlePolicy?.allowedHandles?.includes('e'), false)
+
+  const edgeOptIn = resolveGridItemCapability({
+    item: {
+      i: 'video',
+      x: 0,
+      y: 0,
+      w: 2,
+      h: 2,
+      isResizable: true,
+      resizeHandles: ['e', 'se']
+    },
+    dashboard: {
+      preserveAspectRatio: true,
+      aspectRatio: 16 / 9,
+      aspectRatioEdgeHandles: ['e']
+    }
+  })
+  assert.deepEqual(edgeOptIn.resizeHandles, ['e', 'se'])
+
+  const locked = resolveGridItemCapability({
+    item: { i: 'locked', x: 0, y: 0, w: 1, h: 1 },
+    editor: { locked: true, draggable: true, resizable: true }
+  })
+  assert.equal(locked.static, false)
+  assert.equal(locked.locked, true)
+  assert.equal(locked.draggable, false)
+  assert.equal(locked.resizable, false)
+
+  const staticItem = resolveGridItemCapability({
+    item: { i: 'static', x: 0, y: 0, w: 1, h: 1, static: true, isDraggable: true }
+  })
+  assert.equal(staticItem.static, true)
+  assert.equal(staticItem.draggable, false)
+  assert.ok(staticItem.diagnostics.some(item => item.code === 'item-capability.conflict'))
+
+  const unsafeDashboard = Object.create(null) as Record<string, unknown>
+  unsafeDashboard.preserveAspectRatio = false
+  unsafeDashboard['constructor'] = 'ignored'
+  unsafeDashboard.futurePolicy = { enabled: true, constructor: 'ignored' }
+  const sanitized = resolveGridItemCapability({
+    item: { i: 'safe', x: 0, y: 0, w: 1, h: 1 },
+    dashboard: unsafeDashboard,
+    preserveUnknownFields: true
+  })
+  assert.ok(sanitized.diagnostics.some(item => item.code === 'item-capability.unsafe-key' && item.field === 'constructor'))
+  assert.ok(sanitized.diagnostics.some(item => item.code === 'item-capability.unknown-field' && item.field === 'futurePolicy'))
+  assert.deepEqual(sanitized.metadata?.dashboard, { futurePolicy: { enabled: true } })
+
+  const startRatio = resolveGridItemAspectRatioConstraint({
+    id: 'logo',
+    item: { x: 0, y: 0, w: 2, h: 2 },
+    preserveAspectRatio: true,
+    metrics: { colWidth: 120, rowHeight: 60, margin: [0, 0] }
+  })
+  assert.equal(startRatio.constraint?.source, 'start-geometry')
+  assert.equal(startRatio.constraint?.ratio, 2)
+
+  const fallbackRatio = resolveGridItemAspectRatioConstraint({
+    id: 'fallback-logo',
+    item: { x: 0, y: 0, w: 4, h: 2 },
+    preserveAspectRatio: true,
+    fallbackPolicy: 'grid-cell'
+  })
+  assert.equal(fallbackRatio.constraint?.source, 'start-geometry')
+  assert.equal(fallbackRatio.constraint?.ratio, 2)
+  assert.ok(fallbackRatio.diagnostics.some(item => item.code === 'item-capability.fallback-used'))
+}
+
+async function testLayoutEngineAspectRatioResizeConstraint() {
+  const layout: Layout = [{ i: 'video', x: 0, y: 0, w: 2, h: 2 }]
+  const constraint = {
+    handlePolicy: { allowedHandles: ['se'] as ResizeHandleAxis[] },
+    aspectRatio: {
+      enabled: true,
+      ratio: 2,
+      ratioKind: 'visual-px' as const,
+      source: 'explicit' as const,
+      fallbackPolicy: 'block' as const,
+      edgeHandles: [],
+      metrics: { colWidth: 100, rowHeight: 100, margin: [0, 0] as [number, number] }
+    }
+  }
+
+  const disabled = executeLayoutOperation({
+    id: 'ratio-disabled-handle',
+    phase: 'preview',
+    layout,
+    operation: { type: 'resize', id: 'video', w: 4, h: 2, handle: 'e', constraint },
+    options
+  })
+  assert.equal(disabled.status, 'blocked')
+  assert.equal(disabled.blocked?.reason, 'handle-disabled')
+  assert.equal(getLayoutItem(disabled.layout, 'video')?.w, 2)
+
+  const resized = executeLayoutOperation({
+    id: 'ratio-resize',
+    phase: 'commit',
+    layout,
+    operation: { type: 'resize', id: 'video', w: 4, h: 4, handle: 'se', constraint },
+    options
+  })
+  assert.equal(resized.status, 'changed')
+  assert.equal(resized.placeholder?.w, 4)
+  assert.equal(resized.placeholder?.h, 2)
+
+  const anchored = executeLayoutOperation({
+    id: 'ratio-nw-anchor',
+    phase: 'commit',
+    layout: [{ i: 'video', x: 4, y: 4, w: 2, h: 2 }],
+    operation: {
+      type: 'resize',
+      id: 'video',
+      w: 4,
+      h: 4,
+      handle: 'nw',
+      constraint: {
+        ...constraint,
+        handlePolicy: { allowedHandles: ['nw'] as ResizeHandleAxis[] }
+      }
+    },
+    options: { ...options, compactType: null }
+  })
+  assert.equal(anchored.status, 'changed')
+  assert.equal(anchored.placeholder?.x, 2)
+  assert.equal(anchored.placeholder?.y, 4)
+  assert.equal(anchored.placeholder?.w, 4)
+  assert.equal(anchored.placeholder?.h, 2)
+
+  const missingMetrics = executeLayoutOperation({
+    id: 'ratio-missing-metrics',
+    phase: 'commit',
+    layout,
+    operation: {
+      type: 'resize',
+      id: 'video',
+      w: 4,
+      h: 4,
+      handle: 'se',
+      constraint: {
+        aspectRatio: {
+          enabled: true,
+          ratio: 2,
+          ratioKind: 'visual-px',
+          source: 'explicit',
+          fallbackPolicy: 'block',
+          edgeHandles: []
+        }
+      }
+    },
+    options
+  })
+  assert.equal(missingMetrics.status, 'blocked')
+  assert.equal(missingMetrics.blocked?.reason, 'metrics-missing')
+
+  const fallbackResize = executeLayoutOperation({
+    id: 'ratio-grid-cell-fallback',
+    phase: 'commit',
+    layout,
+    operation: {
+      type: 'resize',
+      id: 'video',
+      w: 3,
+      h: 1,
+      handle: 'se',
+      constraint: {
+        aspectRatio: {
+          enabled: true,
+          ratioKind: 'visual-px',
+          source: 'start-geometry',
+          fallbackPolicy: 'grid-cell',
+          edgeHandles: []
+        }
+      }
+    },
+    options
+  })
+  assert.equal(fallbackResize.status, 'changed')
+  assert.equal(fallbackResize.placeholder?.w, 3)
+  assert.equal(fallbackResize.placeholder?.h, 3)
+  assert.ok(fallbackResize.diagnostics?.details?.some(item => item.code === 'item-capability.fallback-used'))
+
+  const impossible = executeLayoutOperation({
+    id: 'ratio-impossible-minmax',
+    phase: 'commit',
+    layout: [{ i: 'video', x: 0, y: 0, w: 2, h: 2, maxW: 3 }],
+    operation: { type: 'resize', id: 'video', w: 4, h: 4, handle: 'se', constraint },
+    options
+  })
+  assert.equal(impossible.status, 'blocked')
+  assert.equal(impossible.blocked?.reason, 'aspect-ratio')
+
+  const worker = runLayoutWorkerRequest({
+    type: 'layout-engine-request',
+    id: 'ratio-worker',
+    request: {
+      id: 'ratio-worker',
+      phase: 'commit',
+      layout,
+      operation: { type: 'resize', id: 'video', w: 4, h: 4, handle: 'se', constraint },
+      options
+    }
+  })
+  assert.deepEqual(worker.result?.placeholder, resized.placeholder)
+  assert.equal(worker.result?.status, resized.status)
 }
 
 function testMigrationAndRepairOperations() {
@@ -986,6 +1221,8 @@ async function main() {
   testGroupMoveValidationAndParity()
   testGroupMoveCollisionsAndCompaction()
   testResizeDropResponsive()
+  testItemCapabilityResolverAndAspectRatioHelpers()
+  await testLayoutEngineAspectRatioResizeConstraint()
   testMigrationAndRepairOperations()
   testPlacementTranslateAndCustomSolver()
   testInteractionController()

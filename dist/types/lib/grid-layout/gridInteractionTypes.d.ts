@@ -1,7 +1,8 @@
 import type { CompactType, EventCallback, Layout, LayoutItem, ResizeHandleAxis } from "../utils";
 import type { DropDragOverResult } from "./contract";
 import type { GridDragActivationDistance } from "../interaction-state-machine";
-import type { LayoutOperationResult } from "../layout-engine";
+import type { LayoutOperationResult, LayoutResizeConstraint } from "../layout-engine";
+import type { GridItemCapabilityDiagnostic, GridItemResizeMetrics } from "../item-capabilities";
 import type { GridLayoutState } from "./useGridLayoutModel";
 import type { useGridAutoScroll } from "./useGridAutoScroll";
 import type { useGridFrameUpdate } from "./useGridFrameUpdate";
@@ -24,6 +25,7 @@ export type GridInteractionsProps = {
     maxRows: number;
     preventCollision: boolean;
     rowHeight: number;
+    renderPrecision?: "integer" | "subpixel" | null;
     transformScale: number;
     verticalCompact: boolean;
     width?: number;
@@ -41,9 +43,9 @@ export type GridLayoutEventBridge = {
 export type GridLayoutEngineBridge = ReturnType<typeof useGridLayoutEngineBridge>;
 export type GridFrameUpdate = ReturnType<typeof useGridFrameUpdate>;
 export type GridAutoScroll = ReturnType<typeof useGridAutoScroll>;
-export type GridInteractionBlockedReason = "mode-readonly" | "editor-mode-missing" | "capability" | "locked" | "hidden" | "static-item" | "collision" | "bounds" | "maxRows" | "missing-item" | "selection-count" | "unsupported-scope" | "unsupported" | "section-row-locked" | "section-row-collapsed" | "section-row-policy" | "before-command-blocked" | "before-command-cancelled" | "before-command-timeout" | "command-pending" | "guard-aborted" | "stale-command" | "multi-resize-unsupported" | "clipboard-unavailable" | "clipboard-permission" | "clipboard-invalid" | "persistence-error" | "conflict" | "invalid-input";
+export type GridInteractionBlockedReason = "mode-readonly" | "editor-mode-missing" | "capability" | "locked" | "hidden" | "static-item" | "collision" | "bounds" | "maxRows" | "missing-item" | "handle-disabled" | "aspect-ratio" | "metrics-missing" | "selection-count" | "unsupported-scope" | "unsupported" | "section-row-locked" | "section-row-collapsed" | "section-row-policy" | "before-command-blocked" | "before-command-cancelled" | "before-command-timeout" | "command-pending" | "guard-aborted" | "stale-command" | "multi-resize-unsupported" | "clipboard-unavailable" | "clipboard-permission" | "clipboard-invalid" | "persistence-error" | "conflict" | "invalid-input";
 export type GridInteractionCommandResult = {
-    status: "changed" | "noop" | "blocked" | "cancelled" | "timeout" | "error" | string;
+    status: "changed" | "noop" | "blocked" | "cancelled" | "timeout" | "error";
 };
 export type GridInteractionsEditor = {
     clearGuides: () => void;
@@ -97,6 +99,26 @@ export type GridInteractionsEditor = {
         event?: Event;
     }) => Promise<GridInteractionCommandResult | null>;
     rollbackInteraction?: (layout: Layout, reason: string) => void;
+    resolveResizeIntent?: (input: {
+        id: string;
+        item: LayoutItem;
+        layout: Layout;
+        handle: ResizeHandleAxis;
+        rawCandidate: LayoutItem;
+        metrics?: GridItemResizeMetrics;
+        phase: "preview" | "commit";
+    }) => {
+        kind: "allowed";
+        candidate: LayoutItem;
+        constraint?: LayoutResizeConstraint;
+        diagnostics?: GridItemCapabilityDiagnostic[];
+    } | {
+        kind: "blocked";
+        reason: GridInteractionBlockedReason;
+        ids: string[];
+        message?: string;
+        diagnostics?: GridItemCapabilityDiagnostic[];
+    };
 };
 export type GridInteractionCommonOptions = {
     props: GridInteractionsProps;

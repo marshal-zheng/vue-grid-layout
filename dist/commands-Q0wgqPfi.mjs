@@ -1,4 +1,5 @@
-const R = /* @__PURE__ */ new Set(["__proto__", "prototype", "constructor"]), O = [
+import { j as O, n as j } from "./migration-CPonYzEY.mjs";
+const C = /* @__PURE__ */ new Set(["__proto__", "prototype", "constructor"]), D = [
   "locked",
   "visible",
   "editable",
@@ -7,11 +8,11 @@ const R = /* @__PURE__ */ new Set(["__proto__", "prototype", "constructor"]), O 
   "deletable",
   "duplicatable",
   "copyable"
-], j = (e, t) => Object.prototype.hasOwnProperty.call(e, t), k = (e) => {
+], A = (e, t) => Object.prototype.hasOwnProperty.call(e, t), I = (e) => {
   if (!e || typeof e != "object") return !1;
   const t = Object.getPrototypeOf(e);
   return t === Object.prototype || t === null;
-}, w = (e) => !R.has(e), m = (e, t, s) => {
+}, p = (e) => !C.has(e), w = (e, t, s) => {
   if (e == null || typeof e == "string" || typeof e == "number" || typeof e == "boolean")
     return typeof e == "number" && !Number.isFinite(e) ? (s.push({
       code: "non-json-value",
@@ -20,22 +21,22 @@ const R = /* @__PURE__ */ new Set(["__proto__", "prototype", "constructor"]), O 
     }), !1) : !0;
   if (Array.isArray(e)) {
     let r = !0;
-    for (let o = 0; o < e.length; o++)
-      r = m(e[o], `${t}[${o}]`, s) && r;
+    for (let a = 0; a < e.length; a++)
+      r = w(e[a], `${t}[${a}]`, s) && r;
     return r;
   }
-  if (k(e)) {
+  if (I(e)) {
     let r = !0;
-    return Object.keys(e).forEach((o) => {
-      if (!w(o)) {
+    return Object.keys(e).forEach((a) => {
+      if (!p(a)) {
         s.push({
           code: "unsafe-key",
-          path: `${t}.${o}`,
+          path: `${t}.${a}`,
           message: "Metadata contains a reserved key."
         }), r = !1;
         return;
       }
-      r = m(e[o], `${t}.${o}`, s) && r;
+      r = w(e[a], `${t}.${a}`, s) && r;
     }), r;
   }
   return s.push({
@@ -43,79 +44,87 @@ const R = /* @__PURE__ */ new Set(["__proto__", "prototype", "constructor"]), O 
     path: t,
     message: "Metadata must contain JSON-safe values only."
   }), !1;
-}, z = (e, t, s) => {
+}, R = (e, t, s) => {
   const r = `editorMetaById.${t}`;
-  if (!k(e))
+  if (!I(e))
     return s.push({
       code: "invalid-field",
       path: r,
       message: "Item metadata must be a plain object."
     }), null;
-  const o = {};
-  return O.forEach((a) => {
-    const i = e[a];
+  const a = {};
+  if (D.forEach((o) => {
+    const i = e[o];
     if (typeof i != "undefined") {
       if (typeof i != "boolean") {
         s.push({
           code: "invalid-field",
-          path: `${r}.${String(a)}`,
+          path: `${r}.${String(o)}`,
           message: "Editor capability metadata fields must be boolean."
         });
         return;
       }
-      o[a] = i;
+      a[o] = i;
     }
-  }), typeof e.label != "undefined" && (typeof e.label == "string" ? o.label = e.label : s.push({
+  }), typeof e.label != "undefined" && (typeof e.label == "string" ? a.label = e.label : s.push({
     code: "invalid-field",
     path: `${r}.label`,
     message: "Editor metadata label must be a string."
-  })), typeof e.data != "undefined" && (k(e.data) && m(e.data, `${r}.data`, s) ? o.data = { ...e.data } : k(e.data) || s.push({
+  })), typeof e.resizeHandles != "undefined") {
+    const o = j(e.resizeHandles);
+    o && o.length === e.resizeHandles.length ? a.resizeHandles = o : s.push({
+      code: "invalid-field",
+      path: `${r}.resizeHandles`,
+      message: "Editor metadata resizeHandles must be valid resize handle values."
+    });
+  }
+  return typeof e.data != "undefined" && (I(e.data) && w(e.data, `${r}.data`, s) ? a.data = { ...e.data } : I(e.data) || s.push({
     code: "invalid-field",
     path: `${r}.data`,
     message: "Editor metadata data must be a JSON-safe object."
-  })), o;
-}, D = (e, t = {}) => {
-  const s = [], r = [], o = {};
+  })), a;
+}, H = (e, t = {}) => {
+  const s = [], r = [], a = {};
   if (e == null)
-    return { ok: !0, value: o, errors: s, warnings: r };
-  if (!k(e))
+    return { ok: !0, value: a, errors: s, warnings: r };
+  if (!I(e))
     return s.push({
       code: "invalid-root",
       path: "editorMetaById",
       message: "Editor metadata must be a plain object keyed by item id."
-    }), { ok: !1, value: o, errors: s, warnings: r };
-  const a = t.layout ? new Set(t.layout.map((i) => i.i)) : null;
+    }), { ok: !1, value: a, errors: s, warnings: r };
+  const o = t.layout ? new Set(t.layout.map((i) => i.i)) : null;
   return Object.keys(e).forEach((i) => {
-    if (!w(i) || typeof i != "string" || i.length === 0) {
+    if (!p(i) || typeof i != "string" || i.length === 0) {
       s.push({
-        code: w(i) ? "invalid-id" : "unsafe-key",
+        code: p(i) ? "invalid-id" : "unsafe-key",
         path: `editorMetaById.${i}`,
         message: "Editor metadata id must be a safe non-empty string."
       });
       return;
     }
-    if (a && !a.has(i)) {
-      const n = {
+    if (o && !o.has(i)) {
+      const c = {
         code: "orphan-meta",
         path: `editorMetaById.${i}`,
         message: "Editor metadata references an item that is not in layout."
       };
       if (t.removeOrphans !== !1) {
-        r.push(n);
+        r.push(c);
         return;
       }
-      s.push(n);
+      s.push(c);
       return;
     }
-    const c = z(e[i], i, s);
-    c && (o[i] = c);
+    const n = R(e[i], i, s);
+    n && (a[i] = n);
   }), {
     ok: s.length === 0,
-    value: o,
+    value: a,
     errors: s,
     warnings: r
   };
-}, B = (e, t = {}) => D(e, t).value, Y = B, Q = (e, t) => B(e, { layout: t }), A = (e, t, s) => s ? { type: "set", id: e, previous: t, next: s } : t ? { type: "remove", id: e, previous: t } : null, G = (e, t) => {
+}, $ = (e, t = {}) => H(e, t).value, X = $, Z = (e, t) => $(e, { layout: t }), G = (e, t, s) => s ? { type: "set", id: e, previous: t, next: s } : t ? { type: "remove", id: e, previous: t } : null, L = (e, t) => {
   if (t.length === 0) return e;
   const s = { ...e };
   return t.forEach((r) => {
@@ -125,54 +134,67 @@ const R = /* @__PURE__ */ new Set(["__proto__", "prototype", "constructor"]), O 
     }
     s[r.id] = { ...r.next };
   }), s;
-}, W = (e, t, s) => {
-  const r = e[t], o = s == null ? void 0 : z({ ...r || {}, ...s }, t, []) || {}, a = A(t, r, o);
+}, x = (e, t, s) => {
+  const r = e[t], a = s == null ? void 0 : R({ ...r || {}, ...s }, t, []) || {}, o = G(t, r, a);
   return {
-    metaById: a ? G(e, [a]) : e,
-    patch: a
+    metaById: o ? L(e, [o]) : e,
+    patch: o
   };
-}, L = (e, t) => {
+}, V = (e, t) => {
   var s;
   return ((s = e[t]) == null ? void 0 : s.visible) !== !1;
-}, X = (e, t) => e.filter((s) => L(t, s.i)), _ = (e, t, s = {}) => {
-  const r = (t == null ? void 0 : t.locked) === !0, o = (t == null ? void 0 : t.visible) !== !1, a = e.static === !0, i = typeof e.isDraggable == "boolean" ? e.isDraggable : !a && s.isDraggable !== !1, c = typeof e.isResizable == "boolean" ? e.isResizable : !a && s.isResizable !== !1, n = !r && (t == null ? void 0 : t.editable) !== !1 && !a, u = n && (t == null ? void 0 : t.draggable) !== !1 && i, f = n && (t == null ? void 0 : t.resizable) !== !1 && c, d = e.isBounded !== !1 && s.isBounded !== !1, l = n && (t == null ? void 0 : t.deletable) !== !1 && s.defaultDeletable !== !1, b = n && (t == null ? void 0 : t.duplicatable) !== !1 && s.defaultDuplicatable !== !1, I = o && (t == null ? void 0 : t.copyable) !== !1 && s.defaultCopyable !== !1;
+}, ee = (e, t) => e.filter((s) => V(t, s.i)), _ = (e, t, s = {}) => {
+  const r = O({
+    item: e,
+    editor: t,
+    defaults: {
+      draggable: s.isDraggable !== !1,
+      resizable: s.isResizable !== !1,
+      bounded: s.isBounded !== !1,
+      deletable: s.defaultDeletable !== !1,
+      duplicatable: s.defaultDuplicatable !== !1,
+      copyable: s.defaultCopyable !== !1
+    }
+  });
   return {
     id: e.i,
-    locked: r,
-    visible: o,
-    editable: n,
-    draggable: u,
-    resizable: f,
-    bounded: d,
-    deletable: l,
-    duplicatable: b,
-    copyable: I,
-    resizeHandles: e.resizeHandles,
+    locked: r.locked,
+    visible: r.visible,
+    editable: r.editable,
+    draggable: r.draggable,
+    resizable: r.resizable,
+    bounded: r.bounded,
+    deletable: r.deletable,
+    duplicatable: r.duplicatable,
+    copyable: r.copyable,
+    resizeHandles: r.resizeHandles,
+    diagnostics: r.diagnostics,
     source: {
-      layoutStatic: a,
-      layoutDraggable: i,
-      layoutResizable: c,
+      layoutStatic: e.static === !0,
+      layoutDraggable: typeof e.isDraggable == "boolean" ? e.isDraggable : !e.static && s.isDraggable !== !1,
+      layoutResizable: typeof e.isResizable == "boolean" ? e.isResizable : !e.static && s.isResizable !== !1,
       layoutBounded: e.isBounded,
       metaLocked: t == null ? void 0 : t.locked,
       metaVisible: t == null ? void 0 : t.visible,
-      metaEditable: t == null ? void 0 : t.editable
+      metaEditable: t == null ? void 0 : t.editable,
+      capabilitySources: r.sources
     }
   };
-}, Z = (e, t, s = {}) => {
+}, se = (e, t, s = {}) => {
   const r = {};
-  return e.forEach((o) => {
-    r[o.i] = _(o, t[o.i], s);
+  return e.forEach((a) => {
+    r[a.i] = _(a, t[a.i], s);
   }), r;
-}, v = (e) => !e || typeof e != "object" ? !1 : Array.isArray(e) ? e.some(v) : k(e) ? Object.keys(e).some((t) => R.has(t) ? !0 : v(e[t])) : !1, x = (e, t, s) => !!(e[t] && j(e[t], String(s)));
-let H = 0;
-const p = () => {
+}, M = (e) => !e || typeof e != "object" ? !1 : Array.isArray(e) ? e.some(M) : I(e) ? Object.keys(e).some((t) => C.has(t) ? !0 : M(e[t])) : !1, te = (e, t, s) => !!(e[t] && A(e[t], String(s)));
+let q = 0;
+const h = () => {
   const e = typeof performance != "undefined" ? performance : null;
   return e && typeof e.now == "function" ? e.now() : Date.now();
-}, ee = (e) => ({
+}, re = (e) => ({
   ...e,
-  id: e.id || `editor-command:${e.type}:${++H}`
-}), se = (e, t) => {
-  var r, o;
+  id: e.id || `editor-command:${e.type}:${++q}`
+}), ae = (e, t) => {
+  var r, a;
   if (typeof e == "string") return { mode: e };
   if (e != null && e.skip)
     return {
@@ -184,10 +206,10 @@ const p = () => {
   return {
     ...e,
     mode: s,
-    preserveRedoStack: (o = e == null ? void 0 : e.preserveRedoStack) != null ? o : s === "ignore" || s === "record-preserveRedoStack"
+    preserveRedoStack: (a = e == null ? void 0 : e.preserveRedoStack) != null ? a : s === "ignore" || s === "record-preserveRedoStack"
   };
-}, V = (e) => e === "select" || e === "clearSelection", $ = (e) => e === "lock" || e === "unlock" || e === "show" || e === "hide", h = (e) => e === "section-row-collapse" || e === "section-row-expand" || e === "section-row-move" || e === "section-row-delete" || e === "section-row-reorder", P = (e) => e === "move" || e === "resize" || e === "add" || e === "delete" || e === "duplicate" || e === "paste" || e === "align" || e === "distribute" || e === "tidy", te = (e) => e === "save" || e === "discard" || e === "reset", q = (e) => e === "undo" || e === "redo", re = (e) => P(e) || $(e) || h(e), oe = (e) => V(e) || q(e) ? "ignore" : P(e) || $(e) || h(e) ? "record" : "ignore", y = (e, t, s = {}) => {
-  var r, o, a, i, c, n, u, f, d, l, b, I, E, M;
+}, K = (e) => e === "select" || e === "clearSelection", B = (e) => e === "lock" || e === "unlock" || e === "show" || e === "hide", k = (e) => e === "section-row-collapse" || e === "section-row-expand" || e === "section-row-move" || e === "section-row-delete" || e === "section-row-reorder", P = (e) => e === "move" || e === "resize" || e === "add" || e === "delete" || e === "duplicate" || e === "paste" || e === "align" || e === "distribute" || e === "tidy", oe = (e) => e === "save" || e === "discard" || e === "reset", F = (e) => e === "undo" || e === "redo", ie = (e) => P(e) || B(e) || k(e), de = (e) => K(e) || F(e) ? "ignore" : P(e) || B(e) || k(e) ? "record" : "ignore", m = (e, t, s = {}) => {
+  var r, a, o, i, n, c, u, g, d, l, b, y, E, v;
   return {
     id: e.id,
     type: e.type,
@@ -200,54 +222,54 @@ const p = () => {
     blocked: s.blocked,
     diagnostics: {
       durationMs: ((r = s.diagnostics) == null ? void 0 : r.durationMs) || 0,
-      guardMs: (o = s.diagnostics) == null ? void 0 : o.guardMs,
-      guideCount: (a = s.diagnostics) == null ? void 0 : a.guideCount,
+      guardMs: (a = s.diagnostics) == null ? void 0 : a.guardMs,
+      guideCount: (o = s.diagnostics) == null ? void 0 : o.guideCount,
       layoutDiagnostics: (i = s.diagnostics) == null ? void 0 : i.layoutDiagnostics,
-      operationResult: (c = s.diagnostics) == null ? void 0 : c.operationResult,
-      intelligence: (n = s.diagnostics) == null ? void 0 : n.intelligence,
+      operationResult: (n = s.diagnostics) == null ? void 0 : n.operationResult,
+      intelligence: (c = s.diagnostics) == null ? void 0 : c.intelligence,
       computed: (u = s.diagnostics) == null ? void 0 : u.computed,
-      messages: (f = s.diagnostics) == null ? void 0 : f.messages,
+      messages: (g = s.diagnostics) == null ? void 0 : g.messages,
       pendingScope: (d = s.diagnostics) == null ? void 0 : d.pendingScope,
       stateRevision: (l = s.diagnostics) == null ? void 0 : l.stateRevision,
       stale: (b = s.diagnostics) == null ? void 0 : b.stale,
-      historyMode: (I = s.diagnostics) == null ? void 0 : I.historyMode,
+      historyMode: (y = s.diagnostics) == null ? void 0 : y.historyMode,
       source: (E = s.diagnostics) == null ? void 0 : E.source,
-      origin: (M = s.diagnostics) == null ? void 0 : M.origin
+      origin: (v = s.diagnostics) == null ? void 0 : v.origin
     },
     undo: s.undo,
     error: s.error
   };
-}, g = (e, t, s = {}) => {
-  var r, o, a;
-  return y(e, "blocked", {
+}, f = (e, t, s = {}) => {
+  var r, a, o;
+  return m(e, "blocked", {
     ...s,
     blocked: {
       reason: t,
       itemIds: ((r = s.blocked) == null ? void 0 : r.itemIds) || s.targetIds,
-      message: (o = s.blocked) == null ? void 0 : o.message,
-      skippedIds: (a = s.blocked) == null ? void 0 : a.skippedIds
+      message: (a = s.blocked) == null ? void 0 : a.message,
+      skippedIds: (o = s.blocked) == null ? void 0 : o.skippedIds
     }
   });
-}, S = (e, t, s) => y(e, "error", {
+}, z = (e, t, s) => m(e, "error", {
   error: { message: t, cause: s }
-}), K = (e, t, s) => {
+}), N = (e, t, s) => {
   if (e.targetIds) return Array.from(new Set(e.targetIds.filter(Boolean)));
   if (e.type === "select") {
-    const o = e.payload;
-    if (o != null && o.ids) return Array.from(new Set(o.ids.filter(Boolean)));
-    if (o != null && o.id) return [o.id];
+    const a = e.payload;
+    if (a != null && a.ids) return Array.from(new Set(a.ids.filter(Boolean)));
+    if (a != null && a.id) return [a.id];
   }
   if (e.type === "add" || e.type === "paste") return [];
-  if (h(e.type)) {
-    const o = e.payload;
-    return Array.isArray(o == null ? void 0 : o.ids) ? Array.from(new Set(o.ids.filter(Boolean))) : o != null && o.id ? [o.id] : [];
+  if (k(e.type)) {
+    const a = e.payload;
+    return Array.isArray(a == null ? void 0 : a.ids) ? Array.from(new Set(a.ids.filter(Boolean))) : a != null && a.id ? [a.id] : [];
   }
   const r = t.selectedIds.filter(Boolean);
   return r.length > 0 ? r : s.length > 0 && t.activeId ? [t.activeId] : [];
-}, F = (e, t) => {
+}, T = (e, t) => {
   const s = new Set(e.map((r) => r.i));
   return t.filter((r) => !s.has(r));
-}, N = (e) => e === "move" || e === "align" || e === "distribute" || e === "tidy" ? "draggable" : e === "resize" ? "resizable" : e === "delete" ? "deletable" : e === "duplicate" ? "duplicatable" : e === "copy" ? "copyable" : e === "hide" || e === "lock" ? "editable" : null, T = (e) => e === "align" ? 2 : e === "distribute" || e === "tidy" ? 3 : 0, C = (e, t) => !!e && typeof e == "object" && Object.prototype.hasOwnProperty.call(e, t), J = (e) => {
+}, J = (e) => e === "move" || e === "align" || e === "distribute" || e === "tidy" ? "draggable" : e === "resize" ? "resizable" : e === "delete" ? "deletable" : e === "duplicate" ? "duplicatable" : e === "copy" ? "copyable" : e === "hide" || e === "lock" ? "editable" : null, U = (e) => e === "align" ? 2 : e === "distribute" || e === "tidy" ? 3 : 0, S = (e, t) => !!e && typeof e == "object" && Object.prototype.hasOwnProperty.call(e, t), Y = (e) => {
   const t = e.payload;
   if (e.type === "align") {
     const s = t == null ? void 0 : t.mode;
@@ -255,18 +277,18 @@ const p = () => {
   }
   if (e.type === "distribute") {
     const s = t == null ? void 0 : t.mode, r = t == null ? void 0 : t.strategy;
-    return (s === "horizontal" || s === "vertical" || s === "spacing-x" || s === "spacing-y") && (!C(t, "strategy") || r === "edge-to-edge" || r === "center-to-center");
+    return (s === "horizontal" || s === "vertical" || s === "spacing-x" || s === "spacing-y") && (!S(t, "strategy") || r === "edge-to-edge" || r === "center-to-center");
   }
   if (e.type === "tidy") {
     const s = t == null ? void 0 : t.axis;
-    return !C(t, "axis") || s === "x" || s === "y" || s === "both";
+    return !S(t, "axis") || s === "x" || s === "y" || s === "both";
   }
-  return h(e.type) ? typeof (t == null ? void 0 : t.id) == "string" && t.id.length > 0 : !0;
-}, U = (e, t, s) => {
+  return k(e.type) ? typeof (t == null ? void 0 : t.id) == "string" && t.id.length > 0 : !0;
+}, Q = (e, t, s) => {
   const r = t[e.i];
   return r != null && r.locked ? "locked" : (r == null ? void 0 : r.visible) === !1 ? "hidden" : e.static ? "static-item" : s;
-}, ae = (e, t) => {
-  const s = K(
+}, le = (e, t) => {
+  const s = N(
     e,
     t.selection,
     t.layout
@@ -277,7 +299,7 @@ const p = () => {
       targetIds: s,
       allowedIds: [],
       blockedIds: s,
-      result: g(e, "editor-mode-missing", {
+      result: f(e, "editor-mode-missing", {
         targetIds: s,
         blocked: { reason: "editor-mode-missing", itemIds: s }
       })
@@ -288,7 +310,7 @@ const p = () => {
       targetIds: s,
       allowedIds: [],
       blockedIds: s,
-      result: g(e, "mode-readonly", {
+      result: f(e, "mode-readonly", {
         targetIds: s,
         blocked: { reason: "mode-readonly", itemIds: s }
       })
@@ -299,18 +321,18 @@ const p = () => {
       targetIds: s,
       allowedIds: [],
       blockedIds: s,
-      result: g(e, "multi-resize-unsupported", {
+      result: f(e, "multi-resize-unsupported", {
         targetIds: s
       })
     };
-  const r = T(e.type);
+  const r = U(e.type);
   if (r > 0 && s.length < r)
     return {
       ok: !1,
       targetIds: s,
       allowedIds: [],
       blockedIds: s,
-      result: g(e, "selection-count", {
+      result: f(e, "selection-count", {
         targetIds: s,
         blocked: {
           reason: "selection-count",
@@ -329,13 +351,13 @@ const p = () => {
         }
       })
     };
-  if (!J(e))
+  if (!Y(e))
     return {
       ok: !1,
       targetIds: s,
       allowedIds: [],
       blockedIds: s,
-      result: g(e, "invalid-input", {
+      result: f(e, "invalid-input", {
         targetIds: s,
         blocked: {
           reason: "invalid-input",
@@ -374,81 +396,82 @@ const p = () => {
       targetIds: s,
       allowedIds: [],
       blockedIds: [],
-      result: g(e, "missing-item", {
+      result: f(e, "missing-item", {
         targetIds: s
       })
     };
-  const o = F(t.layout, s);
-  if (o.length > 0 && e.type !== "select" && !h(e.type))
+  const a = T(t.layout, s);
+  if (a.length > 0 && e.type !== "select" && !k(e.type))
     return {
       ok: !1,
       targetIds: s,
       allowedIds: [],
-      blockedIds: o,
-      result: g(e, "missing-item", {
+      blockedIds: a,
+      result: f(e, "missing-item", {
         targetIds: s,
-        blocked: { reason: "missing-item", itemIds: o }
+        blocked: { reason: "missing-item", itemIds: a }
       })
     };
-  const a = N(e.type);
-  if (!a)
+  const o = J(e.type);
+  if (!o)
     return {
       ok: !0,
       targetIds: s,
       allowedIds: s,
       blockedIds: []
     };
-  const i = [], c = [];
-  let n = "capability";
+  const i = [], n = [];
+  let c = "capability";
   return s.forEach((u) => {
-    const f = t.layout.find((l) => l.i === u);
-    if (!f) {
-      c.push(u), n = "missing-item";
+    var l;
+    const g = t.layout.find((b) => b.i === u);
+    if (!g) {
+      n.push(u), c = "missing-item";
       return;
     }
-    _(
-      f,
+    (((l = t.itemCapabilities) == null ? void 0 : l[u]) || _(
+      g,
       t.editorMetaById[u],
       {
         isDraggable: t.isDraggable,
         isResizable: t.isResizable,
         isBounded: t.isBounded
       }
-    )[a] ? i.push(u) : (c.push(u), n = U(f, t.editorMetaById, "capability"));
-  }), c.length > 0 && t.commandPolicy !== "skip-blocked" ? {
+    ))[o] ? i.push(u) : (n.push(u), c = Q(g, t.editorMetaById, "capability"));
+  }), n.length > 0 && t.commandPolicy !== "skip-blocked" ? {
     ok: !1,
     targetIds: s,
     allowedIds: [],
-    blockedIds: c,
-    result: g(e, n, {
+    blockedIds: n,
+    result: f(e, c, {
       targetIds: s,
-      blocked: { reason: n, itemIds: c }
+      blocked: { reason: c, itemIds: n }
     })
   } : i.length === 0 && s.length > 0 ? {
     ok: !1,
     targetIds: s,
     allowedIds: i,
-    blockedIds: c,
-    result: g(e, n, {
+    blockedIds: n,
+    result: f(e, c, {
       targetIds: s,
-      blocked: { reason: n, itemIds: c }
+      blocked: { reason: c, itemIds: n }
     })
   } : {
     ok: !0,
     targetIds: s,
     allowedIds: i,
-    blockedIds: c
+    blockedIds: n
   };
-}, ie = async (e, t, s, r = 5e3) => {
-  var c, n;
+}, ne = async (e, t, s, r = 5e3) => {
+  var n, c;
   if (!e) return { guardMs: 0 };
-  const o = p();
-  let a = null, i = null;
+  const a = h();
+  let o = null, i = null;
   try {
-    if ((c = s.signal) != null && c.aborted)
+    if ((n = s.signal) != null && n.aborted)
       return {
         guardMs: 0,
-        result: y(t, "cancelled", {
+        result: m(t, "cancelled", {
           targetIds: s.targetIds,
           blocked: {
             reason: "guard-aborted",
@@ -458,19 +481,19 @@ const p = () => {
           diagnostics: { durationMs: 0, guardMs: 0 }
         })
       };
-    const u = Promise.resolve(e({ ...s, command: t })), f = s.signal ? new Promise((b) => {
-      var I;
-      i = () => b("__aborted__"), (I = s.signal) == null || I.addEventListener("abort", i, { once: !0 });
+    const u = Promise.resolve(e({ ...s, command: t })), g = s.signal ? new Promise((b) => {
+      var y;
+      i = () => b("__aborted__"), (y = s.signal) == null || y.addEventListener("abort", i, { once: !0 });
     }) : null, d = await Promise.race([
       u,
-      ...f ? [f] : [],
+      ...g ? [g] : [],
       new Promise((b) => {
-        a = setTimeout(() => b("__timeout__"), r);
+        o = setTimeout(() => b("__timeout__"), r);
       })
-    ]), l = p() - o;
+    ]), l = h() - a;
     return d === "__aborted__" ? {
       guardMs: l,
-      result: y(t, "cancelled", {
+      result: m(t, "cancelled", {
         targetIds: s.targetIds,
         blocked: {
           reason: "guard-aborted",
@@ -481,7 +504,7 @@ const p = () => {
       })
     } : d === "__timeout__" ? {
       guardMs: l,
-      result: y(t, "timeout", {
+      result: m(t, "timeout", {
         targetIds: s.targetIds,
         blocked: {
           reason: "before-command-timeout",
@@ -492,13 +515,13 @@ const p = () => {
       })
     } : d === !1 ? {
       guardMs: l,
-      result: g(t, "before-command-blocked", {
+      result: f(t, "before-command-blocked", {
         targetIds: s.targetIds,
         diagnostics: { durationMs: 0, guardMs: l }
       })
     } : !d || d === !0 || d.status === "allow" ? { guardMs: l } : d.status === "cancel" ? {
       guardMs: l,
-      result: y(t, "cancelled", {
+      result: m(t, "cancelled", {
         targetIds: s.targetIds,
         diagnostics: { durationMs: 0, guardMs: l },
         blocked: {
@@ -509,7 +532,7 @@ const p = () => {
       })
     } : d.status === "timeout" ? {
       guardMs: l,
-      result: y(t, "timeout", {
+      result: m(t, "timeout", {
         targetIds: s.targetIds,
         diagnostics: { durationMs: 0, guardMs: l },
         blocked: {
@@ -520,14 +543,14 @@ const p = () => {
       })
     } : d.status === "error" ? {
       guardMs: l,
-      result: S(
+      result: z(
         t,
         d.message || "beforeCommand guard failed.",
         d.error
       )
     } : {
       guardMs: l,
-      result: g(
+      result: f(
         t,
         d.reason || "before-command-blocked",
         {
@@ -543,84 +566,84 @@ const p = () => {
     };
   } catch (u) {
     return {
-      guardMs: p() - o,
-      result: S(
+      guardMs: h() - a,
+      result: z(
         t,
         "beforeCommand guard failed.",
         u
       )
     };
   } finally {
-    a && clearTimeout(a), i && ((n = s.signal) == null || n.removeEventListener("abort", i));
+    o && clearTimeout(o), i && ((c = s.signal) == null || c.removeEventListener("abort", i));
   }
-}, de = (e, t) => {
-  const s = [], r = new Map(e.map((a) => [a.i, a])), o = new Map(t.map((a) => [a.i, a]));
-  return t.forEach((a) => {
-    const i = r.get(a.i);
+}, ce = (e, t) => {
+  const s = [], r = new Map(e.map((o) => [o.i, o])), a = new Map(t.map((o) => [o.i, o]));
+  return t.forEach((o) => {
+    const i = r.get(o.i);
     if (!i) {
-      s.push({ type: "add", item: a });
+      s.push({ type: "add", item: o });
       return;
     }
-    (i.w !== a.w || i.h !== a.h || i.x !== a.x || i.y !== a.y) && (i.w !== a.w || i.h !== a.h ? s.push({
+    (i.w !== o.w || i.h !== o.h || i.x !== o.x || i.y !== o.y) && (i.w !== o.w || i.h !== o.h ? s.push({
       type: "resize",
-      id: a.i,
+      id: o.i,
       from: {
         x: i.x,
         y: i.y,
         w: i.w,
         h: i.h
       },
-      to: { x: a.x, y: a.y, w: a.w, h: a.h }
+      to: { x: o.x, y: o.y, w: o.w, h: o.h }
     }) : s.push({
       type: "move",
-      id: a.i,
+      id: o.i,
       from: { x: i.x, y: i.y },
-      to: { x: a.x, y: a.y }
+      to: { x: o.x, y: o.y }
     }));
-  }), e.forEach((a) => {
-    o.has(a.i) || s.push({ type: "remove", id: a.i });
+  }), e.forEach((o) => {
+    a.has(o.i) || s.push({ type: "remove", id: o.i });
   }), s;
-}, ne = (e, t, s) => ({
+}, ue = (e, t, s) => ({
   durationMs: e,
   guardMs: t,
   layoutDiagnostics: s
-}), le = (e, t) => {
+}), fe = (e, t) => {
   const s = /* @__PURE__ */ new Set();
   return e.forEach((r) => {
-    r.type === "add" ? s.add(r.item.i) : r.type === "compact" ? r.affectedIds.forEach((o) => s.add(o)) : s.add(r.id);
+    r.type === "add" ? s.add(r.item.i) : r.type === "compact" ? r.affectedIds.forEach((a) => s.add(a)) : s.add(r.id);
   }), t.forEach((r) => s.add(r.id)), Array.from(s);
 };
 export {
   _ as A,
-  K as B,
-  ie as C,
-  B as D,
-  re as E,
-  D as F,
-  G as a,
-  g as b,
-  ae as c,
-  le as d,
-  de as e,
-  A as f,
-  y as g,
-  oe as h,
-  S as i,
-  X as j,
-  x as k,
-  v as l,
-  L as m,
-  q as n,
+  N as B,
+  ne as C,
+  $ as D,
+  ie as E,
+  H as F,
+  L as a,
+  f as b,
+  le as c,
+  fe as d,
+  ce as e,
+  G as f,
+  m as g,
+  de as h,
+  z as i,
+  ee as j,
+  te as k,
+  M as l,
+  V as m,
+  F as n,
   P as o,
-  $ as p,
-  te as q,
-  h as r,
-  V as s,
-  ne as t,
-  Y as u,
-  ee as v,
-  se as w,
-  W as x,
-  Q as y,
-  Z as z
+  B as p,
+  oe as q,
+  k as r,
+  K as s,
+  ue as t,
+  X as u,
+  re as v,
+  ae as w,
+  x,
+  Z as y,
+  se as z
 };

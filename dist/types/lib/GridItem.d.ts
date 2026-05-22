@@ -281,8 +281,8 @@ declare const GridItem: import("vue").DefineComponent<import("vue").ExtractPropT
     maxH: number;
     static: boolean;
     resizeHandles: ("s" | "w" | "e" | "n" | "sw" | "nw" | "se" | "ne")[];
-    renderPrecision: GridRenderPrecision;
     handle: string;
+    renderPrecision: GridRenderPrecision;
     class: string;
     style: CSSProperties;
     dragActivationDistance: GridDragActivationDistance;

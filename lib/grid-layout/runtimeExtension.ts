@@ -1,5 +1,6 @@
 import type { Ref, VNode } from "vue";
-import type { Layout, LayoutItem } from "../utils";
+import type { Layout, LayoutItem, ResizeHandleAxis } from "../utils";
+import type { GridItemCapabilityDiagnostic } from "../item-capabilities";
 import type {
   GridInteractionBlockedReason,
   GridLayoutEngineBridge,
@@ -17,6 +18,8 @@ export type GridItemRenderState = {
   draggable: boolean;
   resizable: boolean;
   bounded: boolean;
+  resizeHandles?: ResizeHandleAxis[];
+  capabilityDiagnostics?: GridItemCapabilityDiagnostic[];
   className?: string;
   previewItem?: LayoutItem | null;
   onClick?: (event: MouseEvent) => void;
@@ -42,6 +45,7 @@ export type GridLayoutRuntimeExtensionContext = {
     maxRows: number;
     preventCollision: boolean;
     rowHeight: number;
+    renderPrecision?: "integer" | "subpixel" | null;
     transformScale: number;
     verticalCompact: boolean;
     width?: number;

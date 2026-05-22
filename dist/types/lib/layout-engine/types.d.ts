@@ -1,4 +1,5 @@
 import type { CompactType, Layout, LayoutItem, ResizeHandleAxis } from "../utils";
+import type { GridItemAspectRatioConstraint, LayoutResizeConstraint } from "../item-capabilities";
 export type LayoutEngineMode = "default" | "legacy";
 export type LayoutOperationPhase = "preview" | "commit";
 export type LayoutOperation = {
@@ -22,6 +23,7 @@ export type LayoutOperation = {
     x?: number;
     y?: number;
     handle: ResizeHandleAxis;
+    constraint?: LayoutResizeConstraint;
 } | {
     type: "dropFit";
     item: Pick<LayoutItem, "w" | "h"> & Partial<Pick<LayoutItem, "i">>;
@@ -97,7 +99,7 @@ export type LayoutPatch = {
     type: "compact";
     affectedIds: string[];
 };
-export type LayoutBlockedReason = "collision" | "static-item" | "bounds" | "maxRows" | "missing-item" | "invalid-input" | "unsupported";
+export type LayoutBlockedReason = "collision" | "static-item" | "bounds" | "maxRows" | "missing-item" | "invalid-input" | "handle-disabled" | "aspect-ratio" | "metrics-missing" | "unsupported";
 export type LayoutMigrationSettings = {
     cols?: number | null;
     columns?: number | null;
@@ -177,7 +179,7 @@ export type LayoutRepairSummary = {
     unresolvedIds: string[];
     durationMs?: number;
 };
-export type LayoutRepairDiagnosticCode = "settings-invalid" | "settings-visual-only" | "settings-ratio" | "item-invalid" | "item-sanitized" | "item-clamped" | "item-shrunk" | "item-expanded" | "item-moved" | "item-added" | "item-skipped" | "collision-detected" | "repair-fallback" | "static-preserved" | "forced-static-repair" | "unresolved-item" | "custom-solver-fallback" | "policy-unsupported" | "placement-source";
+export type LayoutRepairDiagnosticCode = "settings-invalid" | "settings-visual-only" | "settings-ratio" | "item-invalid" | "item-sanitized" | "item-clamped" | "item-shrunk" | "item-expanded" | "item-moved" | "item-added" | "item-skipped" | "collision-detected" | "repair-fallback" | "static-preserved" | "forced-static-repair" | "unresolved-item" | "custom-solver-fallback" | "policy-unsupported" | "placement-source" | "item-capability.conflict" | "item-capability.handle-disabled" | "item-capability.aspect-ratio-invalid" | "item-capability.metrics-missing" | "item-capability.fallback-used" | "item-capability.sidecar-projected" | "item-capability.unsafe-key" | "item-capability.unknown-field";
 export type LayoutRepairDiagnostic = {
     code: LayoutRepairDiagnosticCode;
     level: "info" | "warning" | "error";
@@ -262,6 +264,7 @@ export type LayoutOperationRequest = {
     heavy?: boolean;
     debug?: boolean;
 };
+export type { GridItemAspectRatioConstraint, LayoutResizeConstraint };
 export type LayoutIndexOptions = {
     cols: number;
     maxRows?: number;

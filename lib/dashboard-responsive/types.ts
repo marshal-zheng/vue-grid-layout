@@ -13,6 +13,10 @@ import type {
 } from "../dashboard";
 import type { GridEditorController, GridEditorMetaById, GridEditorProp } from "../editor";
 import type { GridLayoutEngineProp } from "../layout-engine";
+import type {
+  GridItemAspectRatioConstraint,
+  ResolvedGridItemCapability
+} from "../item-capabilities";
 import type { Layout } from "../utils";
 import type { LayoutValidationMode } from "../persistence";
 import type {
@@ -99,6 +103,8 @@ export type DashboardResponsiveRuntime = {
   layout: Layout;
   gridSettings: ResolvedDashboardGridSettings;
   editorMetaById: GridEditorMetaById;
+  capabilitiesById?: Record<string, ResolvedGridItemCapability>;
+  resizeConstraintsById?: Record<string, GridItemAspectRatioConstraint>;
   layoutId: string;
   requestedBreakpoint: string;
   resolvedProfileId: string | null;

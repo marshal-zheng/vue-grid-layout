@@ -4,6 +4,10 @@ import type {
   LayoutItem,
   ResizeHandleAxis
 } from "../utils";
+import type {
+  GridItemAspectRatioConstraint,
+  LayoutResizeConstraint
+} from "../item-capabilities";
 
 export type LayoutEngineMode = "default" | "legacy";
 
@@ -27,6 +31,7 @@ export type LayoutOperation =
       x?: number;
       y?: number;
       handle: ResizeHandleAxis;
+      constraint?: LayoutResizeConstraint;
     }
   | {
       type: "dropFit";
@@ -100,6 +105,9 @@ export type LayoutBlockedReason =
   | "maxRows"
   | "missing-item"
   | "invalid-input"
+  | "handle-disabled"
+  | "aspect-ratio"
+  | "metrics-missing"
   | "unsupported";
 
 export type LayoutMigrationSettings = {
@@ -214,7 +222,15 @@ export type LayoutRepairDiagnosticCode =
   | "unresolved-item"
   | "custom-solver-fallback"
   | "policy-unsupported"
-  | "placement-source";
+  | "placement-source"
+  | "item-capability.conflict"
+  | "item-capability.handle-disabled"
+  | "item-capability.aspect-ratio-invalid"
+  | "item-capability.metrics-missing"
+  | "item-capability.fallback-used"
+  | "item-capability.sidecar-projected"
+  | "item-capability.unsafe-key"
+  | "item-capability.unknown-field";
 
 export type LayoutRepairDiagnostic = {
   code: LayoutRepairDiagnosticCode;
@@ -300,6 +316,11 @@ export type LayoutOperationRequest = {
   deadlineMs?: number;
   heavy?: boolean;
   debug?: boolean;
+};
+
+export type {
+  GridItemAspectRatioConstraint,
+  LayoutResizeConstraint
 };
 
 export type LayoutIndexOptions = {

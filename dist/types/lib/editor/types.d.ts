@@ -1,8 +1,10 @@
 import type { ComputedRef, Ref } from "vue";
 import type { GridHistoryStore } from "../history";
+import type { GridItemAspectRatioConstraint, ResolvedGridItemCapability } from "../item-capabilities";
 import type { GridLayoutEngineOptions, GridLayoutEngineProp, LayoutDiagnostics, LayoutOperation, LayoutOperationResult, LayoutPatch } from "../layout-engine";
 import type { GridLayoutPersistenceController, GridLayoutPersistenceProp, LayoutPersistenceDocument, LayoutPersistenceError, LayoutPersistenceEvent, LayoutPersistenceMeta, LayoutPersistenceStatus, LayoutsMap, MaybePromise, ResponsiveGridLayoutPersistenceProp } from "../persistence";
 import type { Layout, LayoutItem, ResizeHandleAxis } from "../utils";
+import type { GridItemCapabilityDiagnostic, GridItemCapabilitySource } from "../item-capabilities";
 export type GridEditorMode = "view" | "edit";
 export type GridEditorDerivedState = "viewing" | "editingClean" | "editingDirty" | "dragging" | "resizing" | "placing" | "keyboardEditing" | "savePending" | "saveFailed" | "conflict";
 export type GridEditorSelectionMode = "single" | "multiple";
@@ -23,6 +25,7 @@ export type GridEditorItemMeta = {
     deletable?: boolean;
     duplicatable?: boolean;
     copyable?: boolean;
+    resizeHandles?: ResizeHandleAxis[];
     label?: string;
     data?: Record<string, unknown>;
 };
@@ -39,6 +42,7 @@ export type GridEditorResolvedCapability = {
     duplicatable: boolean;
     copyable: boolean;
     resizeHandles?: ResizeHandleAxis[];
+    diagnostics?: GridItemCapabilityDiagnostic[];
     source: {
         layoutStatic?: boolean;
         layoutDraggable?: boolean;
@@ -47,6 +51,7 @@ export type GridEditorResolvedCapability = {
         metaLocked?: boolean;
         metaVisible?: boolean;
         metaEditable?: boolean;
+        capabilitySources?: Record<string, GridItemCapabilitySource>;
     };
 };
 export type GridEditorMetadataPatch = {
@@ -84,7 +89,7 @@ export type GridEditorCommand = {
     history?: GridEditorHistoryMode | GridEditorHistoryPolicy;
 };
 export type GridEditorCommandStatus = "changed" | "noop" | "blocked" | "cancelled" | "timeout" | "error";
-export type GridEditorBlockedReason = "mode-readonly" | "editor-mode-missing" | "capability" | "locked" | "hidden" | "static-item" | "collision" | "bounds" | "maxRows" | "missing-item" | "selection-count" | "unsupported-scope" | "unsupported" | "section-row-locked" | "section-row-collapsed" | "section-row-policy" | "clipboard-unavailable" | "clipboard-permission" | "clipboard-invalid" | "before-command-blocked" | "before-command-cancelled" | "before-command-timeout" | "command-pending" | "guard-aborted" | "stale-command" | "multi-resize-unsupported" | "persistence-error" | "conflict" | "invalid-input";
+export type GridEditorBlockedReason = "mode-readonly" | "editor-mode-missing" | "capability" | "locked" | "hidden" | "static-item" | "collision" | "bounds" | "maxRows" | "missing-item" | "handle-disabled" | "aspect-ratio" | "metrics-missing" | "selection-count" | "unsupported-scope" | "unsupported" | "section-row-locked" | "section-row-collapsed" | "section-row-policy" | "clipboard-unavailable" | "clipboard-permission" | "clipboard-invalid" | "before-command-blocked" | "before-command-cancelled" | "before-command-timeout" | "command-pending" | "guard-aborted" | "stale-command" | "multi-resize-unsupported" | "persistence-error" | "conflict" | "invalid-input";
 export type GridEditorTransactionSummary = {
     layoutSize?: number;
     layoutCount?: number;
@@ -904,6 +909,8 @@ export type UseGridEditorOptions = {
     idGenerator?: (baseId: string, existingIds: Set<string>) => string;
     pasteStrategy?: GridEditorPasteStrategy;
     commandPolicy?: GridEditorCommandPolicy;
+    itemCapabilities?: Record<string, ResolvedGridItemCapability>;
+    resizeConstraints?: Record<string, GridItemAspectRatioConstraint>;
     onEvent?: (event: GridEditorEvent) => void;
 };
 export type GridEditorProp = Omit<UseGridEditorOptions, "layout" | "layouts" | "breakpoint"> & {

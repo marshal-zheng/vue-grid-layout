@@ -1,3 +1,4 @@
+import { normalizeResizeHandles, resolveGridItemCapability } from "../item-capabilities";
 import type { Layout, LayoutItem } from "../utils";
 import type {
   GridEditorItemMeta,
@@ -160,6 +161,19 @@ const sanitizeItemMeta = (
     }
   }
 
+  if (typeof input.resizeHandles !== "undefined") {
+    const handles = normalizeResizeHandles(input.resizeHandles);
+    if (handles && handles.length === (input.resizeHandles as unknown[]).length) {
+      meta.resizeHandles = handles;
+    } else {
+      issues.push({
+        code: "invalid-field",
+        path: `${path}.resizeHandles`,
+        message: "Editor metadata resizeHandles must be valid resize handle values."
+      });
+    }
+  }
+
   if (typeof input.data !== "undefined") {
     if (isPlainRecord(input.data) && isJsonSafeValue(input.data, `${path}.data`, issues)) {
       meta.data = { ...input.data };
@@ -307,43 +321,45 @@ export const resolveEditorItemCapability = (
   meta: GridEditorItemMeta | undefined,
   options: ResolveEditorCapabilityOptions = {}
 ): GridEditorResolvedCapability => {
-  const locked = meta?.locked === true;
-  const visible = meta?.visible !== false;
-  const layoutStatic = item.static === true;
-  const layoutDraggable = typeof item.isDraggable === "boolean"
-    ? item.isDraggable
-    : !layoutStatic && options.isDraggable !== false;
-  const layoutResizable = typeof item.isResizable === "boolean"
-    ? item.isResizable
-    : !layoutStatic && options.isResizable !== false;
-  const editable = !locked && meta?.editable !== false && !layoutStatic;
-  const draggable = editable && meta?.draggable !== false && layoutDraggable;
-  const resizable = editable && meta?.resizable !== false && layoutResizable;
-  const bounded = item.isBounded !== false && options.isBounded !== false;
-  const deletable = editable && meta?.deletable !== false && options.defaultDeletable !== false;
-  const duplicatable = editable && meta?.duplicatable !== false && options.defaultDuplicatable !== false;
-  const copyable = visible && meta?.copyable !== false && options.defaultCopyable !== false;
+  const resolved = resolveGridItemCapability({
+    item,
+    editor: meta,
+    defaults: {
+      draggable: options.isDraggable !== false,
+      resizable: options.isResizable !== false,
+      bounded: options.isBounded !== false,
+      deletable: options.defaultDeletable !== false,
+      duplicatable: options.defaultDuplicatable !== false,
+      copyable: options.defaultCopyable !== false
+    }
+  });
 
   return {
     id: item.i,
-    locked,
-    visible,
-    editable,
-    draggable,
-    resizable,
-    bounded,
-    deletable,
-    duplicatable,
-    copyable,
-    resizeHandles: item.resizeHandles,
+    locked: resolved.locked,
+    visible: resolved.visible,
+    editable: resolved.editable,
+    draggable: resolved.draggable,
+    resizable: resolved.resizable,
+    bounded: resolved.bounded,
+    deletable: resolved.deletable,
+    duplicatable: resolved.duplicatable,
+    copyable: resolved.copyable,
+    resizeHandles: resolved.resizeHandles,
+    diagnostics: resolved.diagnostics,
     source: {
-      layoutStatic,
-      layoutDraggable,
-      layoutResizable,
+      layoutStatic: item.static === true,
+      layoutDraggable: typeof item.isDraggable === "boolean"
+        ? item.isDraggable
+        : !item.static && options.isDraggable !== false,
+      layoutResizable: typeof item.isResizable === "boolean"
+        ? item.isResizable
+        : !item.static && options.isResizable !== false,
       layoutBounded: item.isBounded,
       metaLocked: meta?.locked,
       metaVisible: meta?.visible,
-      metaEditable: meta?.editable
+      metaEditable: meta?.editable,
+      capabilitySources: resolved.sources
     }
   };
 };

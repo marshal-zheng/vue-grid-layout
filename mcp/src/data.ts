@@ -205,6 +205,12 @@ import {
   createGridHistoryStore,
   bindKeyboardShortcuts
 } from '@marsio/vue-grid-layout/history'
+
+import {
+  resolveGridItemCapability,
+  resolveGridItemAspectRatioConstraint,
+  type LayoutResizeConstraint
+} from '@marsio/vue-grid-layout/layout-engine'
 \`\`\`
 
 ---
@@ -351,6 +357,8 @@ const AutoWidthLayout = WidthProvider(VueGridLayout)
 | \`resizeHandles\` | \`ResizeHandleAxis[]\` | 否 | 缩放手柄方向 |
 
 **优先级**：\`data-grid\` > \`v-model\` 数组中同 \`i\` 的项 > 全局设置
+
+Dashboard/editor wrapper 可通过 runtime sidecar 使用 \`capabilitiesById\` 与 \`resizeConstraintsById\` 表达 \`locked\`、\`resizable=false\`、handle policy、\`preserveAspectRatio\` 和视觉像素 \`aspectRatio\`；这些字段不会写回基础 \`LayoutItem\` API。
 
 ---
 

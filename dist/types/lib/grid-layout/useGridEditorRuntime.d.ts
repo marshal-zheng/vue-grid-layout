@@ -1,9 +1,10 @@
 import type { Ref } from "vue";
+import { type GridItemAspectRatioConstraint, type GridItemResizeMetrics, type ResolvedGridItemCapability } from "../item-capabilities";
 import { type GridLayoutPersistenceController, type GridLayoutPersistenceProp } from "../persistence";
 import type { CompactType, Layout, LayoutItem, ResizeHandleAxis } from "../utils";
 import type { GridEditorController, GridEditorBlockedReason, GridEditorGuidesOptions, GridEditorProp, GridEditorCommandResult } from "../editor/types";
 import type { GridLayoutEngineBridge } from "./gridInteractionTypes";
-import type { LayoutOperationResult } from "../layout-engine";
+import type { LayoutOperationResult, LayoutResizeConstraint } from "../layout-engine";
 type GridEditorRuntimeProps = {
     allowOverlap: boolean;
     cols: number;
@@ -16,8 +17,11 @@ type GridEditorRuntimeProps = {
     maxRows: number;
     preventCollision: boolean;
     rowHeight: number;
+    renderPrecision?: "integer" | "subpixel" | null;
     transformScale: number;
     verticalCompact: boolean;
+    itemCapabilities?: Record<string, ResolvedGridItemCapability>;
+    resizeConstraints?: Record<string, GridItemAspectRatioConstraint>;
 };
 type GridEditorInteractionSnapshot = {
     activeDragId: string | null;
@@ -84,6 +88,55 @@ export declare function useGridEditorRuntime({ props, layoutRef, persistenceCont
         id?: undefined;
         reason?: undefined;
     };
+    resolveResizeIntent: (input: {
+        id: string;
+        item: LayoutItem;
+        layout: Layout;
+        handle: ResizeHandleAxis;
+        rawCandidate: LayoutItem;
+        metrics?: GridItemResizeMetrics;
+        phase: "preview" | "commit";
+    }) => {
+        kind: "allowed";
+        candidate: LayoutItem;
+        reason?: undefined;
+        ids?: undefined;
+        message?: undefined;
+        diagnostics?: undefined;
+        constraint?: undefined;
+    } | {
+        kind: "blocked";
+        reason: "mode-readonly";
+        ids: string[];
+        message: string;
+        candidate?: undefined;
+        diagnostics?: undefined;
+        constraint?: undefined;
+    } | {
+        kind: "blocked";
+        reason: GridEditorBlockedReason;
+        ids: string[];
+        diagnostics: import("../item-capabilities").GridItemCapabilityDiagnostic[] | undefined;
+        candidate?: undefined;
+        message?: undefined;
+        constraint?: undefined;
+    } | {
+        kind: "blocked";
+        reason: "handle-disabled";
+        ids: string[];
+        message: string;
+        diagnostics: import("../item-capabilities").GridItemCapabilityDiagnostic[];
+        candidate?: undefined;
+        constraint?: undefined;
+    } | {
+        kind: "allowed";
+        candidate: LayoutItem;
+        constraint: LayoutResizeConstraint | undefined;
+        diagnostics: import("../item-capabilities").GridItemCapabilityDiagnostic[];
+        reason?: undefined;
+        ids?: undefined;
+        message?: undefined;
+    };
     notifyMoveBlocked: (input: {
         reason: GridEditorBlockedReason;
         ids: string[];
@@ -117,6 +170,8 @@ export declare function useGridEditorRuntime({ props, layoutRef, persistenceCont
         draggable: boolean;
         resizable: boolean;
         bounded: boolean;
+        resizeHandles: ResizeHandleAxis[] | undefined;
+        capabilityDiagnostics: import("../item-capabilities").GridItemCapabilityDiagnostic[] | undefined;
         className: string | undefined;
         previewItem: LayoutItem | null;
         onClick: ((event: MouseEvent) => void) | undefined;

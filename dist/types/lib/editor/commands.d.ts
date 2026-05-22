@@ -1,4 +1,5 @@
 import type { Layout } from "../utils";
+import type { ResolvedGridItemCapability } from "../item-capabilities";
 import type { LayoutPatch, LayoutDiagnostics } from "../layout-engine";
 import type { GridEditorBeforeCommand, GridEditorBlockedReason, GridEditorCommand, GridEditorCommandPolicy, GridEditorCommandResult, GridEditorCommandSource, GridEditorCommandStatus, GridEditorCommandType, GridEditorHistoryMode, GridEditorHistoryPolicy, GridEditorMetaById, GridEditorMetadataPatch, GridEditorMode, GridEditorSelectionState } from "./types";
 export type NormalizedGridEditorCommand = GridEditorCommand & {
@@ -16,6 +17,7 @@ export type GridEditorCommandCheckContext = {
     isDraggable?: boolean;
     isResizable?: boolean;
     isBounded?: boolean;
+    itemCapabilities?: Record<string, ResolvedGridItemCapability>;
 };
 export type GridEditorCommandCheck = {
     ok: boolean;

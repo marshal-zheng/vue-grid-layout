@@ -21,6 +21,12 @@ import {
   resolveEditorItemCapability
 } from "../editor/metadata";
 import {
+  resolveAspectRatioResizeCandidate,
+  type GridItemAspectRatioConstraint,
+  type GridItemResizeMetrics,
+  type ResolvedGridItemCapability
+} from "../item-capabilities";
+import {
   useGridLayoutPersistence,
   type GridLayoutPersistenceController,
   type GridLayoutPersistenceProp,
@@ -43,7 +49,8 @@ import type { GridLayoutEngineBridge } from "./gridInteractionTypes";
 import { useGridPlacementInteractions } from "./useGridPlacementInteractions";
 import type {
   LayoutOperation,
-  LayoutOperationResult
+  LayoutOperationResult,
+  LayoutResizeConstraint
 } from "../layout-engine";
 
 const pickGeometry = (item: LayoutItem): Pick<LayoutItem, "x" | "y" | "w" | "h"> => ({
@@ -65,8 +72,11 @@ type GridEditorRuntimeProps = {
   maxRows: number;
   preventCollision: boolean;
   rowHeight: number;
+  renderPrecision?: "integer" | "subpixel" | null;
   transformScale: number;
   verticalCompact: boolean;
+  itemCapabilities?: Record<string, ResolvedGridItemCapability>;
+  resizeConstraints?: Record<string, GridItemAspectRatioConstraint>;
 };
 
 type GridEditorInteractionSnapshot = {
@@ -229,6 +239,8 @@ export function useGridEditorRuntime({
         kind: "layout",
         layout: layoutRef,
         layoutOperationRunner,
+        itemCapabilities: props.itemCapabilities,
+        resizeConstraints: props.resizeConstraints,
         persistence: (resolvedPersistenceController || config.persistence) as never
       })
     : null;
@@ -259,6 +271,10 @@ export function useGridEditorRuntime({
   const isEditMode = () => Boolean(controller && controller.mode.value === "edit");
   const getMetaById = () => controller?.editorMetaById.value || {};
   const guidesEnabled = () => Boolean(controller && config?.guides !== false);
+  const getCapabilitySidecar = (id: string): ResolvedGridItemCapability | undefined =>
+    props.itemCapabilities?.[id];
+  const getResizeConstraintSidecar = (id: string): GridItemAspectRatioConstraint | undefined =>
+    props.resizeConstraints?.[id];
 
   const resetSnap = () => {
     lastSnapResolution = null;
@@ -409,6 +425,169 @@ export function useGridEditorRuntime({
     if (meta?.visible === false) return "hidden";
     if (item.static) return "static-item";
     return "capability";
+  };
+
+  const hydrateResizeConstraint = (
+    constraint: LayoutResizeConstraint | undefined,
+    metrics: GridItemResizeMetrics | undefined,
+    startGeometry: Pick<LayoutItem, "x" | "y" | "w" | "h"> | undefined
+  ): LayoutResizeConstraint | undefined => {
+    if (!constraint) return undefined;
+    return {
+      ...constraint,
+      aspectRatio: constraint.aspectRatio
+        ? {
+            ...constraint.aspectRatio,
+            metrics: constraint.aspectRatio.metrics || metrics,
+            startGeometry: constraint.aspectRatio.startGeometry || startGeometry
+          }
+        : undefined
+    };
+  };
+
+  const resolveRuntimeCapability = (
+    item: LayoutItem,
+    defaults: GridEditorItemDefaults,
+    metrics?: GridItemResizeMetrics
+  ): ResolvedGridItemCapability | null => {
+    const sidecar = getCapabilitySidecar(item.i);
+    if (sidecar) {
+      const startGeometry = pickGeometry(getOldResizeItem() || item);
+      const explicitConstraint = getResizeConstraintSidecar(item.i);
+      return {
+        ...sidecar,
+        resizeConstraint: hydrateResizeConstraint(
+          explicitConstraint
+            ? {
+                ...sidecar.resizeConstraint,
+                aspectRatio: explicitConstraint,
+                handlePolicy: sidecar.resizeConstraint?.handlePolicy || {
+                  allowedHandles: sidecar.resizeHandles,
+                  blockedReason: "handle-disabled"
+                }
+              }
+            : sidecar.resizeConstraint,
+          metrics,
+          startGeometry
+        )
+      };
+    }
+
+    const compatibility = resolveEditorItemCapability(item, getMetaById()[item.i], defaults);
+    return {
+      id: compatibility.id,
+      visible: compatibility.visible,
+      editable: compatibility.editable,
+      draggable: compatibility.draggable,
+      resizable: compatibility.resizable,
+      bounded: compatibility.bounded,
+      static: compatibility.source.layoutStatic === true,
+      locked: compatibility.locked,
+      resizeHandles: compatibility.resizeHandles || [],
+      deletable: compatibility.deletable,
+      duplicatable: compatibility.duplicatable,
+      copyable: compatibility.copyable,
+      resizeConstraint: compatibility.resizeHandles
+        ? {
+            handlePolicy: {
+              allowedHandles: compatibility.resizeHandles,
+              blockedReason: "handle-disabled"
+            }
+          }
+        : undefined,
+      sources: compatibility.source.capabilitySources || {},
+      sourceLists: {},
+      diagnostics: compatibility.diagnostics || []
+    };
+  };
+
+  const resolveResizeIntent = (input: {
+    id: string;
+    item: LayoutItem;
+    layout: Layout;
+    handle: ResizeHandleAxis;
+    rawCandidate: LayoutItem;
+    metrics?: GridItemResizeMetrics;
+    phase: "preview" | "commit";
+  }) => {
+    if (!controller) {
+      return { kind: "allowed" as const, candidate: input.rawCandidate };
+    }
+    if (!isEditMode()) {
+      return {
+        kind: "blocked" as const,
+        reason: "mode-readonly" as const,
+        ids: [input.id],
+        message: "Resize is disabled outside edit mode."
+      };
+    }
+    const capability = resolveRuntimeCapability(
+      input.item,
+      { isDraggable: true, isResizable: true, isBounded: true },
+      input.metrics
+    );
+    if (!capability || !capability.resizable) {
+      return {
+        kind: "blocked" as const,
+        reason: reasonForCapability(input.item, getMetaById()[input.id]),
+        ids: [input.id],
+        diagnostics: capability?.diagnostics
+      };
+    }
+    const constraint = hydrateResizeConstraint(
+      capability.resizeConstraint,
+      input.metrics,
+      pickGeometry(getOldResizeItem() || input.item)
+    );
+    const allowedHandles = constraint?.handlePolicy?.allowedHandles;
+    if (allowedHandles && allowedHandles.indexOf(input.handle) === -1) {
+      return {
+        kind: "blocked" as const,
+        reason: "handle-disabled" as const,
+        ids: [input.id],
+        message: "Resize handle is disabled by item capability policy.",
+        diagnostics: capability.diagnostics
+      };
+    }
+    if (constraint?.aspectRatio?.enabled) {
+      const ratioResult = resolveAspectRatioResizeCandidate({
+        startItem: {
+          ...input.item,
+          ...pickGeometry(getOldResizeItem() || input.item)
+        },
+        rawCandidate: input.rawCandidate,
+        handle: input.handle,
+        constraint: constraint.aspectRatio,
+        bounds: {
+          cols: props.cols,
+          maxRows: props.maxRows,
+          minW: input.item.minW,
+          minH: input.item.minH,
+          maxW: input.item.maxW,
+          maxH: input.item.maxH
+        }
+      });
+      if (ratioResult.kind === "blocked") {
+        return {
+          kind: "blocked" as const,
+          reason: ratioResult.reason,
+          ids: [input.id],
+          diagnostics: ratioResult.diagnostics
+        };
+      }
+      return {
+        kind: "allowed" as const,
+        candidate: ratioResult.candidate,
+        constraint,
+        diagnostics: ratioResult.diagnostics
+      };
+    }
+    return {
+      kind: "allowed" as const,
+      candidate: input.rawCandidate,
+      constraint,
+      diagnostics: capability.diagnostics
+    };
   };
 
   const resolveMoveDrag = (input: {
@@ -691,7 +870,7 @@ export function useGridEditorRuntime({
   ) => {
     const meta: GridEditorItemMeta | undefined = getMetaById()[item.i];
     const capability = controller
-      ? resolveEditorItemCapability(item, meta, defaults)
+      ? resolveRuntimeCapability(item, defaults)
       : null;
     const visible = !(controller && meta?.visible === false && !isDroppingItem);
     const readonly = isViewMode() || Boolean(controller && !capability?.editable);
@@ -723,6 +902,8 @@ export function useGridEditorRuntime({
       draggable,
       resizable,
       bounded,
+      resizeHandles: capability?.resizeHandles,
+      capabilityDiagnostics: capability?.diagnostics,
       className,
       previewItem,
       onClick: controller ? (event: MouseEvent) => executeSelect(item.i, event) : undefined
@@ -777,6 +958,7 @@ export function useGridEditorRuntime({
     snapCandidate,
     updateIntelligence,
     resolveMoveDrag,
+    resolveResizeIntent,
     notifyMoveBlocked,
     commitMove,
     commitResize,

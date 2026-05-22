@@ -121,6 +121,85 @@ async function testSelectionCapabilityAndHistory() {
   assert.equal(editor.editorMetaById.value.a?.locked, undefined)
 }
 
+async function testCommandResizeAspectRatioConstraints() {
+  const layout = ref<Layout>([
+    { i: 'video', x: 0, y: 0, w: 2, h: 2 }
+  ])
+  const previews: unknown[] = []
+  const editor = createGridEditorController({
+    layout,
+    defaultMode: 'edit',
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: null,
+      allowOverlap: false,
+      preventCollision: false
+    },
+    resizeConstraints: {
+      video: {
+        enabled: true,
+        ratio: 2,
+        ratioKind: 'visual-px',
+        source: 'explicit',
+        fallbackPolicy: 'block',
+        edgeHandles: [],
+        metrics: { colWidth: 100, rowHeight: 100, margin: [0, 0] as [number, number] }
+      }
+    },
+    beforeCommand: context => {
+      if (context.command.type === 'resize') previews.push(context.preview)
+      return { status: 'allow' }
+    }
+  })
+
+  const resized = await editor.execute({
+    type: 'resize',
+    targetIds: ['video'],
+    payload: { w: 4, h: 4, handle: 'se' }
+  })
+  assert.equal(resized.status, 'changed')
+  assert.equal(layout.value.find(item => item.i === 'video')?.w, 4)
+  assert.equal(layout.value.find(item => item.i === 'video')?.h, 2)
+  assert.equal(resized.diagnostics?.operationResult?.diagnostics?.operationType, 'resize')
+  assert.ok(resized.layoutPatches.some(patch => patch.type === 'resize' && patch.to.h === 2))
+  const preview = previews[0] as { layoutPatches?: Array<{ type: string; to?: { h?: number } }> } | undefined
+  assert.ok(preview?.layoutPatches?.some(patch => patch.type === 'resize' && patch.to?.h === 2))
+
+  const missingMetricsLayout = ref<Layout>([
+    { i: 'video', x: 0, y: 0, w: 2, h: 2 }
+  ])
+  const missingMetricsEditor = createGridEditorController({
+    layout: missingMetricsLayout,
+    defaultMode: 'edit',
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: null,
+      allowOverlap: false,
+      preventCollision: false
+    },
+    resizeConstraints: {
+      video: {
+        enabled: true,
+        ratio: 2,
+        ratioKind: 'visual-px',
+        source: 'explicit',
+        fallbackPolicy: 'block',
+        edgeHandles: []
+      }
+    }
+  })
+  const blocked = await missingMetricsEditor.execute({
+    type: 'resize',
+    targetIds: ['video'],
+    payload: { w: 4, h: 4, handle: 'se' }
+  })
+  assert.equal(blocked.status, 'blocked')
+  assert.equal(blocked.blocked?.reason, 'metrics-missing')
+  assert.equal(missingMetricsLayout.value.find(item => item.i === 'video')?.h, 2)
+}
+
 async function testGroupMoveCommands() {
   const unsupportedLayout = ref<Layout>([
     { i: 'a', x: 0, y: 0, w: 2, h: 1 },
@@ -1557,6 +1636,7 @@ async function testControllerPlacementSessionLifecycle() {
 async function run() {
   await testModeAndGuard()
   await testSelectionCapabilityAndHistory()
+  await testCommandResizeAspectRatioConstraints()
   await testGroupMoveCommands()
   await testMetadataClipboardAndPaste()
   await testPlacementPolicies()

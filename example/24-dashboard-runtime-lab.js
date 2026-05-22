@@ -533,6 +533,43 @@ const widgetCatalog = [
     type: "Map",
     value: "5 zones",
     detail: "Hidden in mobile profile"
+  },
+  {
+    id: "video",
+    title: "Launch Video",
+    type: "16:9",
+    value: "HD",
+    detail: "Aspect ratio resize"
+  },
+  {
+    id: "logo",
+    title: "Brand Logo",
+    type: "1:1",
+    value: "Square",
+    detail: "Corner-only aspect ratio"
+  },
+  {
+    id: "kpi",
+    title: "KPI Snapshot",
+    type: "Fixed",
+    value: "99.2%",
+    detail: "Resize disabled"
+  },
+  {
+    id: "approval",
+    title: "Approval Queue",
+    type: "Locked",
+    value: "4",
+    detail: "Locked but not static",
+    locked: true
+  },
+  {
+    id: "invalidRatio",
+    title: "Invalid Ratio",
+    type: "Diagnostic",
+    value: "101",
+    detail: "Validation warning",
+    warning: true
   }
 ];
 
@@ -607,6 +644,55 @@ const createDashboardDocument = () => serializeDocument({
           mobileHeight: 4,
           preserveAspectRatio: true,
           aspectRatio: 2.6
+        },
+        video: {
+          col: 0,
+          row: 7,
+          sizeX: 8,
+          sizeY: 4,
+          minSizeX: 4,
+          preserveAspectRatio: true,
+          aspectRatio: 16 / 9,
+          resizeHandles: ["se", "sw", "ne", "nw"],
+          mobileOrder: 6,
+          mobileHeight: 3
+        },
+        logo: {
+          col: 8,
+          row: 7,
+          sizeX: 4,
+          sizeY: 4,
+          preserveAspectRatio: true,
+          aspectRatio: 1,
+          mobileOrder: 7,
+          mobileHeight: 3
+        },
+        kpi: {
+          col: 12,
+          row: 7,
+          sizeX: 4,
+          sizeY: 2,
+          resizable: false,
+          mobileOrder: 8,
+          mobileHeight: 2
+        },
+        approval: {
+          col: 16,
+          row: 7,
+          sizeX: 4,
+          sizeY: 2,
+          mobileOrder: 9,
+          mobileHeight: 2
+        },
+        invalidRatio: {
+          col: 20,
+          row: 7,
+          sizeX: 4,
+          sizeY: 2,
+          preserveAspectRatio: true,
+          aspectRatio: 101,
+          mobileOrder: 10,
+          mobileHeight: 2
         }
       },
       gridSettings: {
@@ -627,7 +713,12 @@ const createDashboardDocument = () => serializeDocument({
             utilization: { col: 8, row: 0, sizeX: 4, sizeY: 3 },
             service: { col: 0, row: 3, sizeX: 6, sizeY: 3 },
             incidents: { col: 6, row: 3, sizeX: 6, sizeY: 3 },
-            region: { col: 0, row: 6, sizeX: 12, sizeY: 4 }
+            region: { col: 0, row: 6, sizeX: 12, sizeY: 4 },
+            video: { col: 0, row: 10, sizeX: 6, sizeY: 3, aspectRatio: 16 / 9 },
+            logo: { col: 6, row: 10, sizeX: 3, sizeY: 3 },
+            kpi: { col: 9, row: 10, sizeX: 3, sizeY: 2 },
+            approval: { col: 0, row: 13, sizeX: 6, sizeY: 2 },
+            invalidRatio: { col: 6, row: 13, sizeX: 3, sizeY: 2 }
           },
           gridSettings: {
             columns: 12,
@@ -645,7 +736,12 @@ const createDashboardDocument = () => serializeDocument({
             utilization: { col: 0, row: 6, sizeX: 6, sizeY: 3, mobileOrder: 2, mobileHeight: 3 },
             service: { col: 0, row: 9, sizeX: 6, sizeY: 2, mobileOrder: 3, mobileHeight: 2 },
             incidents: { col: 0, row: 11, sizeX: 6, sizeY: 3, mobileOrder: 4, mobileHeight: 3 },
-            region: { col: 0, row: 14, sizeX: 6, sizeY: 4, mobileHide: true, mobileOrder: 5, mobileHeight: 4 }
+            region: { col: 0, row: 14, sizeX: 6, sizeY: 4, mobileHide: true, mobileOrder: 5, mobileHeight: 4 },
+            video: { col: 0, row: 18, sizeX: 6, sizeY: 3, mobileOrder: 6, mobileHeight: 3 },
+            logo: { col: 0, row: 21, sizeX: 6, sizeY: 3, mobileOrder: 7, mobileHeight: 3 },
+            kpi: { col: 0, row: 24, sizeX: 6, sizeY: 2, mobileOrder: 8, mobileHeight: 2 },
+            approval: { col: 0, row: 26, sizeX: 6, sizeY: 2, mobileOrder: 9, mobileHeight: 2 },
+            invalidRatio: { col: 0, row: 28, sizeX: 6, sizeY: 2, mobileOrder: 10, mobileHeight: 2 }
           },
           gridSettings: {
             columns: 6,
@@ -663,7 +759,9 @@ const createDashboardDocument = () => serializeDocument({
         version: 1,
         editorMetaById: {
           service: { locked: true, label: "Service Health" },
-          region: { label: "Region Performance" }
+          region: { label: "Region Performance" },
+          approval: { locked: true, label: "Approval Queue" },
+          invalidRatio: { label: "Invalid Ratio" }
         }
       }
     },

@@ -47,6 +47,32 @@ export type {
   LayoutWorkerLike,
   ScheduledLayoutTask
 } from "./types";
+export type {
+  AspectRatioResizeBounds,
+  GridItemAspectRatioConstraint,
+  GridItemAspectRatioFallbackPolicy,
+  GridItemAspectRatioResizeResult,
+  GridItemCapabilityDefaults,
+  GridItemCapabilityDiagnostic,
+  GridItemCapabilityDiagnosticCode,
+  GridItemCapabilitySource,
+  GridItemEditorCapabilityInput,
+  GridItemPhysicalCapabilityInput,
+  GridItemResizeMetrics,
+  GridItemVisualSize,
+  LayoutResizeConstraint,
+  ResolveGridItemCapabilityInput,
+  ResolvedGridItemCapability
+} from "../item-capabilities";
+export {
+  getGridItemVisualSize,
+  isResizeHandleAxis,
+  isValidAspectRatio,
+  normalizeResizeHandles,
+  resolveAspectRatioResizeCandidate,
+  resolveGridItemAspectRatioConstraint,
+  resolveGridItemCapability
+} from "../item-capabilities";
 
 export { rowColumnOccupancyStrategy } from "./indexing";
 export {

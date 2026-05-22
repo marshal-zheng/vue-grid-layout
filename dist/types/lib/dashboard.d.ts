@@ -1,4 +1,5 @@
 import type { GridEditorMetaById } from "./editor/types";
+import { type ResolvedGridItemCapability, type GridItemAspectRatioConstraint } from "./item-capabilities";
 import type { Layout, ResizeHandleAxis } from "./utils";
 import type { LayoutValidationMode, MaybePromise } from "./persistence";
 import type { GridHeightMode, GridRenderPrecision } from "./grid-height";
@@ -217,6 +218,8 @@ export type DashboardGridRuntimeProjection = {
     layout: Layout;
     gridSettings: ResolvedDashboardGridSettings;
     editorMetaById: GridEditorMetaById;
+    capabilitiesById?: Record<string, ResolvedGridItemCapability>;
+    resizeConstraintsById?: Record<string, GridItemAspectRatioConstraint>;
     layoutId: string;
     profileId: string | null;
     fallbackApplied: boolean;

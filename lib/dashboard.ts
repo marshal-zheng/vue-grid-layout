@@ -1,5 +1,12 @@
 import { validateEditorMetaById } from "./editor/metadata";
 import type { GridEditorMetaById } from "./editor/types";
+import {
+  resolveGridItemCapability,
+  type GridItemPhysicalCapabilityInput,
+  type ResolvedGridItemCapability,
+  type GridItemAspectRatioConstraint,
+  type GridItemCapabilityDiagnostic
+} from "./item-capabilities";
 import type { Layout, LayoutItem, ResizeHandleAxis } from "./utils";
 import type { LayoutValidationMode, MaybePromise } from "./persistence";
 import type { GridHeightMode, GridRenderPrecision } from "./grid-height";
@@ -251,6 +258,8 @@ export type DashboardGridRuntimeProjection = {
   layout: Layout;
   gridSettings: ResolvedDashboardGridSettings;
   editorMetaById: GridEditorMetaById;
+  capabilitiesById?: Record<string, ResolvedGridItemCapability>;
+  resizeConstraintsById?: Record<string, GridItemAspectRatioConstraint>;
   layoutId: string;
   profileId: string | null;
   fallbackApplied: boolean;
@@ -397,7 +406,9 @@ const DASHBOARD_ITEM_RUNTIME_UNSUPPORTED_FIELDS = [
   "desktopHide",
   "mobileHide",
   "mobileHeight",
-  "mobileOrder",
+  "mobileOrder"
+];
+const DASHBOARD_ITEM_RUNTIME_SIDECAR_FIELDS = [
   "preserveAspectRatio",
   "aspectRatio"
 ];
@@ -1489,6 +1500,43 @@ const mergeProfileItem = (
   ...(override || {})
 });
 
+const toPhysicalCapabilityInput = (
+  item: DashboardItemLayout | DashboardItemLayoutOverride | undefined
+): GridItemPhysicalCapabilityInput | undefined => {
+  if (!item) return undefined;
+  const input: GridItemPhysicalCapabilityInput = {};
+  copyDefined(input, "static", item.static);
+  copyDefined(input, "draggable", item.draggable);
+  copyDefined(input, "resizable", item.resizable);
+  copyDefined(input, "bounded", item.bounded);
+  if (item.resizeHandles) input.resizeHandles = item.resizeHandles.slice();
+  copyDefined(input, "preserveAspectRatio", item.preserveAspectRatio);
+  copyDefined(input, "aspectRatio", item.aspectRatio);
+  return Object.keys(input).length > 0 ? input : undefined;
+};
+
+const capabilityDiagnosticToDashboard = (
+  diagnosticInput: GridItemCapabilityDiagnostic,
+  context: {
+    layoutId: string;
+    profileId: string | null;
+    itemId: string;
+  }
+): DashboardDiagnostic => diagnostic(
+  diagnosticInput.code,
+  diagnosticInput.level,
+  diagnosticInput.message,
+  {
+    layoutId: context.layoutId,
+    profileId: context.profileId || undefined,
+    itemId: context.itemId,
+    path: diagnosticInput.field
+      ? `layouts.${context.layoutId}.widgets.${context.itemId}.${diagnosticInput.field}`
+      : undefined,
+    details: diagnosticInput.details
+  }
+);
+
 const layoutSorter = (a: LayoutItem, b: LayoutItem): number => {
   if (a.y !== b.y) return a.y - b.y;
   if (a.x !== b.x) return a.x - b.x;
@@ -1575,6 +1623,8 @@ export function projectDashboardLayoutDocument(
 
   const targetView = options.targetView ?? "desktop";
   const runtimeLayout: Layout = [];
+  const capabilitiesById: Record<string, ResolvedGridItemCapability> = {};
+  const resizeConstraintsById: Record<string, GridItemAspectRatioConstraint> = {};
   const editorMetaById: GridEditorMetaById = {
     ...(layoutDefinition.editor?.editorMetaById || {})
   };
@@ -1588,8 +1638,11 @@ export function projectDashboardLayoutDocument(
   }
 
   Object.keys(layoutDefinition.widgets).forEach(id => {
+    const baseItem = layoutDefinition.widgets[id];
+    const profileItem = profile?.widgets?.[id];
     const item = mergeProfileItem(layoutDefinition.widgets[id], profile?.widgets?.[id]);
-    runtimeLayout.push(toRuntimeLayoutItem(id, item));
+    const runtimeItem = toRuntimeLayoutItem(id, item);
+    runtimeLayout.push(runtimeItem);
 
     const meta = { ...(editorMetaById[id] || {}) };
     const hidden = targetView === "mobile" ? item.mobileHide === true : item.desktopHide === true;
@@ -1617,9 +1670,38 @@ export function projectDashboardLayoutDocument(
     }
     editorMetaById[id] = meta;
 
+    const capability = resolveGridItemCapability({
+      item: runtimeItem,
+      dashboard: toPhysicalCapabilityInput(baseItem),
+      profile: toPhysicalCapabilityInput(profileItem),
+      editor: meta,
+      preserveUnknownFields: true
+    });
+    capabilitiesById[id] = capability;
+    if (capability.aspectRatio) {
+      resizeConstraintsById[id] = capability.aspectRatio;
+    }
+    capability.diagnostics.forEach(capabilityDiagnostic => {
+      diagnostics.push(capabilityDiagnosticToDashboard(capabilityDiagnostic, {
+        layoutId,
+        profileId,
+        itemId: id
+      }));
+    });
+
     DASHBOARD_ITEM_RUNTIME_UNSUPPORTED_FIELDS.forEach(field => {
       if (typeof item[field] !== "undefined") {
         diagnostics.push(diagnostic("unsupported-field", "info", `${field} is preserved in the dashboard document but not written to LayoutItem.`, {
+          layoutId,
+          profileId: profileId || undefined,
+          itemId: id,
+          path: `layouts.${layoutId}.widgets.${id}.${field}`
+        }));
+      }
+    });
+    DASHBOARD_ITEM_RUNTIME_SIDECAR_FIELDS.forEach(field => {
+      if (typeof item[field] !== "undefined") {
+        diagnostics.push(diagnostic("item-capability.sidecar-projected", "info", `${field} was projected through capability sidecar and not written to LayoutItem.`, {
           layoutId,
           profileId: profileId || undefined,
           itemId: id,
@@ -1649,6 +1731,8 @@ export function projectDashboardLayoutDocument(
     layout: runtimeLayout,
     gridSettings,
     editorMetaById: projectedMeta,
+    capabilitiesById,
+    resizeConstraintsById: Object.keys(resizeConstraintsById).length > 0 ? resizeConstraintsById : undefined,
     layoutId,
     profileId,
     fallbackApplied,
@@ -1668,11 +1752,6 @@ const runtimeItemToDashboardPatch = (item: LayoutItem): DashboardItemLayoutOverr
   copyDefined(patch, "minSizeY", item.minH);
   copyDefined(patch, "maxSizeX", item.maxW);
   copyDefined(patch, "maxSizeY", item.maxH);
-  copyDefined(patch, "static", item.static);
-  copyDefined(patch, "draggable", item.isDraggable);
-  copyDefined(patch, "resizable", item.isResizable);
-  copyDefined(patch, "bounded", item.isBounded);
-  if (item.resizeHandles) patch.resizeHandles = item.resizeHandles.slice();
   return patch;
 };
 

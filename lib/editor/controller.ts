@@ -7,7 +7,8 @@ import {
   getLayoutItem,
   type Layout,
   type LayoutItem,
-  type CompactType
+  type CompactType,
+  type ResizeHandleAxis
 } from "../utils";
 import {
   executeLayoutOperation
@@ -16,7 +17,8 @@ import type {
   GridLayoutEngineOptions,
   LayoutBlockedReason,
   LayoutOperation,
-  LayoutOperationResult
+  LayoutOperationResult,
+  LayoutResizeConstraint
 } from "../layout-engine";
 import {
   cloneLayoutsMap,
@@ -214,6 +216,16 @@ const isPasteStrategy = (value: unknown): value is GridEditorPasteStrategy =>
   value === "nearest-fit" ||
   value === "first-fit" ||
   value === "insert-top-shift";
+
+const isResizeHandleAxis = (value: unknown): value is ResizeHandleAxis =>
+  value === "s" ||
+  value === "w" ||
+  value === "e" ||
+  value === "n" ||
+  value === "sw" ||
+  value === "nw" ||
+  value === "se" ||
+  value === "ne";
 
 const mapLayoutBlockedReason = (
   reason: LayoutBlockedReason | undefined
@@ -788,6 +800,23 @@ export const createGridEditorController = (
       operation,
       options: engineOptions
     }));
+  };
+
+  const resolveResizeConstraint = (
+    id: string
+  ): LayoutResizeConstraint | undefined => {
+    const capability = options.itemCapabilities?.[id];
+    const aspectRatio = options.resizeConstraints?.[id] || capability?.resizeConstraint?.aspectRatio;
+    const handlePolicy = capability?.resizeConstraint?.handlePolicy || (
+      capability?.resizeHandles
+        ? {
+            allowedHandles: capability.resizeHandles,
+            blockedReason: "handle-disabled" as const
+          }
+        : undefined
+    );
+    if (!aspectRatio && !handlePolicy) return undefined;
+    return { aspectRatio, handlePolicy };
   };
 
   const readClipboard = async (
@@ -1559,22 +1588,68 @@ export const createGridEditorController = (
       });
     } else if (command.type === "resize") {
       const targetId = allowedIds[0];
-      nextLayout = nextLayout.map(item => {
-        if (item.i !== targetId) return item;
+      const targetItem = targetId ? getLayoutItem(nextLayout, targetId) : undefined;
+      const constraint = targetId ? resolveResizeConstraint(targetId) : undefined;
+      if (targetItem && constraint) {
         const nextW = isFiniteGridNumber(payload.w)
           ? payload.w
-          : item.w + (isFiniteGridNumber(payload.dw) ? payload.dw : 0);
+          : targetItem.w + (isFiniteGridNumber(payload.dw) ? payload.dw : 0);
         const nextH = isFiniteGridNumber(payload.h)
           ? payload.h
-          : item.h + (isFiniteGridNumber(payload.dh) ? payload.dh : 0);
-        return {
-          ...item,
-          x: isFiniteGridNumber(payload.x) ? Math.max(0, Math.floor(payload.x)) : item.x,
-          y: isFiniteGridNumber(payload.y) ? Math.max(0, Math.floor(payload.y)) : item.y,
-          w: clampGridSize(nextW, item.w),
-          h: clampGridSize(nextH, item.h)
+          : targetItem.h + (isFiniteGridNumber(payload.dh) ? payload.dh : 0);
+        const operationResult = await runLayoutOperation(command, layout, {
+          type: "resize",
+          id: targetId,
+          x: isFiniteGridNumber(payload.x) ? Math.max(0, Math.floor(payload.x)) : undefined,
+          y: isFiniteGridNumber(payload.y) ? Math.max(0, Math.floor(payload.y)) : undefined,
+          w: clampGridSize(nextW, targetItem.w),
+          h: clampGridSize(nextH, targetItem.h),
+          handle: isResizeHandleAxis(payload.handle) ? payload.handle : "se",
+          constraint
+        }, payload);
+        resultDiagnostics = {
+          durationMs: 0,
+          layoutDiagnostics: operationResult.diagnostics,
+          operationResult
         };
-      });
+        if (operationResult.status === "blocked") {
+          const reason = mapLayoutBlockedReason(operationResult.blocked?.reason);
+          return createGridEditorCommandResult(command, "blocked", {
+            targetIds: allowedIds,
+            blocked: {
+              reason,
+              itemIds: operationResult.blocked?.itemIds || allowedIds,
+              message: `Resize command blocked by ${reason}.`
+            },
+            diagnostics: resultDiagnostics
+          });
+        }
+        if (operationResult.status === "error") {
+          return createGridEditorCommandResult(command, "error", {
+            targetIds: allowedIds,
+            diagnostics: resultDiagnostics,
+            error: operationResult.error || { message: "Layout operation failed." }
+          });
+        }
+        nextLayout = operationResult.layout;
+      } else {
+        nextLayout = nextLayout.map(item => {
+          if (item.i !== targetId) return item;
+          const nextW = isFiniteGridNumber(payload.w)
+            ? payload.w
+            : item.w + (isFiniteGridNumber(payload.dw) ? payload.dw : 0);
+          const nextH = isFiniteGridNumber(payload.h)
+            ? payload.h
+            : item.h + (isFiniteGridNumber(payload.dh) ? payload.dh : 0);
+          return {
+            ...item,
+            x: isFiniteGridNumber(payload.x) ? Math.max(0, Math.floor(payload.x)) : item.x,
+            y: isFiniteGridNumber(payload.y) ? Math.max(0, Math.floor(payload.y)) : item.y,
+            w: clampGridSize(nextW, item.w),
+            h: clampGridSize(nextH, item.h)
+          };
+        });
+      }
     } else if (command.type === "align") {
       const cols = isFiniteGridNumber(payload.cols) ? payload.cols : 12;
       const maxRows = isFiniteGridNumber(payload.maxRows) ? payload.maxRows : Infinity;
@@ -1960,16 +2035,55 @@ export const createGridEditorController = (
       }
     }
     if (!previewLayout && command.type === "resize") {
-      previewLayout = getLayout().map(item => {
-        if (item.i !== allowedIds[0]) return item;
-        return {
-          ...item,
-          x: isFiniteGridNumber(payload.x) ? Math.max(0, Math.floor(payload.x)) : item.x,
-          y: isFiniteGridNumber(payload.y) ? Math.max(0, Math.floor(payload.y)) : item.y,
-          w: isFiniteGridNumber(payload.w) ? clampGridSize(payload.w, item.w) : item.w,
-          h: isFiniteGridNumber(payload.h) ? clampGridSize(payload.h, item.h) : item.h
-        };
-      });
+      const currentLayout = getLayout();
+      const targetId = allowedIds[0];
+      const targetItem = targetId ? getLayoutItem(currentLayout, targetId) : undefined;
+      const constraint = targetId ? resolveResizeConstraint(targetId) : undefined;
+      const engineOptions = constraint ? resolveLayoutEngineOptions(payload) : null;
+      if (targetItem && constraint && engineOptions) {
+        const nextW = isFiniteGridNumber(payload.w)
+          ? payload.w
+          : targetItem.w + (isFiniteGridNumber(payload.dw) ? payload.dw : 0);
+        const nextH = isFiniteGridNumber(payload.h)
+          ? payload.h
+          : targetItem.h + (isFiniteGridNumber(payload.dh) ? payload.dh : 0);
+        const operationResult = executeLayoutOperation({
+          id: `${command.id}:preview-layout`,
+          phase: "preview",
+          layout: currentLayout,
+          operation: {
+            type: "resize",
+            id: targetId,
+            x: isFiniteGridNumber(payload.x) ? Math.max(0, Math.floor(payload.x)) : undefined,
+            y: isFiniteGridNumber(payload.y) ? Math.max(0, Math.floor(payload.y)) : undefined,
+            w: clampGridSize(nextW, targetItem.w),
+            h: clampGridSize(nextH, targetItem.h),
+            handle: isResizeHandleAxis(payload.handle) ? payload.handle : "se",
+            constraint
+          },
+          options: engineOptions
+        });
+        previewLayout = operationResult.status === "blocked" || operationResult.status === "error"
+          ? currentLayout
+          : operationResult.layout;
+      } else {
+        previewLayout = currentLayout.map(item => {
+          if (item.i !== targetId) return item;
+          const nextW = isFiniteGridNumber(payload.w)
+            ? payload.w
+            : item.w + (isFiniteGridNumber(payload.dw) ? payload.dw : 0);
+          const nextH = isFiniteGridNumber(payload.h)
+            ? payload.h
+            : item.h + (isFiniteGridNumber(payload.dh) ? payload.dh : 0);
+          return {
+            ...item,
+            x: isFiniteGridNumber(payload.x) ? Math.max(0, Math.floor(payload.x)) : item.x,
+            y: isFiniteGridNumber(payload.y) ? Math.max(0, Math.floor(payload.y)) : item.y,
+            w: clampGridSize(nextW, item.w),
+            h: clampGridSize(nextH, item.h)
+          };
+        });
+      }
     }
 
     if (!previewLayout && command.type === "add") {
@@ -2269,7 +2383,8 @@ export const createGridEditorController = (
       layout: getLayout(),
       editorMetaById: editorMetaById.value,
       selection: selection.value,
-      commandPolicy: options.commandPolicy
+      commandPolicy: options.commandPolicy,
+      itemCapabilities: options.itemCapabilities
     }),
     getGuardContext: (command, check, preview, signal) => {
       const payload = getPayloadRecord(command);
@@ -2438,7 +2553,8 @@ export const createGridEditorController = (
       layout: getLayout(),
       editorMetaById: editorMetaById.value,
       selection: selection.value,
-      commandPolicy: options.commandPolicy
+      commandPolicy: options.commandPolicy,
+      itemCapabilities: options.itemCapabilities
     });
     if (check.result) return check.result;
     const validation = descriptor.validatePayload?.(command);

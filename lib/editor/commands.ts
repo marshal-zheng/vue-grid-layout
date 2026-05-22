@@ -1,4 +1,5 @@
 import type { Layout, LayoutItem } from "../utils";
+import type { ResolvedGridItemCapability } from "../item-capabilities";
 import type { LayoutPatch, LayoutDiagnostics } from "../layout-engine";
 import type {
   GridEditorBeforeCommand,
@@ -34,6 +35,7 @@ export type GridEditorCommandCheckContext = {
   isDraggable?: boolean;
   isResizable?: boolean;
   isBounded?: boolean;
+  itemCapabilities?: Record<string, ResolvedGridItemCapability>;
 };
 
 export type GridEditorCommandCheck = {
@@ -444,7 +446,7 @@ export const checkGridEditorCommand = (
       reason = "missing-item";
       return;
     }
-    const capability = resolveEditorItemCapability(
+    const capability = context.itemCapabilities?.[id] || resolveEditorItemCapability(
       item,
       context.editorMetaById[id],
       {

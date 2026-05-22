@@ -558,9 +558,9 @@ const collectUnsupportedProfileFieldDiagnostics = (
     DASHBOARD_PROFILE_DEFERRED_ITEM_FIELDS.forEach(field => {
       if (typeof entry.item[field] !== "undefined") {
         diagnostics.push(createDashboardResponsiveDiagnostic(
-          "unsupported-profile-field",
+          "item-capability.sidecar-projected",
           "info",
-          `Profile item field ${field} is preserved but not directly mapped to LayoutItem in this version.`,
+          `Profile item field ${field} was projected through capability sidecar and not written to LayoutItem.`,
           {
             layoutId,
             profileId,
@@ -981,6 +981,8 @@ export function resolveDashboardResponsiveProfile(
     layout: projectionFields.layout,
     gridSettings,
     editorMetaById: projectionFields.editorMetaById,
+    capabilitiesById: projection.projection.capabilitiesById,
+    resizeConstraintsById: projection.projection.resizeConstraintsById,
     layoutId,
     requestedBreakpoint,
     resolvedProfileId,
@@ -1049,11 +1051,6 @@ const patchItemFromLayout = (item: LayoutItem): DashboardItemLayoutOverride => {
   if (typeof item.minH !== "undefined") patch.minSizeY = item.minH;
   if (typeof item.maxW !== "undefined") patch.maxSizeX = item.maxW;
   if (typeof item.maxH !== "undefined") patch.maxSizeY = item.maxH;
-  if (typeof item.static !== "undefined") patch.static = item.static;
-  if (typeof item.isDraggable !== "undefined") patch.draggable = item.isDraggable;
-  if (typeof item.isResizable !== "undefined") patch.resizable = item.isResizable;
-  if (typeof item.isBounded !== "undefined") patch.bounded = item.isBounded;
-  if (item.resizeHandles) patch.resizeHandles = item.resizeHandles.slice();
   return patch;
 };
 

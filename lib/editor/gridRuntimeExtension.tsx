@@ -39,6 +39,7 @@ export const createEditorGridRuntimeExtension = (
       snapCandidate: editorRuntime.snapCandidate,
       updateIntelligence: editorRuntime.updateIntelligence,
       resolveMoveDrag: editorRuntime.resolveMoveDrag,
+      resolveResizeIntent: editorRuntime.resolveResizeIntent,
       notifyMoveBlocked: editorRuntime.notifyMoveBlocked,
       commitMove: editorRuntime.commitMove,
       commitResize: editorRuntime.commitResize,

@@ -7,7 +7,8 @@ import type {
 } from "../utils";
 import type { DropDragOverResult } from "./contract";
 import type { GridDragActivationDistance } from "../interaction-state-machine";
-import type { LayoutOperationResult } from "../layout-engine";
+import type { LayoutOperationResult, LayoutResizeConstraint } from "../layout-engine";
+import type { GridItemCapabilityDiagnostic, GridItemResizeMetrics } from "../item-capabilities";
 import type { GridLayoutState } from "./useGridLayoutModel";
 import type { useGridAutoScroll } from "./useGridAutoScroll";
 import type { useGridFrameUpdate } from "./useGridFrameUpdate";
@@ -29,6 +30,7 @@ export type GridInteractionsProps = {
   maxRows: number;
   preventCollision: boolean;
   rowHeight: number;
+  renderPrecision?: "integer" | "subpixel" | null;
   transformScale: number;
   verticalCompact: boolean;
   width?: number;
@@ -60,6 +62,9 @@ export type GridInteractionBlockedReason =
   | "bounds"
   | "maxRows"
   | "missing-item"
+  | "handle-disabled"
+  | "aspect-ratio"
+  | "metrics-missing"
   | "selection-count"
   | "unsupported-scope"
   | "unsupported"
@@ -143,6 +148,28 @@ export type GridInteractionsEditor = {
     event?: Event;
   }) => Promise<GridInteractionCommandResult | null>;
   rollbackInteraction?: (layout: Layout, reason: string) => void;
+  resolveResizeIntent?: (input: {
+    id: string;
+    item: LayoutItem;
+    layout: Layout;
+    handle: ResizeHandleAxis;
+    rawCandidate: LayoutItem;
+    metrics?: GridItemResizeMetrics;
+    phase: "preview" | "commit";
+  }) =>
+    | {
+        kind: "allowed";
+        candidate: LayoutItem;
+        constraint?: LayoutResizeConstraint;
+        diagnostics?: GridItemCapabilityDiagnostic[];
+      }
+    | {
+        kind: "blocked";
+        reason: GridInteractionBlockedReason;
+        ids: string[];
+        message?: string;
+        diagnostics?: GridItemCapabilityDiagnostic[];
+      };
 };
 
 export type GridInteractionCommonOptions = {

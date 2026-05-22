@@ -1,4 +1,4 @@
-import { c as o, b as a } from "./createGridLayoutComponent-Dco68dmI.mjs";
+import { c as o, b as a } from "./createGridLayoutComponent-DrGx-LJV.mjs";
 const t = o({
   name: "VueGridLayout",
   props: a
