@@ -22,9 +22,9 @@ import type {
 } from "../interaction-state-machine";
 import type {
   GridInteractionCommonOptions,
-  GridInteractionModelCommitters
+  GridInteractionModelCommitters,
+  GridInteractionBlockedReason
 } from "./gridInteractionTypes";
-import type { GridEditorBlockedReason } from "../editor";
 import type { LayoutOperationResult } from "../layout-engine";
 import { useGridInteractionMachine } from "./useGridInteractionMachine";
 
@@ -72,7 +72,7 @@ export function useGridDragResizeInteractions({
   const resizeBlocked = ref(false);
   const activeDragId = ref<string | null>(null);
   const activeResizeId = ref<string | null>(null);
-  const dragBlockedReason = ref<GridEditorBlockedReason | null>(null);
+  const dragBlockedReason = ref<GridInteractionBlockedReason | null>(null);
   const dragBlockedItemIds = ref<string[]>([]);
   const dragBlockedMessage = ref<string | null>(null);
   let activeMoveContext: ActiveMoveContext | null = null;
@@ -128,7 +128,7 @@ export function useGridDragResizeInteractions({
   };
 
   const setDragBlockedFeedback = (
-    reason: GridEditorBlockedReason,
+    reason: GridInteractionBlockedReason,
     itemIds: string[],
     message?: string
   ) => {
@@ -145,7 +145,7 @@ export function useGridDragResizeInteractions({
     notify = false
   ) => {
     if (result.status === "blocked" && result.blocked) {
-      const reason = result.blocked.reason as GridEditorBlockedReason;
+      const reason = result.blocked.reason as GridInteractionBlockedReason;
       const ids = result.blocked.itemIds.length > 0
         ? result.blocked.itemIds
         : fallbackIds;
@@ -778,7 +778,7 @@ export function useGridDragResizeInteractions({
       activeDragInteractionId = dragInteractionId;
       activeDragId.value = moveIntent.activeId || i;
       setDragBlockedFeedback(
-        moveIntent.reason as GridEditorBlockedReason,
+        moveIntent.reason as GridInteractionBlockedReason,
         moveIntent.ids,
         `Pointer move blocked by ${moveIntent.reason}.`
       );

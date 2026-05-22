@@ -1,4 +1,5 @@
-import type { GridEditorController, GridEditorPlacementCursor } from "../editor";
+import type { GridEditorController } from "../editor/types";
+import type { GridEditorPlacementCursor } from "../editor/placementSession";
 import { calcXY, type PositionParams } from "../calculateUtils";
 import type { CompactType } from "../utils";
 

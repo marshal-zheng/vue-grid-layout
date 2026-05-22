@@ -1,8 +1,9 @@
 import { deepEqual } from "fast-equals";
 import { VNode, Fragment } from 'vue'
-import { isArray } from "lodash";
 
 import type { Kv } from './type'
+
+const isArray = Array.isArray;
 
 export type ResizeHandleAxis =
   | "s"

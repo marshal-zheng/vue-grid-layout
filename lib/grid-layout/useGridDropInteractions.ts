@@ -1,5 +1,6 @@
 import { h, markRaw, ref } from "vue";
 import {
+  cloneLayout,
   compact,
   compactType,
   findFirstFit,
@@ -8,9 +9,6 @@ import {
   getLayoutItem,
   withLayoutItem
 } from "../utils";
-import {
-  createGridEditorPlacementRollbackSnapshot
-} from "../editor/placementSession";
 import type { LayoutItem } from "../utils";
 import { calcXY, type PositionParams } from "../calculateUtils";
 import type { GridInteractionCommonOptions } from "./gridInteractionTypes";
@@ -133,7 +131,7 @@ export function useGridDropInteractions({
         removeDroppingPlaceholder("drop-commit-rejected");
         return;
       }
-      const baseLayout = createGridEditorPlacementRollbackSnapshot(layout.filter(l => l.i !== droppingId));
+      const baseLayout = cloneLayout(layout.filter(l => l.i !== droppingId));
       const targetItem = item || state.activeDrag || null;
       const target = targetItem
         ? { x: targetItem.x, y: targetItem.y }
@@ -266,7 +264,7 @@ export function useGridDropInteractions({
 
     void (async () => {
       const droppingId = String(droppingItem.i);
-      const baseLayout = createGridEditorPlacementRollbackSnapshot(layout.filter(l => l.i !== droppingId));
+      const baseLayout = cloneLayout(layout.filter(l => l.i !== droppingId));
       const committedLayout = cleanItem ? [...baseLayout, cleanItem] : baseLayout;
       const commandResult = cleanItem
         ? (state.suppressLayoutChange = true, await editor.commitDrop?.({
@@ -364,7 +362,7 @@ export function useGridDropInteractions({
       };
       const cursorGridPos = calcXY(positionParams, layerY, layerX, finalDroppingItem.w, finalDroppingItem.h);
 
-      const baseLayout = createGridEditorPlacementRollbackSnapshot(layout.filter(l => l.i !== finalDroppingItem.i));
+      const baseLayout = cloneLayout(layout.filter(l => l.i !== finalDroppingItem.i));
       if (!isLegacyLayoutEngine()) {
         const droppingId = String(finalDroppingItem.i);
         const dropCandidate = {
@@ -528,7 +526,7 @@ export function useGridDropInteractions({
     };
     const calculatedPosition = calcXY(positionParams, layerY, layerX, cursorDroppingItem.w, cursorDroppingItem.h);
     const droppingItemId = String(cursorDroppingItem.i);
-    const baseLayout = createGridEditorPlacementRollbackSnapshot(layout.filter(l => l.i !== droppingItemId));
+    const baseLayout = cloneLayout(layout.filter(l => l.i !== droppingItemId));
     const rawDroppingItem = {
       ...cursorDroppingItem,
       i: droppingItemId,

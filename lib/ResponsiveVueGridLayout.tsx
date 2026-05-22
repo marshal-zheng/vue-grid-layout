@@ -6,9 +6,7 @@ import {
   Breakpoints
 } from "./responsiveUtils";
 import VueGridLayout from "./VueGridLayout";
-import type { ResponsiveGridLayoutPersistenceProp } from "./persistence";
 import type { GridLayoutEngineProp } from "./layout-engine";
-import type { GridEditorProp } from "./editor";
 import type { GridDragActivationDistance } from "./interaction-state-machine";
 import {
   getIndentationValue,
@@ -33,14 +31,11 @@ export interface Props<Breakpoint extends string = string> {
     default: [10, 10]
   };
   containerPadding: Record<Breakpoint, [number, number] | null> | [number, number] | null;
-  persistence?: ResponsiveGridLayoutPersistenceProp;
   layoutEngine?: false | GridLayoutEngineProp;
-  editor?: false | GridEditorProp;
   dragActivationDistance?: GridDragActivationDistance;
 }
 
-const ResponsiveVueGridLayout = defineComponent({
-  props: {
+export const responsiveGridLayoutProps = {
     /** Force current breakpoint key (optional, usually auto-calculated) */
     breakpoint: { type: String, default: '' },
     /** Breakpoint to pixel width mapping, e.g. { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 } */
@@ -83,11 +78,6 @@ const ResponsiveVueGridLayout = defineComponent({
       default: "vertical",
       validator: (value: CompactType) => value == null || ['vertical', 'horizontal'].includes(value),
     },
-    /** Durable save/load persistence configuration for all breakpoint layouts */
-    persistence: {
-      type: [Boolean, Object] as PropType<ResponsiveGridLayoutPersistenceProp>,
-      default: false
-    },
     /** Layout engine configuration for responsive heavy operations and the inner grid */
     layoutEngine: {
       type: [Boolean, Object] as PropType<false | GridLayoutEngineProp>,
@@ -97,17 +87,15 @@ const ResponsiveVueGridLayout = defineComponent({
     dragActivationDistance: {
       type: [Number, Object] as PropType<GridDragActivationDistance>,
       default: undefined
-    },
-    /** Headless professional editor controller/options. Disabled by default. */
-    editor: {
-      type: [Boolean, Object] as PropType<false | GridEditorProp>,
-      default: false
-    },
-  },
+    }
+};
+
+const ResponsiveVueGridLayout = defineComponent({
+  props: responsiveGridLayoutProps,
   emits: ['update:layouts', 'layoutChange', 'breakpointChange', 'widthChange'],
   setup(props, { slots, emit }) {
     const model = useResponsiveGridLayoutModel({
-      props,
+      props: props as never,
       slots,
       emit
     });
@@ -122,9 +110,7 @@ const ResponsiveVueGridLayout = defineComponent({
         layouts,
         margin,
         containerPadding,
-        persistence,
         layoutEngine,
-        editor,
         ...other
       } = props;
       /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -142,7 +128,6 @@ const ResponsiveVueGridLayout = defineComponent({
           modelValue={state.layout}
           cols={state.cols}
           layoutEngine={layoutEngine}
-          editor={model.getInnerEditorProp()}
         >{child}</VueGridLayout>
       );
     }

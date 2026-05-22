@@ -1,14 +1,32 @@
-import { pick } from "lodash";
 import clsx from "clsx";
 import type { Ref } from "vue";
 import {
-  bindGridEditorKeyboard,
+  bindGridEditorKeyboard
+} from "../editor/keyboard";
+import {
   computeGridEditorIntelligence,
-  createGridEditorCommandResult,
-  createGridEditorController,
-  resolveEditorItemCapability,
   resolveGridEditorSnap
-} from "../editor";
+} from "../editor/intelligence";
+import {
+  createGridEditorCommandResult
+} from "../editor/commands";
+import {
+  createGridEditorController
+} from "../editor/controller";
+import {
+  createGridEditorPersistenceEnvelope,
+  readGridEditorPersistenceEnvelope
+} from "../editor/persistenceBridge";
+import {
+  resolveEditorItemCapability
+} from "../editor/metadata";
+import {
+  useGridLayoutPersistence,
+  type GridLayoutPersistenceController,
+  type GridLayoutPersistenceProp,
+  type LayoutPersistenceEvent,
+  type LayoutPersistenceMeta
+} from "../persistence";
 import { executeLayoutOperation } from "../layout-engine";
 import { cloneLayout, compactType, getLayoutItem } from "../utils";
 import type { CompactType, Layout, LayoutItem, ResizeHandleAxis } from "../utils";
@@ -18,8 +36,9 @@ import type {
   GridEditorGuideInteraction,
   GridEditorGuidesOptions,
   GridEditorItemMeta,
-  GridEditorProp
-} from "../editor";
+  GridEditorProp,
+  GridEditorCommandResult
+} from "../editor/types";
 import type { GridLayoutEngineBridge } from "./gridInteractionTypes";
 import { useGridPlacementInteractions } from "./useGridPlacementInteractions";
 import type {
@@ -27,11 +46,19 @@ import type {
   LayoutOperationResult
 } from "../layout-engine";
 
+const pickGeometry = (item: LayoutItem): Pick<LayoutItem, "x" | "y" | "w" | "h"> => ({
+  x: item.x,
+  y: item.y,
+  w: item.w,
+  h: item.h
+});
+
 type GridEditorRuntimeProps = {
   allowOverlap: boolean;
   cols: number;
   compactType: CompactType;
   editor?: false | GridEditorProp;
+  persistence?: false | GridLayoutPersistenceProp | GridLayoutPersistenceController<Layout>;
   width?: number;
   margin: number[];
   containerPadding?: number[] | null;
@@ -80,6 +107,21 @@ const emptyGuideState = () => ({
   measurementHud: null,
   anchorEdges: []
 });
+
+const isGridLayoutPersistenceController = (
+  value: unknown
+): value is GridLayoutPersistenceController<Layout> =>
+  Boolean(value && typeof value === "object" && "save" in value && "commit" in value && "load" in value);
+
+const isGridLayoutPersistenceConfig = (
+  value: unknown
+): value is Exclude<GridLayoutPersistenceProp, false> =>
+  Boolean(value && typeof value === "object" && !isGridLayoutPersistenceController(value));
+
+const resolvePersistenceMeta = (
+  meta?: LayoutPersistenceMeta | (() => LayoutPersistenceMeta | undefined)
+): LayoutPersistenceMeta =>
+  typeof meta === "function" ? { ...(meta() || {}) } : { ...(meta || {}) };
 
 const unsupportedLayoutResult = (
   id: string,
@@ -145,13 +187,49 @@ export function useGridEditorRuntime({
       options: engineBridge.getLayoutEngineOptions()
     });
   });
-  const controller: GridEditorController | null = config
+  const persistenceInput = persistenceController || props.persistence || config?.persistence;
+  let controller: GridEditorController | null = null;
+  const resolvedPersistenceController: GridLayoutPersistenceController<Layout> | null =
+    config && isGridLayoutPersistenceController(persistenceInput)
+      ? persistenceInput
+      : config && isGridLayoutPersistenceConfig(persistenceInput)
+        ? useGridLayoutPersistence<Layout>({
+            ...persistenceInput,
+            kind: "layout",
+            target: layoutRef,
+            watchTarget: false,
+            meta: () => ({
+              ...resolvePersistenceMeta(persistenceInput.meta),
+              editor: createGridEditorPersistenceEnvelope(
+                controller?.editorMetaById.value || {},
+                controller?.sectionRows.value
+              )
+            }),
+            onEvent: (event: LayoutPersistenceEvent<Layout>) => {
+              if (event.type === "load-success" || event.type === "external-apply") {
+                const envelope = readGridEditorPersistenceEnvelope(event.document);
+                if (envelope.ok && envelope.envelope && controller) {
+                  controller.editorMetaById.value = envelope.envelope.editorMetaById;
+                  if (envelope.envelope.sectionRows) {
+                    controller.sectionRows.value = envelope.envelope.sectionRows;
+                  }
+                }
+                controller?.setExternalLayout(event.value, event.type);
+              }
+              persistenceInput.onEvent?.(event);
+            }
+          })
+        : null;
+  const ownsPersistenceController = Boolean(
+    config && resolvedPersistenceController && isGridLayoutPersistenceConfig(persistenceInput)
+  );
+  controller = config
     ? config.controller || createGridEditorController({
         ...config,
         kind: "layout",
         layout: layoutRef,
         layoutOperationRunner,
-        persistence: (persistenceController as never) || config.persistence
+        persistence: (resolvedPersistenceController || config.persistence) as never
       })
     : null;
   let unbindKeyboard: (() => void) | null = null;
@@ -210,7 +288,7 @@ export function useGridEditorRuntime({
         ? getOldDragItem()
         : null;
     return startItem
-      ? { [activeId]: pick(startItem, ["x", "y", "w", "h"]) }
+      ? { [activeId]: pickGeometry(startItem) }
       : undefined;
   };
 
@@ -476,6 +554,12 @@ export function useGridEditorRuntime({
     layoutRef.value = cloneLayout(layout);
   };
 
+  const commitPersistence = (result: GridEditorCommandResult | null) => {
+    if (result?.status === "changed") {
+      resolvedPersistenceController?.commit(layoutRef.value, { source: "component" });
+    }
+  };
+
   const commitMove = async (input: {
     ids: string[];
     activeId?: string;
@@ -485,7 +569,7 @@ export function useGridEditorRuntime({
   }) => {
     if (!controller) return null;
     applyCommittedLayout(input.beforeLayout);
-    return await controller.execute({
+    const result = await controller.execute({
       type: "move",
       targetIds: input.ids,
       source: input.source || "pointer",
@@ -499,6 +583,8 @@ export function useGridEditorRuntime({
         preventCollision: props.preventCollision
       }
     });
+    commitPersistence(result);
+    return result;
   };
 
   const commitResize = async (input: {
@@ -509,7 +595,7 @@ export function useGridEditorRuntime({
   }) => {
     if (!controller) return null;
     applyCommittedLayout(input.beforeLayout);
-    return await controller.execute({
+    const result = await controller.execute({
       type: "resize",
       targetIds: [input.id],
       source: "pointer",
@@ -523,6 +609,8 @@ export function useGridEditorRuntime({
         preventCollision: props.preventCollision
       }
     });
+    commitPersistence(result);
+    return result;
   };
 
   const commitDrop = async (input: {
@@ -534,7 +622,7 @@ export function useGridEditorRuntime({
   }) => {
     if (!controller) return null;
     applyCommittedLayout(input.beforeLayout);
-    return await controller.execute({
+    const result = await controller.execute({
       type: "add",
       targetIds: [input.id],
       source: "drop",
@@ -548,6 +636,8 @@ export function useGridEditorRuntime({
         preventCollision: props.preventCollision
       }
     });
+    commitPersistence(result);
+    return result;
   };
 
   const rollbackInteraction = (layout: Layout) => {
@@ -657,6 +747,13 @@ export function useGridEditorRuntime({
         typeof config?.keyboard === "object" ? config.keyboard : {}
       );
     }
+    if (ownsPersistenceController) {
+      void resolvedPersistenceController?.load().then(result => {
+        if (result.value && result.fallbackApplied) {
+          controller?.setExternalLayout(result.value, "persistence-fallback");
+        }
+      });
+    }
   };
 
   const stop = () => {
@@ -664,6 +761,7 @@ export function useGridEditorRuntime({
     unbindKeyboard = null;
     placementInteractions.cancel("runtime-stop");
     if (!config?.controller) controller?.stop();
+    else if (ownsPersistenceController) resolvedPersistenceController?.stop();
   };
 
   return {

@@ -1,5 +1,5 @@
 import { Fragment, defineComponent, getCurrentInstance, h, onMounted, toRef, watch, type PropType, type VNode } from "vue";
-import VueGridLayout from "./VueGridLayout";
+import EditorGridLayout from "./editor/EditorGridLayout";
 import { basicProps as gridLayoutProps } from "./VueGridLayoutPropTypes";
 import { getNonFragmentChildren, type Layout } from "./utils";
 import { resolveGridHeightRuntime } from "./grid-height";
@@ -284,7 +284,6 @@ const DashboardResponsiveVueGridLayout = defineComponent({
         renderPrecision,
         editor,
         layoutEngine,
-        persistence,
         ...gridProps
       } = props;
 
@@ -309,11 +308,10 @@ const DashboardResponsiveVueGridLayout = defineComponent({
       void renderPrecision;
       void editor;
       void layoutEngine;
-      void persistence;
       const heightOptions = resolveHeightOptions(runtime.heightOptions);
 
       return (
-        <VueGridLayout
+        <EditorGridLayout
           {...attrs}
           {...gridProps}
           {...{
@@ -344,7 +342,7 @@ const DashboardResponsiveVueGridLayout = defineComponent({
           onDropDragOver={emitGridEvent("dropDragOver")}
         >
           {filterSlotChildren()}
-        </VueGridLayout>
+        </EditorGridLayout>
       );
     };
   }

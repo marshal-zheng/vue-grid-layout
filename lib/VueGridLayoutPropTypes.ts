@@ -2,17 +2,13 @@ import { VNode, Ref, PropType, CSSProperties } from 'vue'
 import type {
   CompactType,
   Layout,
-  LayoutItem,
   ResizeHandleAxis
 } from "./utils";
-import type { GridHistoryStore } from './history'
-import type { GridLayoutPersistenceProp } from './persistence'
 import type { GridLayoutEngineProp } from './layout-engine'
-import type { GridEditorProp } from './editor'
 import type { GridHeightMode, GridRenderPrecision } from './grid-height'
 import type { GridDragActivationDistance } from './interaction-state-machine'
 
-interface DroppingItem {
+export interface DroppingItem {
   i: string;
   w: number;
   h: number;
@@ -63,7 +59,7 @@ export type Props = {
   draggableHandle: string
   verticalCompact: boolean
   compactType: CompactType
-  layout: Layout
+  modelValue: Layout
   margin: number[]
   containerPadding?: number[] | null
   rowHeight: number
@@ -76,15 +72,12 @@ export type Props = {
   preventCollision: boolean
   useCSSTransforms: boolean
   transformScale: number
-  droppingItem: Partial<LayoutItem>
+  droppingItem: DroppingItem
   resizeHandles: ResizeHandleAxis[]
   resizeHandle?: ResizeHandle
   allowOverlap: boolean
-  historyStore?: GridHistoryStore
-  persistence?: GridLayoutPersistenceProp
   layoutEngine?: false | GridLayoutEngineProp
-  editor?: false | GridEditorProp
-  innerRef?: Ref<"div">
+  innerRef?: Ref<HTMLElement | null>
 };
 
 export type DefaultProps = Omit<Props, 'width'>;
@@ -279,25 +272,10 @@ export const basicProps = {
   },
   /** Custom resize handle render function or VNode */
   resizeHandle: resizeHandleType,
-  /** Pinia history store instance for undo/redo functionality */
-  historyStore: {
-    type: Object as PropType<GridHistoryStore>,
-    default: null
-  },
-  /** Durable save/load persistence configuration */
-  persistence: {
-    type: [Boolean, Object] as PropType<GridLayoutPersistenceProp>,
-    default: false
-  },
   /** Layout engine configuration; false or { mode: "legacy" } uses the legacy path */
   layoutEngine: {
     type: [Boolean, Object] as PropType<false | GridLayoutEngineProp>,
     default: undefined
-  },
-  /** Headless professional editor controller/options. Disabled by default. */
-  editor: {
-    type: [Boolean, Object] as PropType<false | GridEditorProp>,
-    default: false
   },
   /** Placeholder config for external drop { i, w, h } */
   droppingItem: {

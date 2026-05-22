@@ -6,10 +6,6 @@ import type {
   ResizeHandleAxis
 } from "../utils";
 import type { DropDragOverResult } from "./contract";
-import type {
-  GridEditorBlockedReason,
-  GridEditorCommandResult
-} from "../editor";
 import type { GridDragActivationDistance } from "../interaction-state-machine";
 import type { LayoutOperationResult } from "../layout-engine";
 import type { GridLayoutState } from "./useGridLayoutModel";
@@ -53,6 +49,41 @@ export type GridLayoutEngineBridge = ReturnType<typeof useGridLayoutEngineBridge
 export type GridFrameUpdate = ReturnType<typeof useGridFrameUpdate>;
 export type GridAutoScroll = ReturnType<typeof useGridAutoScroll>;
 
+export type GridInteractionBlockedReason =
+  | "mode-readonly"
+  | "editor-mode-missing"
+  | "capability"
+  | "locked"
+  | "hidden"
+  | "static-item"
+  | "collision"
+  | "bounds"
+  | "maxRows"
+  | "missing-item"
+  | "selection-count"
+  | "unsupported-scope"
+  | "unsupported"
+  | "section-row-locked"
+  | "section-row-collapsed"
+  | "section-row-policy"
+  | "before-command-blocked"
+  | "before-command-cancelled"
+  | "before-command-timeout"
+  | "command-pending"
+  | "guard-aborted"
+  | "stale-command"
+  | "multi-resize-unsupported"
+  | "clipboard-unavailable"
+  | "clipboard-permission"
+  | "clipboard-invalid"
+  | "persistence-error"
+  | "conflict"
+  | "invalid-input";
+
+export type GridInteractionCommandResult = {
+  status: "changed" | "noop" | "blocked" | "cancelled" | "timeout" | "error";
+};
+
 export type GridInteractionsEditor = {
   clearGuides: () => void;
   resetSnap: () => void;
@@ -80,12 +111,12 @@ export type GridInteractionsEditor = {
     | { kind: "group"; activeId: string; ids: string[] }
     | {
         kind: "blocked";
-        reason: GridEditorBlockedReason;
+        reason: GridInteractionBlockedReason;
         ids: string[];
         activeId?: string;
       };
   notifyMoveBlocked: (input: {
-    reason: GridEditorBlockedReason;
+    reason: GridInteractionBlockedReason;
     ids: string[];
     activeId?: string;
     message?: string;
@@ -97,20 +128,20 @@ export type GridInteractionsEditor = {
     beforeLayout: Layout;
     afterLayout: Layout;
     source?: "pointer" | "drop";
-  }) => Promise<GridEditorCommandResult | null>;
+  }) => Promise<GridInteractionCommandResult | null>;
   commitResize?: (input: {
     id: string;
     beforeLayout: Layout;
     afterLayout: Layout;
     handle?: ResizeHandleAxis;
-  }) => Promise<GridEditorCommandResult | null>;
+  }) => Promise<GridInteractionCommandResult | null>;
   commitDrop?: (input: {
     id: string;
     beforeLayout: Layout;
     afterLayout: Layout;
     item?: LayoutItem;
     event?: Event;
-  }) => Promise<GridEditorCommandResult | null>;
+  }) => Promise<GridInteractionCommandResult | null>;
   rollbackInteraction?: (layout: Layout, reason: string) => void;
 };
 

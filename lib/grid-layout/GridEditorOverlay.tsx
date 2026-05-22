@@ -3,7 +3,7 @@ import clsx from "clsx";
 import { applyRenderPrecision, calcGridColWidth } from "../calculateUtils";
 import type { Layout, LayoutItem } from "../utils";
 import type { Kv } from "../type";
-import type { GridEditorGuide, GridEditorGuideState } from "../editor";
+import type { GridEditorGuide, GridEditorGuideState } from "../editor/types";
 import type { GridEditorPlacementSession } from "../editor/placementSession";
 import type { GridRenderPrecision } from "../grid-height";
 

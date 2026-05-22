@@ -1,6 +1,5 @@
-import { Fragment, markRaw, nextTick, onBeforeUnmount, onMounted, reactive, toRef, watch, type Ref, type VNode } from "vue";
+import { Fragment, onBeforeUnmount, reactive, watch, type VNode } from "vue";
 import { deepEqual } from "fast-equals";
-import { pick } from "lodash";
 import {
   cloneLayout,
   compactType as resolveCompactType,
@@ -15,23 +14,20 @@ import {
 } from "../responsiveUtils";
 import type { Breakpoints, ResponsiveLayout } from "../responsiveUtils";
 import {
-  cloneLayoutsMap,
-  useGridLayoutPersistence,
-  type LayoutPersistenceEvent,
-  type ResponsiveGridLayoutPersistenceProp
-} from "../persistence";
-import {
   createLayoutExecutor,
   executeLayoutOperation
 } from "../layout-engine";
 import type {
   GridLayoutEngineOptions,
-  GridLayoutEngineProp,
-  LayoutOperation,
-  LayoutOperationResult
+  GridLayoutEngineProp
 } from "../layout-engine";
-import { createGridEditorController } from "../editor";
-import type { GridEditorController, GridEditorProp } from "../editor";
+
+const pickResponsiveInputs = (props: ResponsiveGridLayoutModelProps) => ({
+  width: props.width,
+  breakpoint: props.breakpoint,
+  breakpoints: props.breakpoints,
+  cols: props.cols
+});
 
 export interface BreakpointMap {
   [key: string]: number;
@@ -59,11 +55,9 @@ export interface ResponsiveGridLayoutModelProps<Breakpoint extends string = stri
   cols: Record<Breakpoint, number> | BreakpointMap;
   compactType: CompactType;
   containerPadding: Record<Breakpoint, [number, number] | null> | [number, number] | null;
-  editor?: false | GridEditorProp;
   layoutEngine?: false | GridLayoutEngineProp;
   layouts: ResponsiveLayout<Breakpoint> | LayoutsMap;
   margin: Record<Breakpoint, [number, number] | null> | [number, number];
-  persistence?: ResponsiveGridLayoutPersistenceProp;
   verticalCompact: boolean;
   width: number;
 }
@@ -81,38 +75,6 @@ type UseResponsiveGridLayoutModelOptions = {
   emit: ResponsiveEmit;
 };
 
-const unsupportedLayoutResult = (
-  id: string,
-  layout: Layout,
-  operation: LayoutOperation
-): LayoutOperationResult => ({
-  id,
-  status: "blocked",
-  layout,
-  patches: [],
-  affectedIds: [],
-  collisions: [],
-  blocked: {
-    reason: "unsupported",
-    itemIds: operation.type === "groupMove"
-      ? operation.ids
-      : "id" in operation
-        ? [operation.id]
-        : []
-  },
-  diagnostics: {
-    operationId: id,
-    operationType: operation.type,
-    phase: "commit",
-    layoutSize: layout.length,
-    affectedCount: 0,
-    collisionCount: 0,
-    indexHit: false,
-    executorKind: "main-thread",
-    durationMs: 0
-  }
-});
-
 export function getIndentationValue<T extends Array<number> | null>(
   param: { [key: string]: T } | T,
   breakpoint: string
@@ -120,6 +82,14 @@ export function getIndentationValue<T extends Array<number> | null>(
   if (param == null) return null;
   return Array.isArray(param) ? param : param[breakpoint];
 }
+
+export const cloneResponsiveLayoutsMap = (layouts: LayoutsMap): LayoutsMap => {
+  const out: LayoutsMap = {};
+  Object.keys(layouts).forEach(key => {
+    out[key] = cloneLayout(layouts[key]);
+  });
+  return out;
+};
 
 export function useResponsiveGridLayoutModel({
   props,
@@ -152,52 +122,6 @@ export function useResponsiveGridLayoutModel({
   };
 
   const state = reactive(generateInitialState());
-  let restoringPersistence = false;
-
-  const applyRestoredLayouts = (layouts: LayoutsMap) => {
-    restoringPersistence = true;
-    const restoredLayouts = cloneLayoutsMap(layouts);
-    const layout = findOrGenerateResponsiveLayout(
-      restoredLayouts,
-      props.breakpoints,
-      state.breakpoint,
-      state.breakpoint,
-      state.cols,
-      resolveCompactType(props)
-    );
-    const nextLayouts = {
-      ...restoredLayouts,
-      [state.breakpoint]: layout
-    };
-    state.layout = markRaw(layout);
-    state.layouts = nextLayouts;
-    emit("update:layouts", nextLayouts);
-    emit("layoutChange", layout, nextLayouts);
-    void nextTick().then(() => {
-      restoringPersistence = false;
-    });
-  };
-
-  const persistenceConfig = props.persistence && typeof props.persistence === "object"
-    ? props.persistence
-    : null;
-
-  const onPersistenceEvent = (event: LayoutPersistenceEvent<LayoutsMap>) => {
-    if (event.type === "external-apply") {
-      applyRestoredLayouts(event.value);
-    }
-    persistenceConfig?.onEvent?.(event);
-  };
-
-  const persistenceController = persistenceConfig
-    ? useGridLayoutPersistence<LayoutsMap>({
-        ...persistenceConfig,
-        onEvent: onPersistenceEvent,
-        kind: "responsive",
-        target: toRef(state, "layouts") as Ref<LayoutsMap>,
-        watchTarget: false
-      })
-    : null;
 
   const getLayoutEngineProp = () =>
     props.layoutEngine && typeof props.layoutEngine === "object"
@@ -241,35 +165,7 @@ export function useResponsiveGridLayoutModel({
     };
   };
 
-  const editorConfig = props.editor && typeof props.editor === "object"
-    ? props.editor
-    : null;
-  const editorController: GridEditorController | null = editorConfig
-    ? editorConfig.controller || createGridEditorController({
-        ...editorConfig,
-        kind: "responsive",
-        layout: toRef(state, "layout") as Ref<Layout>,
-        layouts: toRef(state, "layouts") as Ref<LayoutsMap>,
-        breakpoint: toRef(state, "breakpoint") as Ref<string>,
-        layoutOperationRunner: editorConfig.layoutOperationRunner || (input => {
-          const id = `${input.commandId}:layout`;
-          if (isLegacyLayoutEngine()) {
-            return unsupportedLayoutResult(id, input.layout, input.operation);
-          }
-          return executeLayoutOperation({
-            id,
-            phase: input.phase,
-            layout: input.layout,
-            operation: input.operation,
-            options: getLayoutEngineOptions(state.cols, resolveCompactType(props))
-          });
-        }),
-        persistence: (persistenceController as never) || editorConfig.persistence
-      })
-    : null;
-
   const onLayoutChange = (layout: Layout) => {
-    if (restoringPersistence) return;
     const nextLayout = cloneLayout(layout);
     const newLayouts = {
       ...state.layouts,
@@ -279,7 +175,6 @@ export function useResponsiveGridLayoutModel({
     state.layouts = newLayouts;
     emit("update:layouts", newLayouts);
     emit("layoutChange", nextLayout, newLayouts);
-    persistenceController?.commit(cloneLayoutsMap(newLayouts), { source: "component" });
   };
 
   const onWidthChange = (prevProps) => {
@@ -315,13 +210,11 @@ export function useResponsiveGridLayoutModel({
         emit("breakpointChange", newBreakpoint, newCols);
         emit("update:layouts", newLayouts);
         emit("layoutChange", layout, newLayouts);
-        persistenceController?.commit(cloneLayoutsMap(newLayouts), { source: "component" });
 
         state.breakpoint = newBreakpoint;
         state.layout = layout;
         state.cols = newCols;
         state.layouts = newLayouts;
-        editorController?.setExternalLayouts(newLayouts, newBreakpoint, "breakpoint-change");
       };
 
       let layout = findOrGenerateResponsiveLayout(
@@ -382,7 +275,7 @@ export function useResponsiveGridLayoutModel({
   };
 
   watch(
-    () => pick(props, ["width", "breakpoint", "breakpoints", "cols"]),
+    () => pickResponsiveInputs(props),
     (nextProps, prevProps) => {
       if (
         nextProps.width != prevProps.width ||
@@ -416,42 +309,16 @@ export function useResponsiveGridLayoutModel({
           ...newLayouts,
           [breakpoint]: newLayout
         };
-        editorController?.setExternalLayouts(state.layouts, breakpoint, "external-layouts");
-        if (!restoringPersistence) {
-          persistenceController?.commit(cloneLayoutsMap(state.layouts), { source: "programmatic" });
-        }
       }
     },
     { immediate: true }
   );
 
-  onMounted(() => {
-    if (!persistenceController) return;
-    restoringPersistence = true;
-    void persistenceController.load().then(async result => {
-      if (result.value && (result.ok || result.fallbackApplied)) {
-        applyRestoredLayouts(result.value);
-      }
-      await nextTick();
-      restoringPersistence = false;
-    }).catch(async () => {
-      await nextTick();
-      restoringPersistence = false;
-    });
-  });
-
   onBeforeUnmount(() => {
     layoutExecutor.dispose?.();
-    persistenceController?.stop();
-    if (!editorConfig?.controller) editorController?.stop();
   });
 
-  const getInnerEditorProp = () =>
-    editorController ? { ...(editorConfig || {}), controller: editorController } : false;
-
   return {
-    editorController,
-    getInnerEditorProp,
     onLayoutChange,
     state
   };
