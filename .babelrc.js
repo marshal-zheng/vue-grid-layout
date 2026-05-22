@@ -8,7 +8,6 @@ module.exports = {
   plugins: [
     "@babel/plugin-transform-class-properties",
     "transform-inline-environment-variables",
-    '@vue/babel-plugin-jsx',
-    'lodash'
+    '@vue/babel-plugin-jsx'
   ]
 }

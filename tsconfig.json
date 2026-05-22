@@ -2,13 +2,28 @@
   "compilerOptions": {
     "noImplicitAny": false,
     /* Language and Environment */
-    "target": "es5",                                     /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
+    "target": "ES2020",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
     "jsx": "preserve",
     /* Modules */
-    "module": "commonjs",                                /* Specify what module code is generated. */
+    "module": "ESNext",                                  /* Specify what module code is generated. */
     // "allowSyntheticDefaultImports": true,             /* Allow 'import x from y' when a module doesn't have a default export. */
     "esModuleInterop": true,                             /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables `allowSyntheticDefaultImports` for type compatibility. */
     "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "@marsio/vue-grid-layout": ["lib/entries/index.ts"],
+      "@marsio/vue-grid-layout/core": ["lib/entries/core.ts"],
+      "@marsio/vue-grid-layout/responsive": ["lib/entries/responsive.ts"],
+      "@marsio/vue-grid-layout/layout-engine": ["lib/entries/layout-engine.ts"],
+      "@marsio/vue-grid-layout/editor": ["lib/entries/editor.ts"],
+      "@marsio/vue-grid-layout/dashboard": ["lib/entries/dashboard.ts"],
+      "@marsio/vue-grid-layout/dashboard-editor-shell": ["lib/entries/dashboard-editor-shell.ts"],
+      "@marsio/vue-grid-layout/persistence": ["lib/entries/persistence.ts"],
+      "@marsio/vue-grid-layout/history": ["lib/entries/history.ts"],
+      "@marsio/vue-grid-layout/worker": ["lib/entries/worker.ts"],
+      "@marsio/vue-grid-layout/style.css": ["css/styles.css"]
+    },
+    "resolveJsonModule": true,
     // "preserveSymlinks": true,                         /* Disable resolving symlinks to their realpath. This correlates to the same flag in node. */
     "forceConsistentCasingInFileNames": true,            /* Ensure that casing is correct in imports. */
 
@@ -17,5 +32,5 @@
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
     "skipLibCheck": true                                 /* Skip type checking all .d.ts files. */
   },
-  "exclude": ["mcp"]
+  "exclude": ["mcp", "dist", "build", ".tmp", "docs/demo"]
 }
