@@ -6,10 +6,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
-const enginePath = path.join(root, "build", "cjs", "layout-engine", "index.js");
+const enginePath = path.join(root, "dist", "layout-engine.cjs");
+const workerPath = path.join(root, "dist", "worker.cjs");
 
-if (!fs.existsSync(enginePath)) {
-  process.stdout.write("layout-engine bench: missing build artifacts. Run `npm run build` first.\n");
+if (!fs.existsSync(enginePath) || !fs.existsSync(workerPath)) {
+  process.stdout.write("layout-engine bench: missing dist artifacts. Run `npm run build` first.\n");
   process.exit(1);
 }
 
@@ -18,7 +19,7 @@ const {
   mainThreadLayoutExecutor,
   workerLayoutExecutor
 } = require(enginePath);
-const { runLayoutWorkerRequest } = require(path.join(root, "build", "cjs", "layout-engine", "workerRuntime.js"));
+const { runLayoutWorkerRequest } = require(workerPath);
 
 const scenarioList = [
   "dense",

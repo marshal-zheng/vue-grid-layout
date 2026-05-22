@@ -5,9 +5,9 @@ const { performance } = require("node:perf_hooks");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const utilsPath = path.join(__dirname, "..", "build", "cjs", "utils.js");
+const utilsPath = path.join(__dirname, "..", "dist", "core.cjs");
 if (!fs.existsSync(utilsPath)) {
-  process.stdout.write("bench: missing build artifacts. Run `npm run build` first.\n");
+  process.stdout.write("bench: missing dist artifacts. Run `npm run build` first.\n");
   process.exit(1);
 }
 const {
@@ -110,4 +110,3 @@ function ensureBuildArtifacts() {
 
 ensureBuildArtifacts();
 benchWithSizes();
-

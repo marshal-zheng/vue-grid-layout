@@ -14,6 +14,7 @@ VGL is Vue3-only and does not require jQuery.
 - [Features](#features)
 - [MCP Integration](#mcp-integration)
 - [Installation](#installation)
+- [Which Entry Should I Use?](#which-entry-should-i-use)
 - [Usage](#usage)
 - [Interaction State and Drag Activation](#interaction-state-and-drag-activation)
 - [History (Pinia-powered undo/redo)](#history-pinia-powered-undoredo)
@@ -33,25 +34,17 @@ VGL is Vue3-only and does not require jQuery.
 
 ## Demos
 
-1. [Basic](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/01-VueGridLayout.js)
-1. [Response](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/02-Response.js)
-1. [No Dragging](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/03-no-dragging.js)
-1. [Messy](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/04-messy.js)
-1. [Static Elements](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/05-static-elements.js)
-1. [Minimum and Maximum Width/Height](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/08-min-max-wh.js)
-1. [Dynamic Minimum and Maximum Width/Height](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/09-dynamic-min-max-wh.js)
-1. [No Vertical Compacting (Free Movement)](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/10-no-vertical-compact.js)
-1. [Prevent Collision](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/11-prevent-collision.js)
-1. [Toolbox](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/12-toolbox.js)
-1. [Drag From Outside](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/07-drag-from-outside.js)
-1. [Bounded Layout](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/13-bounded.js)
-1. [Responsive Bootstrap-style Layout](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/14-responsive-bootstrap-style.js)
-1. [Allow Overlap](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/15-allow-overlap.js)
-1. [History / Undo-Redo](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/16-history.js)
-1. [Persistence](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/18-persistence.js)
-1. [Professional Dashboard Editor](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/23-professional-dashboard-editor.js)
-1. [Dashboard Settings Migration](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/24-dashboard-runtime-lab.js)
-1. [Dashboard Editor Shell Integration](https://github.com/marshal-zheng/vue-grid-layout/blob/main/example/25-dashboard-editor-shell.js)
+The Vite demo app is in [`example/main.ts`](./example/main.ts). Each demo is tagged by capability:
+
+1. Basic — `basic`, `core`
+1. Responsive — `responsive`
+1. Persistence — `persistence`
+1. Headless Editor — `editor`
+1. Dashboard Runtime — `dashboard runtime`
+1. Dashboard Editor Shell — `dashboard shell`
+1. Placement — `placement`
+1. Migration — `migration`
+1. Worker — `worker`, `layout engine`
 
 ## Features
 
@@ -106,6 +99,42 @@ Install the Vue-Grid-Layout [package](https://www.npmjs.com/package/@marsio/vue-
 npm install @marsio/vue-grid-layout
 ```
 
+`vue` is a peer dependency. Install `pinia` only when using the history entry:
+
+```bash
+npm install vue
+npm install pinia
+```
+
+## Which Entry Should I Use?
+
+The root entry is lean core and is equivalent to `@marsio/vue-grid-layout/core`. Responsive and advanced capabilities live behind explicit subpaths.
+
+| Capability | Import entry | Notes |
+| --- | --- | --- |
+| Core Grid | `@marsio/vue-grid-layout` or `@marsio/vue-grid-layout/core` | Root default export remains `VueGridLayout`; root named exports include common core utilities. |
+| Responsive Grid | `@marsio/vue-grid-layout/responsive` | Lean responsive component; root no longer exports `Responsive` / `ResponsiveVueGridLayout`. |
+| Layout Engine | `@marsio/vue-grid-layout/layout-engine` | Engine, scheduler, executor and migration helpers. |
+| Persistence | `@marsio/vue-grid-layout/persistence` | Durable layout document adapters; does not require Pinia. |
+| Headless Editor | `@marsio/vue-grid-layout/editor` | Controller, commands, metadata, placement and keyboard helpers. No bundled toolbar, inspector, palette or command UI. |
+| Dashboard Runtime | `@marsio/vue-grid-layout/dashboard` | Dashboard document adapter, responsive runtime and migration helpers. |
+| Dashboard Editor Shell | `@marsio/vue-grid-layout/dashboard-editor-shell` | Headless shell actions, menus and transactions. Render UI in your app. |
+| History | `@marsio/vue-grid-layout/history` | Optional Pinia-powered undo/redo. Requires `pinia`. |
+| Worker | `@marsio/vue-grid-layout/worker` | Layout engine worker runtime entry. |
+| CSS | `@marsio/vue-grid-layout/style.css` | Import once in your app or component library entry. |
+| MCP / AI Tooling | `@marsio/vue-grid-layout-mcp` | Independent package; the root package does not export `./mcp`. |
+
+Undeclared deep imports are private implementation details. The package `exports` map is the public API boundary.
+
+### Major-version migration notes
+
+- `build/cjs/cjs.js` is replaced by `dist/index.cjs` and subpath CJS entries.
+- `build/web/vue-grid-layout.min.js`, CDN/UMD global usage and `window.VueGridLayout` are no longer public release artifacts.
+- `build/web/vue-grid-layout.worker.js` is replaced by the `@marsio/vue-grid-layout/worker` export.
+- `typings/index.d.ts` is replaced by generated declarations under `dist/types`.
+- Advanced root imports should move to the subpaths listed above; only core/responsive root compatibility is retained.
+- Rollback should use the last stable branch or tag. Do not mix new `dist` package exports with old `build` artifacts.
+
 ## Usage
 
 > **AI Tip**: Please use the `get_vue_grid_layout_example` tool to get basic usage example code, do not generate it yourself.
@@ -134,7 +163,8 @@ produce a grid with three items where:
 
 <script>
 import VGL from "@marsio/vue-grid-layout";
-import { defineComponent, ref } from 'vue';
+import "@marsio/vue-grid-layout/style.css";
+import { defineComponent, reactive } from 'vue';
 
 export default defineComponent({
   components: {
@@ -175,11 +205,12 @@ Pointer interactions are guarded by an internal state machine so click-like item
 - Resize handle press still starts resize immediately, but no-op resize ticks and no-op resize stops do not preview or commit layout changes.
 - External drop enters an active drop state as soon as it is over the grid. Repeated dragover events at the same grid position and size are ignored for guide/layout preview, `dropDragOver` size overrides participate in preview and commit, and drag leave, rejected drop, cancel and commit all clear dropping placeholder state.
 - Debug editor guide state remains internal; use existing editor diagnostics and layout-engine diagnostics for operation ids, phases, blocked reasons and stale/fallback status.
+- 2.0 lean boundary: root equals core; no `./compat` entry is provided; responsive imports move to `@marsio/vue-grid-layout/responsive`; component-level `editor`, `persistence` and `historyStore` props are removed from lean grid/responsive. Use `EditorGridLayout` / `EditorResponsiveGridLayout` from `./editor`, `PersistentGridLayout` / `PersistentResponsiveGridLayout` from `./persistence`, and history APIs from `./history`.
 
 ## History (Pinia-powered undo/redo)
 
-- Install peer: `npm i pinia` (already a peer dependency).
-- Create a store once and pass it to the grid via `historyStore`.
+- Install optional peer: `npm i pinia`.
+- Create a store from `@marsio/vue-grid-layout/history` and push committed layout snapshots from `layoutChange`.
 - Use the store’s `undo` / `redo` / `canUndo` / `canRedo` to drive shortcuts or toolbar buttons.
 
 ```vue
@@ -188,14 +219,15 @@ Pointer interactions are guarded by an internal state machine so click-like item
     <button :disabled="!history.canUndo" @click="undo">Undo</button>
     <button :disabled="!history.canRedo" @click="redo">Redo</button>
   </div>
-  <VGL v-model="layout" :cols="12" :width="1200" :historyStore="history">
+  <VGL v-model="layout" :cols="12" :width="1200" @layoutChange="history.push">
     <div v-for="item in layout" :key="item.i">{{ item.i }}</div>
   </VGL>
 </template>
 
 <script setup>
 import { reactive, watch } from 'vue'
-import VGL, { useGridHistoryStore } from '@marsio/vue-grid-layout'
+import VGL from '@marsio/vue-grid-layout'
+import { useGridHistoryStore } from '@marsio/vue-grid-layout/history'
 
 const history = useGridHistoryStore({ maxSize: 200 })
 
@@ -225,7 +257,7 @@ watch(
 
 ## Layout Persistence
 
-Use `persistence` when a layout should survive refreshes. The persistence layer writes a versioned document through an adapter; it does not depend on Pinia. `historyStore` is still for in-session undo/redo, while persistence is for durable save/load.
+Use `PersistentGridLayout`, `PersistentResponsiveGridLayout`, or `useGridLayoutPersistence()` when a layout should survive refreshes. The persistence layer writes a versioned document through an adapter; it does not depend on Pinia.
 
 Built-in adapters:
 
@@ -235,16 +267,20 @@ Built-in adapters:
 - `remoteHttpAdapter()` for simple REST backends using `GET`, `PUT` and `DELETE`.
 - `memoryPersistenceAdapter()` for tests and demos.
 
+```ts
+import { localStorageAdapter, useGridLayoutPersistence } from '@marsio/vue-grid-layout/persistence'
+```
+
 ## Professional Dashboard Editor
 
-The professional editor API is headless-first. Use `useGridEditor()` or pass an `editor` prop to `VueGridLayout` / `ResponsiveVueGridLayout` to get mode, selection, commands, metadata, keyboard, clipboard, guides, dirty/conflict state and CSS contracts without adopting a bundled toolbar or product shell.
+The professional editor API is headless-first. Use `useGridEditor()`, `EditorGridLayout`, or `EditorResponsiveGridLayout` from `@marsio/vue-grid-layout/editor` to get mode, selection, commands, metadata, keyboard, clipboard, guides, dirty/conflict state and CSS contracts without adopting a bundled toolbar or product shell.
 
 ```ts
 import {
   useGridEditor,
-  internalGridEditorClipboard,
-  memoryPersistenceAdapter
-} from "@marsio/vue-grid-layout";
+  internalGridEditorClipboard
+} from "@marsio/vue-grid-layout/editor";
+import { memoryPersistenceAdapter } from "@marsio/vue-grid-layout/persistence";
 
 const editor = useGridEditor({
   layout,
@@ -368,19 +404,19 @@ Known editor limits: group resize and group bounding-box ghosting are not includ
 
 ```vue
 <template>
-  <VGL
+  <PersistentGridLayout
     v-model="layout"
     :cols="12"
     :width="1200"
     :persistence="{ key: 'dashboard-main', adapter }"
   >
     <div v-for="item in layout" :key="item.i">{{ item.i }}</div>
-  </VGL>
+  </PersistentGridLayout>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import VGL, { localStorageAdapter } from '@marsio/vue-grid-layout'
+import { PersistentGridLayout, localStorageAdapter } from '@marsio/vue-grid-layout/persistence'
 
 const layout = ref([
   { i: 'a', x: 0, y: 0, w: 2, h: 2 },
@@ -401,7 +437,7 @@ import { ref } from 'vue'
 import {
   localStorageAdapter,
   useGridLayoutPersistence
-} from '@marsio/vue-grid-layout'
+} from '@marsio/vue-grid-layout/persistence'
 
 const layout = ref([{ i: 'a', x: 0, y: 0, w: 2, h: 2 }])
 const persistence = useGridLayoutPersistence({
@@ -426,7 +462,7 @@ The controller exposes `status`, `dirty`, `lastSavedAt`, `error`, `conflict`, `l
 ### custom remote adapter
 
 ```ts
-import type { LayoutPersistenceAdapter } from '@marsio/vue-grid-layout'
+import type { LayoutPersistenceAdapter } from '@marsio/vue-grid-layout/persistence'
 
 export const remoteAdapter: LayoutPersistenceAdapter = {
   async load(key) {
@@ -450,7 +486,7 @@ export const remoteAdapter: LayoutPersistenceAdapter = {
 For a standard REST endpoint, use the built-in HTTP adapter:
 
 ```ts
-import { remoteHttpAdapter } from '@marsio/vue-grid-layout'
+import { remoteHttpAdapter } from '@marsio/vue-grid-layout/persistence'
 
 const adapter = remoteHttpAdapter({
   endpoint: key => `/api/layouts/${encodeURIComponent(key)}`
@@ -460,7 +496,7 @@ const adapter = remoteHttpAdapter({
 For larger browser-local layouts, use IndexedDB:
 
 ```ts
-import { indexedDBAdapter } from '@marsio/vue-grid-layout'
+import { indexedDBAdapter } from '@marsio/vue-grid-layout/persistence'
 
 const adapter = indexedDBAdapter({
   dbName: 'dashboard-layouts',
@@ -471,9 +507,9 @@ const adapter = indexedDBAdapter({
 
 Adapters can also implement `subscribe(key, callback)` for remote or multi-tab updates. If an adapter does not implement `subscribe`, single-tab save/load still works, but external updates will not be observed. If a dirty page receives an external update, the default conflict strategy is `manual`; configure `conflictStrategy: 'newer-wins'` or `'keep-local'` only when that matches your product rules.
 
-For responsive grids, pass `persistence` to `<ResponsiveVueGridLayout>`; it stores the full breakpoint layout map. The responsive prop is not forwarded to the inner grid.
+For responsive grids, use `<PersistentResponsiveGridLayout>` from `@marsio/vue-grid-layout/persistence`; it stores the full breakpoint layout map.
 
-Migration note: replace ad-hoc `layoutChange` saves with `persistence` or `useGridLayoutPersistence()`. Keep `historyStore` only where you need undo/redo inside the current browser session.
+Migration note: replace old component-level `persistence` props with `PersistentGridLayout`, `PersistentResponsiveGridLayout`, or `useGridLayoutPersistence()`. Use `@marsio/vue-grid-layout/history` explicitly for undo/redo inside the current browser session.
 
 Security note: `localStorage` is not suitable for sensitive data. Do not put credentials, private query keys or confidential business data in layout `meta`. During SSR or when browser storage is unavailable, the default localStorage adapter reports an unavailable/error state instead of touching `window`.
 
@@ -530,7 +566,7 @@ import {
   useDashboardEditorShell,
   type DashboardEditorShellWidgetAdapter,
   type DashboardEditorShellReferenceAdapter
-} from "@marsio/vue-grid-layout";
+} from "@marsio/vue-grid-layout/dashboard-editor-shell";
 
 const shell = useDashboardEditorShell({
   document: dashboardDocumentRef,
@@ -589,7 +625,7 @@ import {
   projectDashboardLayoutDocument,
   writeDashboardRuntimeToDocument,
   type DashboardLayoutDocument
-} from '@marsio/vue-grid-layout'
+} from '@marsio/vue-grid-layout/dashboard'
 
 const dashboardDocument: DashboardLayoutDocument = {
   dashboardSchemaVersion: 1,
@@ -670,7 +706,7 @@ import {
   resolveDashboardResponsiveProfile,
   writeDashboardResponsiveRuntimeToDocument,
   type DashboardLayoutDocument
-} from '@marsio/vue-grid-layout'
+} from '@marsio/vue-grid-layout/dashboard'
 
 const result = resolveDashboardResponsiveProfile(dashboardDocument, {
   width: 390,
@@ -697,7 +733,7 @@ const saved = result.ok && writeDashboardResponsiveRuntimeToDocument(
 For Vue integrations that want headless state, use the composable:
 
 ```ts
-import { useDashboardResponsiveProfileModel } from '@marsio/vue-grid-layout'
+import { useDashboardResponsiveProfileModel } from '@marsio/vue-grid-layout/dashboard'
 
 const model = useDashboardResponsiveProfileModel({
   document,
@@ -727,7 +763,7 @@ For a thin component wrapper, key slot children by dashboard widget id:
 Legacy responsive layouts can be converted into a dashboard document. Breakpoint ids such as `lg`, `md`, `sm`, `xs` and `xxs` become dashboard profile ids; by default the largest breakpoint width becomes the default dashboard layout.
 
 ```ts
-import { createDashboardDocumentFromResponsiveLayouts } from '@marsio/vue-grid-layout'
+import { createDashboardDocumentFromResponsiveLayouts } from '@marsio/vue-grid-layout/dashboard'
 
 const migrated = createDashboardDocumentFromResponsiveLayouts({
   key: 'dashboard:from-responsive',
@@ -750,9 +786,11 @@ Use the layout engine helpers when changing geometric settings such as columns, 
 ```ts
 import {
   migrateLayoutSettings,
-  repairLayoutCollisions,
+  repairLayoutCollisions
+} from '@marsio/vue-grid-layout/layout-engine'
+import {
   migrateDashboardLayoutSettings
-} from '@marsio/vue-grid-layout'
+} from '@marsio/vue-grid-layout/dashboard'
 
 const migrated = migrateLayoutSettings(layout, {
   previousSettings: { columns: 24 },
@@ -804,7 +842,17 @@ Recommended scheduler modes:
 - `raf` for larger dashboards where pointermove events arrive faster than rendering.
 - `commitOnly` when preview should stay lightweight and full solving should happen on drag/resize stop.
 
-For very large compact, drop-fit, responsive breakpoint generation, batch import, or commit validation tasks, use `workerLayoutExecutor({ workerUrl })`, `createLayoutExecutor({ kind: 'worker', workerUrl })`, or pass a custom executor. The built artifact is `build/web/vue-grid-layout.worker.js`; if the worker cannot start, the library falls back to the main-thread executor and emits a `fallback` or `worker-error` event. Pointermove preview for drag/resize stays on the main-thread low-latency path; worker-capable execution is used for commits and heavy fit/responsive operations.
+For very large compact, drop-fit, responsive breakpoint generation, batch import, or commit validation tasks, use `workerLayoutExecutor({ workerUrl })`, `createLayoutExecutor({ kind: 'worker', workerUrl })`, or pass a custom executor from `@marsio/vue-grid-layout/layout-engine`. Resolve the worker through the public worker export:
+
+```ts
+import { workerLayoutExecutor } from '@marsio/vue-grid-layout/layout-engine'
+
+const executor = workerLayoutExecutor({
+  workerUrl: new URL('@marsio/vue-grid-layout/worker', import.meta.url).toString()
+})
+```
+
+If your bundler does not support package subpaths in `new URL()`, import the worker entry with its URL query if supported by that bundler, or pass your own `workerFactory`. If the worker cannot start, the library falls back to the main-thread executor and emits a `fallback` or `worker-error` event. Pointermove preview for drag/resize stays on the main-thread low-latency path; worker-capable execution is used for commits and heavy fit/responsive operations.
 
 Preview frames are not durable state. `layoutChange`, `update:modelValue`, `historyStore`, and `persistence` are updated only from committed drag/resize/drop results. Diagnostics summarize operation id, phase, layout size, affected item count, collision count, scheduler mode, executor kind, index usage, and duration; debug mode adds a compact replay summary without logging the full layout by default. The benchmark matrix can be run with `yarn bench:layout-engine`; set `EXECUTOR=worker` to include worker queue/compute/end-to-end reporting and `SIZES`, `SCENARIOS`, `SEED`, or `BUDGET_FILE` to customize the run.
 
@@ -859,12 +907,12 @@ To make VGL responsive, use the `<ResponsiveVueGridLayout>` element:
 </template>
 
 <script>
-import { Responsive as ResponsiveGridLayout } from "@marsio/vue-grid-layout";
+import { ResponsiveVueGridLayout as ResponsiveGridLayout } from "@marsio/vue-grid-layout/responsive";
 import { defineComponent, ref } from 'vue';
 
 export default defineComponent({
   components: {
-    VGL
+    ResponsiveGridLayout
   },
   setup() {
     const generateLayout = () => {
@@ -927,14 +975,15 @@ width upon initialization and window resize events.
 </template>
 
 <script>
-import { Responsive, WidthProvider } from "@marsio/vue-grid-layout";
+import { WidthProvider } from "@marsio/vue-grid-layout";
+import { ResponsiveVueGridLayout } from "@marsio/vue-grid-layout/responsive";
 import { defineComponent, ref } from 'vue';
 
-const ResponsiveGridLayout = WidthProvider(Responsive);
+const ResponsiveGridLayout = WidthProvider(ResponsiveVueGridLayout);
 
 export default defineComponent({
   components: {
-    VGL
+    ResponsiveGridLayout
   },
   setup() {
     const generateLayout = () => {
@@ -1144,20 +1193,6 @@ onDropDragOver: (e: DragEvent) => { w?: number; h?: number } | false;
 // Ref for getting a reference for the grid's wrapping div.
 innerRef?: Ref<"div">,
 
-// Durable persistence. Pass false or omit to keep existing behavior.
-persistence?: false | {
-  key: string,
-  adapter?: LayoutPersistenceAdapter,
-  autoSave?: boolean,
-  debounceMs?: number,
-  timeoutMs?: number,
-  validation?: 'strict' | 'sanitize',
-  fallback?: Layout,
-  conflictStrategy?: 'manual' | 'newer-wins' | 'keep-local',
-  onEvent?: (event: LayoutPersistenceEvent<Layout>) => void,
-  onError?: (error: LayoutPersistenceError) => void
-},
-
 // Layout engine configuration. Omit for the default engine path.
 // Set false or { mode: 'legacy' } to use the legacy path.
 layoutEngine?: false | {
@@ -1199,17 +1234,6 @@ containerPadding: [number, number],
 // layouts is an object mapping breakpoints to layouts.
 // e.g. {lg: Layout, md: Layout, ...}
 layouts,
-
-// Durable persistence for the complete breakpoint layout map.
-persistence?: false | {
-  key: string,
-  adapter?: LayoutPersistenceAdapter,
-  autoSave?: boolean,
-  debounceMs?: number,
-  timeoutMs?: number,
-  fallback?: Record<string, Layout>,
-  conflictStrategy?: 'manual' | 'newer-wins' | 'keep-local'
-},
 
 // Passed to the inner grid and used for responsive layout generation.
 layoutEngine?: false | GridLayoutEngineProp,
