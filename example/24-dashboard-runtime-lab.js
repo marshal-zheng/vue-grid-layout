@@ -270,10 +270,13 @@ style.textContent = `
     background: var(--surface);
     border: 1px solid var(--border-strong);
     display: grid;
-    grid-template-rows: auto 1fr auto;
+    gap: 4px;
+    grid-template-rows: min-content minmax(0, 1fr) min-content;
     height: 100%;
+    min-height: 0;
     min-width: 0;
-    padding: 12px;
+    overflow: hidden;
+    padding: 10px;
   }
 
   .widget-card.warning {
@@ -296,6 +299,7 @@ style.textContent = `
     color: var(--text);
     font-size: 13px;
     font-weight: 600;
+    line-height: 1.2;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -306,20 +310,24 @@ style.textContent = `
     color: var(--subtle);
     flex: 0 0 auto;
     font-size: 11px;
+    line-height: 1.2;
   }
 
   .widget-body {
     align-content: center;
     display: grid;
     gap: 2px;
+    min-height: 0;
     min-width: 0;
+    overflow: hidden;
   }
 
   .widget-value {
     color: #201f1e;
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 600;
     letter-spacing: 0;
+    line-height: 1.1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -329,6 +337,7 @@ style.textContent = `
   .widget-detail {
     color: var(--muted);
     font-size: 12px;
+    line-height: 1.2;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -338,6 +347,7 @@ style.textContent = `
   .widget-foot {
     color: var(--subtle);
     font-size: 11px;
+    line-height: 1.2;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -661,11 +671,11 @@ const createDashboardDocument = () => serializeDocument({
           col: 8,
           row: 7,
           sizeX: 4,
-          sizeY: 4,
+          sizeY: 3,
           preserveAspectRatio: true,
           aspectRatio: 1,
           mobileOrder: 7,
-          mobileHeight: 3
+          mobileHeight: 8
         },
         kpi: {
           col: 12,
@@ -715,7 +725,7 @@ const createDashboardDocument = () => serializeDocument({
             incidents: { col: 6, row: 3, sizeX: 6, sizeY: 3 },
             region: { col: 0, row: 6, sizeX: 12, sizeY: 4 },
             video: { col: 0, row: 10, sizeX: 6, sizeY: 3, aspectRatio: 16 / 9 },
-            logo: { col: 6, row: 10, sizeX: 3, sizeY: 3 },
+            logo: { col: 6, row: 10, sizeX: 3, sizeY: 4 },
             kpi: { col: 9, row: 10, sizeX: 3, sizeY: 2 },
             approval: { col: 0, row: 13, sizeX: 6, sizeY: 2 },
             invalidRatio: { col: 6, row: 13, sizeX: 3, sizeY: 2 }
@@ -738,7 +748,7 @@ const createDashboardDocument = () => serializeDocument({
             incidents: { col: 0, row: 11, sizeX: 6, sizeY: 3, mobileOrder: 4, mobileHeight: 3 },
             region: { col: 0, row: 14, sizeX: 6, sizeY: 4, mobileHide: true, mobileOrder: 5, mobileHeight: 4 },
             video: { col: 0, row: 18, sizeX: 6, sizeY: 3, mobileOrder: 6, mobileHeight: 3 },
-            logo: { col: 0, row: 21, sizeX: 6, sizeY: 3, mobileOrder: 7, mobileHeight: 3 },
+            logo: { col: 0, row: 21, sizeX: 6, sizeY: 8, mobileOrder: 7, mobileHeight: 8 },
             kpi: { col: 0, row: 24, sizeX: 6, sizeY: 2, mobileOrder: 8, mobileHeight: 2 },
             approval: { col: 0, row: 26, sizeX: 6, sizeY: 2, mobileOrder: 9, mobileHeight: 2 },
             invalidRatio: { col: 0, row: 28, sizeX: 6, sizeY: 2, mobileOrder: 10, mobileHeight: 2 }
