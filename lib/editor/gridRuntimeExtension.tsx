@@ -46,6 +46,7 @@ export const createEditorGridRuntimeExtension = (
       commitDrop: editorRuntime.commitDrop,
       rollbackInteraction: editorRuntime.rollbackInteraction
     },
+    syncHistory: editorRuntime.syncHistory,
     mount: editorRuntime.mount,
     stop: editorRuntime.stop,
     getItemRenderState: editorRuntime.getItemRenderState,

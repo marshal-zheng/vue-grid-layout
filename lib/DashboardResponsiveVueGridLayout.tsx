@@ -4,6 +4,7 @@ import { basicProps as gridLayoutProps } from "./VueGridLayoutPropTypes";
 import { getNonFragmentChildren, type Layout } from "./utils";
 import { resolveGridHeightRuntime } from "./grid-height";
 import type { GridEditorProp } from "./editor";
+import type { GridHistoryStore } from "./history";
 import type { GridLayoutEngineProp } from "./layout-engine";
 import {
   createDashboardResponsiveDiagnostic,
@@ -107,12 +108,33 @@ const DashboardResponsiveVueGridLayout = defineComponent({
     editor: {
       type: [Boolean, Object] as PropType<false | GridEditorProp>,
       default: false
+    },
+    historyStore: {
+      type: Object as PropType<GridHistoryStore | undefined>,
+      default: undefined
     }
   },
   emits: eventNames,
   setup(props, { attrs, slots, emit }) {
     const instance = getCurrentInstance();
     let lastSlotDiagnosticSignature = "";
+    const resolveEditorProp = (): false | GridEditorProp => {
+      const configured = props.editor && typeof props.editor === "object"
+        ? props.editor
+        : null;
+      if (!props.historyStore) return configured || false;
+      if (configured) {
+        return {
+          ...configured,
+          legacyHistoryStore: configured.legacyHistoryStore || props.historyStore
+        };
+      }
+      return {
+        legacyHistoryStore: props.historyStore,
+        keyboard: false
+      };
+    };
+
     const model = useDashboardResponsiveProfileModel({
       document: toRef(props, "document"),
       width: toRef(props, "width"),
@@ -123,7 +145,7 @@ const DashboardResponsiveVueGridLayout = defineComponent({
       mode: toRef(props, "mode"),
       validation: props.validation,
       layoutEngine: props.layoutEngine,
-      editor: props.editor,
+      editor: resolveEditorProp(),
       createMissingProfileOnEdit: props.createMissingProfileOnEdit,
       allowUnknownProfileItems: props.allowUnknownProfileItems,
       onEvent: event => {
@@ -283,6 +305,7 @@ const DashboardResponsiveVueGridLayout = defineComponent({
         minRowHeight,
         renderPrecision,
         editor,
+        historyStore,
         layoutEngine,
         ...gridProps
       } = props;
@@ -307,6 +330,7 @@ const DashboardResponsiveVueGridLayout = defineComponent({
       void minRowHeight;
       void renderPrecision;
       void editor;
+      void historyStore;
       void layoutEngine;
       const heightOptions = resolveHeightOptions(runtime.heightOptions);
 

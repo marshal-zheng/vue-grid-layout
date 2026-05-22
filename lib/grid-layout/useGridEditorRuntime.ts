@@ -275,6 +275,8 @@ export function useGridEditorRuntime({
     props.itemCapabilities?.[id];
   const getResizeConstraintSidecar = (id: string): GridItemAspectRatioConstraint | undefined =>
     props.resizeConstraints?.[id];
+  const hasRuntimeSidecar = (id: string): boolean =>
+    Boolean(getCapabilitySidecar(id) || getResizeConstraintSidecar(id));
 
   const resetSnap = () => {
     lastSnapResolution = null;
@@ -419,11 +421,12 @@ export function useGridEditorRuntime({
 
   const reasonForCapability = (
     item: LayoutItem,
-    meta: GridEditorItemMeta | undefined
+    meta: GridEditorItemMeta | undefined,
+    capability?: ResolvedGridItemCapability | null
   ): GridEditorBlockedReason => {
-    if (meta?.locked) return "locked";
-    if (meta?.visible === false) return "hidden";
-    if (item.static) return "static-item";
+    if (capability?.locked || meta?.locked) return "locked";
+    if (capability?.visible === false || meta?.visible === false) return "hidden";
+    if (capability?.static || item.static) return "static-item";
     return "capability";
   };
 
@@ -451,9 +454,9 @@ export function useGridEditorRuntime({
     metrics?: GridItemResizeMetrics
   ): ResolvedGridItemCapability | null => {
     const sidecar = getCapabilitySidecar(item.i);
+    const explicitConstraint = getResizeConstraintSidecar(item.i);
     if (sidecar) {
       const startGeometry = pickGeometry(getOldResizeItem() || item);
-      const explicitConstraint = getResizeConstraintSidecar(item.i);
       return {
         ...sidecar,
         resizeConstraint: hydrateResizeConstraint(
@@ -487,12 +490,15 @@ export function useGridEditorRuntime({
       deletable: compatibility.deletable,
       duplicatable: compatibility.duplicatable,
       copyable: compatibility.copyable,
-      resizeConstraint: compatibility.resizeHandles
+      resizeConstraint: explicitConstraint || compatibility.resizeHandles
         ? {
-            handlePolicy: {
-              allowedHandles: compatibility.resizeHandles,
-              blockedReason: "handle-disabled"
-            }
+            handlePolicy: compatibility.resizeHandles
+              ? {
+                  allowedHandles: compatibility.resizeHandles,
+                  blockedReason: "handle-disabled"
+                }
+              : undefined,
+            aspectRatio: explicitConstraint
           }
         : undefined,
       sources: compatibility.source.capabilitySources || {},
@@ -510,10 +516,11 @@ export function useGridEditorRuntime({
     metrics?: GridItemResizeMetrics;
     phase: "preview" | "commit";
   }) => {
-    if (!controller) {
+    const hasSidecar = hasRuntimeSidecar(input.id);
+    if (!controller && !hasSidecar) {
       return { kind: "allowed" as const, candidate: input.rawCandidate };
     }
-    if (!isEditMode()) {
+    if (controller && !isEditMode()) {
       return {
         kind: "blocked" as const,
         reason: "mode-readonly" as const,
@@ -529,7 +536,7 @@ export function useGridEditorRuntime({
     if (!capability || !capability.resizable) {
       return {
         kind: "blocked" as const,
-        reason: reasonForCapability(input.item, getMetaById()[input.id]),
+        reason: reasonForCapability(input.item, getMetaById()[input.id], capability),
         ids: [input.id],
         diagnostics: capability?.diagnostics
       };
@@ -824,6 +831,13 @@ export function useGridEditorRuntime({
     clearGuides();
   };
 
+  const syncHistory = (layout: Layout, mode: "push" | "replace" = "push") => {
+    const historyStore = config?.legacyHistoryStore;
+    if (!historyStore) return;
+    if (mode === "replace") historyStore.replacePresent(layout);
+    else historyStore.push(layout);
+  };
+
   const executeSelect = (id: string, event: MouseEvent) => {
     if (!controller || !isEditMode()) return;
     void controller.execute({
@@ -869,18 +883,20 @@ export function useGridEditorRuntime({
     isDroppingItem?: boolean
   ) => {
     const meta: GridEditorItemMeta | undefined = getMetaById()[item.i];
-    const capability = controller
+    const capability = controller || hasRuntimeSidecar(item.i)
       ? resolveRuntimeCapability(item, defaults)
       : null;
-    const visible = !(controller && meta?.visible === false && !isDroppingItem);
+    const defaultDraggable = typeof item.isDraggable === "boolean" ? item.isDraggable : !item.static && defaults.isDraggable;
+    const defaultResizable = typeof item.isResizable === "boolean" ? item.isResizable : !item.static && defaults.isResizable;
+    const visible = !(capability?.visible === false && !isDroppingItem);
     const readonly = isViewMode() || Boolean(controller && !capability?.editable);
-    const draggable = controller
-      ? isEditMode() && Boolean(capability?.draggable)
-      : typeof item.isDraggable === "boolean" ? item.isDraggable : !item.static && defaults.isDraggable;
-    const resizable = controller
-      ? isEditMode() && Boolean(capability?.resizable)
-      : typeof item.isResizable === "boolean" ? item.isResizable : !item.static && defaults.isResizable;
-    const bounded = draggable && defaults.isBounded && item.isBounded !== false;
+    const draggable = capability
+      ? (controller ? isEditMode() : defaultDraggable) && capability.draggable
+      : defaultDraggable;
+    const resizable = capability
+      ? (controller ? isEditMode() : defaultResizable) && capability.resizable
+      : defaultResizable;
+    const bounded = draggable && (capability ? capability.bounded : defaults.isBounded && item.isBounded !== false);
     const selected = controller?.selection.value.selectedIds.includes(item.i) || false;
     const active = controller?.selection.value.activeId === item.i;
     const previewItem = getPlacementPreviewItem(item);
@@ -964,6 +980,7 @@ export function useGridEditorRuntime({
     commitResize,
     commitDrop,
     rollbackInteraction,
+    syncHistory,
     getItemRenderState,
     isPlacementActive: placementInteractions.isActive,
     onRootPointerMove,

@@ -900,6 +900,159 @@ function testResizeIntentCarriesConstraintThroughPreviewAndCommit() {
   assert.equal(Boolean((operations[0] as Extract<LayoutOperation, { type: 'resize' }>).constraint?.aspectRatio), true)
 }
 
+function testRuntimeSidecarResizeWithoutEditorController() {
+  const layout = ref<Layout>([
+    { i: 'logo', x: 0, y: 0, w: 2, h: 2 }
+  ])
+  const aspectRatio = {
+    enabled: true,
+    ratio: 1,
+    ratioKind: 'visual-px' as const,
+    source: 'explicit' as const,
+    fallbackPolicy: 'block' as const,
+    edgeHandles: [],
+    metrics: { colWidth: 100, rowHeight: 100, margin: [0, 0] as [number, number] }
+  }
+  const capability = {
+    id: 'logo',
+    visible: true,
+    editable: true,
+    draggable: true,
+    resizable: true,
+    bounded: true,
+    static: false,
+    locked: false,
+    resizeHandles: ['se', 'sw', 'ne', 'nw'],
+    aspectRatio,
+    resizeConstraint: {
+      handlePolicy: {
+        allowedHandles: ['se', 'sw', 'ne', 'nw'],
+        blockedReason: 'handle-disabled'
+      },
+      aspectRatio
+    },
+    sources: {},
+    sourceLists: {},
+    diagnostics: []
+  }
+  const runtime = useGridEditorRuntime({
+    props: {
+      allowOverlap: false,
+      cols: 12,
+      compactType: 'vertical',
+      editor: false,
+      itemCapabilities: { logo: capability },
+      resizeConstraints: { logo: aspectRatio },
+      margin: [0, 0],
+      maxRows: Infinity,
+      preventCollision: false,
+      rowHeight: 100,
+      transformScale: 1,
+      verticalCompact: true,
+      width: 1200
+    },
+    layoutRef: layout,
+    persistenceController: null,
+    engineBridge: {
+      getLayoutEngineOptions: () => ({
+        cols: 12,
+        maxRows: Infinity,
+        compactType: 'vertical',
+        allowOverlap: false,
+        preventCollision: false
+      }),
+      isLegacyLayoutEngine: () => false
+    },
+    getLayout: () => layout.value,
+    getOldDragItem: () => null,
+    getOldResizeItem: () => layout.value[0],
+    isDropping: () => false,
+    getInteractionState: () => null
+  } as never)
+
+  assert.equal(runtime.controller, null)
+  const itemState = runtime.getItemRenderState(layout.value[0], {
+    isDraggable: true,
+    isResizable: true,
+    isBounded: true
+  })
+  assert.equal(itemState.resizable, true)
+  assert.deepEqual(itemState.resizeHandles, ['se', 'sw', 'ne', 'nw'])
+
+  const intent = runtime.resolveResizeIntent({
+    id: 'logo',
+    item: layout.value[0],
+    layout: layout.value,
+    handle: 'se',
+    rawCandidate: { ...layout.value[0], w: 4, h: 1 },
+    metrics: { colWidth: 100, rowHeight: 100, margin: [0, 0] },
+    phase: 'preview'
+  })
+  assert.equal(intent.kind, 'allowed')
+  if (intent.kind === 'allowed') {
+    assert.equal(intent.candidate.w, 4)
+    assert.equal(intent.candidate.h, 4)
+    assert.equal(Boolean(intent.constraint?.aspectRatio), true)
+  }
+}
+
+function testRuntimeLegacyHistorySync() {
+  const layout = ref<Layout>([
+    { i: 'a', x: 0, y: 0, w: 1, h: 1 }
+  ])
+  const calls: Array<{ mode: string; layout: Layout | null }> = []
+  const historyStore = {
+    replacePresent: (next: Layout | null) => {
+      calls.push({ mode: 'replace', layout: next })
+    },
+    push: (next: Layout) => {
+      calls.push({ mode: 'push', layout: next })
+    }
+  }
+  const runtime = useGridEditorRuntime({
+    props: {
+      allowOverlap: false,
+      cols: 12,
+      compactType: 'vertical',
+      editor: {
+        legacyHistoryStore: historyStore
+      },
+      margin: [0, 0],
+      maxRows: Infinity,
+      preventCollision: false,
+      rowHeight: 100,
+      transformScale: 1,
+      verticalCompact: true,
+      width: 1200
+    },
+    layoutRef: layout,
+    persistenceController: null,
+    engineBridge: {
+      getLayoutEngineOptions: () => ({
+        cols: 12,
+        maxRows: Infinity,
+        compactType: 'vertical',
+        allowOverlap: false,
+        preventCollision: false
+      }),
+      isLegacyLayoutEngine: () => false
+    },
+    getLayout: () => layout.value,
+    getOldDragItem: () => null,
+    getOldResizeItem: () => null,
+    isDropping: () => false,
+    getInteractionState: () => null
+  } as never)
+
+  runtime.syncHistory(layout.value, 'replace')
+  runtime.syncHistory([{ ...layout.value[0], x: 1 }], 'push')
+
+  assert.equal(calls.length, 2)
+  assert.equal(calls[0].mode, 'replace')
+  assert.equal(calls[1].mode, 'push')
+  assert.equal(calls[1].layout?.[0].x, 1)
+}
+
 function testDropNoopDoesNotRepeatPreview() {
   const previousElement = (globalThis as { Element?: unknown }).Element
   class FakeElement {
@@ -1234,6 +1387,8 @@ testGroupDragBlockedFeedback()
 testClickLikeDragDoesNotShowGuides()
 testResizeNoopDoesNotPreviewOrCommit()
 testResizeIntentCarriesConstraintThroughPreviewAndCommit()
+testRuntimeSidecarResizeWithoutEditorController()
+testRuntimeLegacyHistorySync()
 testDropNoopDoesNotRepeatPreview()
 testRuntimeSkipBlockedSingleAllowedGroupIntent()
 void testPointerCommandGuardRollback().then(() => {

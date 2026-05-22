@@ -12,6 +12,7 @@ import type {
   ResolvedDashboardGridSettings
 } from "../dashboard";
 import type { GridEditorController, GridEditorMetaById, GridEditorProp } from "../editor";
+import type { GridHistoryStore } from "../history";
 import type { GridLayoutEngineProp } from "../layout-engine";
 import type {
   GridItemAspectRatioConstraint,
@@ -245,6 +246,7 @@ export type DashboardResponsiveComponentProps = {
   createMissingProfileOnEdit?: boolean;
   layoutEngine?: false | GridLayoutEngineProp;
   editor?: false | GridEditorProp;
+  historyStore?: GridHistoryStore;
   heightMode?: GridHeightMode | null;
   containerHeight?: number | null;
   autoMeasureContainerHeight?: boolean;
