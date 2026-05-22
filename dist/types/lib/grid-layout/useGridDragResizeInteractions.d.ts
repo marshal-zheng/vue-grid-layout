@@ -1,0 +1,20 @@
+import type { GridDragEvent, GridResizeEvent } from "../utils";
+import type { GridInteractionCommonOptions, GridInteractionModelCommitters, GridInteractionBlockedReason } from "./gridInteractionTypes";
+type UseGridDragResizeInteractionsOptions = GridInteractionCommonOptions & GridInteractionModelCommitters;
+export declare function useGridDragResizeInteractions({ props, state, eventBridge, engineBridge, frameUpdate, autoScroll, editor, interactionMachine: providedInteractionMachine, nextInteractionRequestId, syncHistory, onLayoutMaybeChanged }: UseGridDragResizeInteractionsOptions): {
+    activeDragId: import("vue").Ref<string | null, string | null>;
+    activeResizeId: import("vue").Ref<string | null, string | null>;
+    dragBlocked: import("vue").Ref<boolean, boolean>;
+    dragBlockedReason: import("vue").Ref<GridInteractionBlockedReason | null, GridInteractionBlockedReason | null>;
+    dragBlockedItemIds: import("vue").Ref<string[], string[]>;
+    dragBlockedMessage: import("vue").Ref<string | null, string | null>;
+    resizeBlocked: import("vue").Ref<boolean, boolean>;
+    clearActiveInteraction: () => void;
+    onResizeStart: (i: string, w: number, h: number, { e, node, handle }: GridResizeEvent) => void;
+    onResize: (i: string, w: number, h: number, { e, node, handle }: GridResizeEvent) => void;
+    onResizeStop: (i: string, w: number, h: number, { e, node, handle }: GridResizeEvent) => void;
+    onDragStart: (i: string, x: number, y: number, { e, node }: GridDragEvent) => void;
+    onDrag: (i: string, x: number, y: number, { e, node }: GridDragEvent) => void;
+    onDragStop: (i: string, x: number, y: number, { e, node }: GridDragEvent) => void;
+};
+export {};
