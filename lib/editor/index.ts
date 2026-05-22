@@ -1,3 +1,5 @@
+export { default as EditorGridLayout } from "./EditorGridLayout";
+export { default as EditorResponsiveGridLayout } from "./EditorResponsiveGridLayout";
 export type * from "./types";
 export * from "./metadata";
 export * from "./selection";
