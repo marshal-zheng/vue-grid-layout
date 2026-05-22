@@ -707,7 +707,7 @@ const executeMove = (
 
   const sourceItem = getLayoutItem(request.layout, operation.id);
   if (!sourceItem) return makeBlockedResult(request, "missing-item", [], start, true, [operation.id]);
-  if (sourceItem.static && sourceItem.isDraggable !== true) {
+  if (sourceItem.static) {
     return makeBlockedResult(request, "static-item", [], start, true, [operation.id]);
   }
   if (sourceItem.x === operation.x && sourceItem.y === operation.y) {
@@ -866,6 +866,9 @@ const executeResize = (
 
   const sourceItem = getLayoutItem(request.layout, operation.id);
   if (!sourceItem) return makeBlockedResult(request, "missing-item", [], start, true, [operation.id]);
+  if (sourceItem.static) {
+    return makeBlockedResult(request, "static-item", [], start, true, [operation.id]);
+  }
   if (!isFinitePositive(operation.w) || !isFinitePositive(operation.h)) {
     return makeBlockedResult(request, "invalid-input", [], start, true, [operation.id]);
   }

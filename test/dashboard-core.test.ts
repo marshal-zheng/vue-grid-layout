@@ -286,6 +286,28 @@ function testProjection() {
   assert.equal(mobile.ok && mobile.projection.capabilitiesById?.temperature.static, false)
   assert.equal(mobile.ok && mobile.projection.resizeConstraintsById?.temperature.enabled, true)
   assert.ok(mobile.ok && mobile.projection.diagnostics.some(item => item.code === 'unknown-item' && item.itemId === 'deferred'))
+  assert.ok(mobile.ok && mobile.projection.diagnostics.some(item =>
+    item.code === 'item-capability.profile-inherited' &&
+    item.itemId === 'temperature' &&
+    item.path === 'layouts.default.widgets.temperature.resizable' &&
+    (item.details as { field?: string, mode?: string }).field === 'resizable' &&
+    (item.details as { field?: string, mode?: string }).mode === 'inherited'
+  ))
+
+  const sourceDiagnosticDoc = createDocument()
+  sourceDiagnosticDoc.layouts.default.profiles!.mobile.widgets!.pressure = {
+    resizable: false,
+    resizeHandles: ['se']
+  }
+  const sourceDiagnosticProjection = projectDashboardLayoutDocument(sourceDiagnosticDoc, { profileId: 'mobile', targetView: 'mobile' })
+  assert.equal(sourceDiagnosticProjection.ok, true)
+  assert.ok(sourceDiagnosticProjection.ok && sourceDiagnosticProjection.projection.diagnostics.some(item =>
+    item.code === 'item-capability.profile-overridden' &&
+    item.itemId === 'pressure' &&
+    item.path === 'layouts.default.profiles.mobile.widgets.pressure.resizable' &&
+    (item.details as { field?: string, mode?: string }).field === 'resizable' &&
+    (item.details as { field?: string, mode?: string }).mode === 'overridden'
+  ))
 
   const fallback = projectDashboardLayoutDocument(doc, { profileId: 'missing' })
   assert.equal(fallback.ok, true)

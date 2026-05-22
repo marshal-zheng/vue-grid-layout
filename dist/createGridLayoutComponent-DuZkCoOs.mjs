@@ -5,8 +5,8 @@ import { DraggableCore as cn } from "@marsio/vue-draggable";
 import { Resizable as sn } from "@marsio/vue-resizable";
 import { b as Xe, f as ht, d as Ct, h as it, c as Vt, e as ln, r as un } from "./resolve-C3SqJijI.mjs";
 import { deepEqual as lt } from "fast-equals";
-import { b as Pt, c as Lt, a as Tt } from "./executor-Bg9C-zCN.mjs";
-import { e as dn, c as gn } from "./core-CE462SRA.mjs";
+import { b as Pt, c as Lt, a as Tt } from "./executor-D3JIs-_s.mjs";
+import { e as dn, c as gn } from "./core-BdZsEnSu.mjs";
 import fn from "resize-observer-polyfill";
 const pn = {
   type: Array,

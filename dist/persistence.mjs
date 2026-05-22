@@ -1,11 +1,11 @@
 import { defineComponent as v, ref as h, watch as g, onMounted as L, onBeforeUnmount as C, createVNode as P, mergeProps as V } from "vue";
-import { V as k } from "./VueGridLayout-CM3Rotjg.mjs";
-import { b as A } from "./createGridLayoutComponent-DrGx-LJV.mjs";
+import { V as k } from "./VueGridLayout-BQflBYev.mjs";
+import { b as A } from "./createGridLayoutComponent-DuZkCoOs.mjs";
 import { a as d } from "./utils-BCVYGne6.mjs";
 import { u as b } from "./persistence-Db97X8w7.mjs";
 import { L as z, c as H, a as N, d as U, i as x, l as I, m as W, b as Y, r as F, s as J, e as K, v as Q } from "./persistence-Db97X8w7.mjs";
-import { r as G, R as E } from "./ResponsiveVueGridLayout-Ci4O-4iC.mjs";
-import { c as y } from "./useResponsiveGridLayoutModel-DD3oWi4i.mjs";
+import { r as G, R as E } from "./ResponsiveVueGridLayout-DwX4Et54.mjs";
+import { c as y } from "./useResponsiveGridLayoutModel-BPXQw0ki.mjs";
 const S = /* @__PURE__ */ v({
   name: "PersistentGridLayout",
   inheritAttrs: !1,

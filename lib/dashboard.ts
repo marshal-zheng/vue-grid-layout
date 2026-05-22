@@ -412,6 +412,15 @@ const DASHBOARD_ITEM_RUNTIME_SIDECAR_FIELDS = [
   "preserveAspectRatio",
   "aspectRatio"
 ];
+const DASHBOARD_CAPABILITY_SOURCE_FIELDS = [
+  "static",
+  "draggable",
+  "resizable",
+  "bounded",
+  "resizeHandles",
+  "preserveAspectRatio",
+  "aspectRatio"
+];
 const THINGSBOARD_WIDGET_LAYOUT_FIELDS = [
   "col",
   "row",
@@ -1537,6 +1546,57 @@ const capabilityDiagnosticToDashboard = (
   }
 );
 
+const pushProfileCapabilitySourceDiagnostics = (
+  diagnostics: DashboardDiagnostic[],
+  capability: ResolvedGridItemCapability,
+  context: {
+    layoutId: string;
+    profileId: string | null;
+    itemId: string;
+    baseItem: DashboardItemLayout;
+    profileItem?: DashboardItemLayoutOverride;
+  }
+): void => {
+  if (!context.profileId) return;
+  DASHBOARD_CAPABILITY_SOURCE_FIELDS.forEach(field => {
+    const profileHasField = Boolean(
+      context.profileItem &&
+      hasOwn(context.profileItem, field) &&
+      typeof context.profileItem[field] !== "undefined"
+    );
+    const baseHasField =
+      hasOwn(context.baseItem, field) &&
+      typeof context.baseItem[field] !== "undefined";
+    if (!profileHasField && !baseHasField) return;
+
+    const code = profileHasField
+      ? "item-capability.profile-overridden"
+      : "item-capability.profile-inherited";
+    const sourceLists = capability.sourceLists[field] || [];
+    diagnostics.push(diagnostic(
+      code,
+      "info",
+      profileHasField
+        ? `Profile capability field ${field} overrides the default item.`
+        : `Profile capability field ${field} is inherited from the default item.`,
+      {
+        layoutId: context.layoutId,
+        profileId: context.profileId || undefined,
+        itemId: context.itemId,
+        path: profileHasField
+          ? `layouts.${context.layoutId}.profiles.${context.profileId}.widgets.${context.itemId}.${field}`
+          : `layouts.${context.layoutId}.widgets.${context.itemId}.${field}`,
+        details: {
+          field,
+          mode: profileHasField ? "overridden" : "inherited",
+          effectiveSource: capability.sources[field],
+          sourceLists
+        }
+      }
+    ));
+  });
+};
+
 const layoutSorter = (a: LayoutItem, b: LayoutItem): number => {
   if (a.y !== b.y) return a.y - b.y;
   if (a.x !== b.x) return a.x - b.x;
@@ -1687,6 +1747,13 @@ export function projectDashboardLayoutDocument(
         profileId,
         itemId: id
       }));
+    });
+    pushProfileCapabilitySourceDiagnostics(diagnostics, capability, {
+      layoutId,
+      profileId,
+      itemId: id,
+      baseItem,
+      profileItem
     });
 
     DASHBOARD_ITEM_RUNTIME_UNSUPPORTED_FIELDS.forEach(field => {

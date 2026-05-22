@@ -182,6 +182,16 @@ function testNoopAndBlocked() {
   assert.equal(blocked.status, 'blocked')
   assert.equal(blocked.blocked?.reason, 'collision')
   assert.deepEqual(blocked.blocked?.itemIds, ['b'])
+
+  const staticMove = executeLayoutOperation({
+    id: 'static-move',
+    phase: 'preview',
+    layout: [{ i: 's', x: 0, y: 0, w: 2, h: 2, static: true, isDraggable: true }],
+    operation: { type: 'move', id: 's', x: 1, y: 0, userAction: true },
+    options
+  })
+  assert.equal(staticMove.status, 'blocked')
+  assert.equal(staticMove.blocked?.reason, 'static-item')
 }
 
 function testGroupMoveValidationAndParity() {
@@ -391,6 +401,20 @@ function testGroupMoveCollisionsAndCompaction() {
 }
 
 function testResizeDropResponsive() {
+  const staticResize = executeLayoutOperation({
+    id: 'resize-static',
+    phase: 'commit',
+    layout: [{ i: 's', x: 0, y: 0, w: 2, h: 2, static: true, isResizable: true }],
+    operation: { type: 'resize', id: 's', w: 3, h: 3, handle: 'se' },
+    options
+  })
+  assert.equal(staticResize.status, 'blocked')
+  assert.equal(staticResize.blocked?.reason, 'static-item')
+  assert.deepEqual(getLayoutItem(staticResize.layout, 's') && {
+    w: getLayoutItem(staticResize.layout, 's')?.w,
+    h: getLayoutItem(staticResize.layout, 's')?.h
+  }, { w: 2, h: 2 })
+
   const resized = executeLayoutOperation({
     id: 'resize-nw',
     phase: 'preview',
