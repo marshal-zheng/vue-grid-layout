@@ -1,8 +1,14 @@
-const { VueGridLayout: VGL, Vue: VueInstance } = window;
-const { createApp, computed, onMounted, reactive, ref } = VueInstance;
+import { createApp, computed, onMounted, reactive, ref } from "vue/dist/vue.esm-bundler.js";
+import { WidthProvider } from "@marsio/vue-grid-layout";
+import {
+  createGridEditorController,
+  createGridEditorPersistenceEnvelope,
+  EditorGridLayout,
+  internalGridEditorClipboard
+} from "@marsio/vue-grid-layout/editor";
+import { memoryPersistenceAdapter, useGridLayoutPersistence } from "@marsio/vue-grid-layout/persistence";
 
-const { WidthProvider } = VGL;
-const VueGridLayout = WidthProvider(VGL);
+const VueGridLayout = WidthProvider(EditorGridLayout);
 
 const cloneLayout = layout => layout.map(item => ({ ...item }));
 
@@ -93,7 +99,7 @@ const App = {
       sectionSnap: true
     });
 
-    const memory = VGL.memoryPersistenceAdapter();
+    const memory = memoryPersistenceAdapter();
     const adapter = {
       load: key => memory.load(key),
       save: (key, document) => {
@@ -107,21 +113,21 @@ const App = {
       subscribe: (key, callback) => memory.subscribe ? memory.subscribe(key, callback) : () => {}
     };
 
-    const persistence = VGL.useGridLayoutPersistence({
+    const persistence = useGridLayoutPersistence({
       key: "professional-editor-demo",
       kind: "layout",
       target: layout,
       adapter,
       autoSave: false,
       meta: () => ({
-        editor: VGL.editor.createGridEditorPersistenceEnvelope(editorMetaById.value, sectionRows.value)
+        editor: createGridEditorPersistenceEnvelope(editorMetaById.value, sectionRows.value)
       }),
       onEvent: event => {
         state.lastEvent = event.type;
       }
     });
 
-    const editor = VGL.createGridEditorController({
+    const editor = createGridEditorController({
       layout,
       mode,
       editorMetaById,
@@ -135,7 +141,7 @@ const App = {
         preventCollision: false,
         diagnostics: { debug: true }
       },
-      clipboard: VGL.internalGridEditorClipboard,
+      clipboard: internalGridEditorClipboard,
       guides: {
         enabled: true,
         snap: true,

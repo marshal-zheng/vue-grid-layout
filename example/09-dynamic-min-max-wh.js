@@ -1,5 +1,5 @@
-const {VueGridLayout: VGL, Vue: VueInstance} = window;
-const { createApp, ref, h, reactive, onMounted } = VueInstance
+import { createApp, ref, h, reactive, onMounted } from "vue/dist/vue.esm-bundler.js";
+import VGL from "@marsio/vue-grid-layout";
 
 const len = 10
 

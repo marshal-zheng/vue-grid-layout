@@ -1,10 +1,9 @@
-const { VueGridLayout: VGL, Vue: VueInstance } = window;
-const { createApp, computed, onBeforeUnmount, onMounted, reactive, ref } = VueInstance;
+import { createApp, computed, onBeforeUnmount, onMounted, reactive, ref } from "vue/dist/vue.esm-bundler.js";
+import VGL, { WidthProvider } from "@marsio/vue-grid-layout";
+import { workerLayoutExecutor } from "@marsio/vue-grid-layout/layout-engine";
+import workerUrl from "@marsio/vue-grid-layout/worker?url";
 
-const { WidthProvider, workerLayoutExecutor } = VGL;
 const VueGridLayout = WidthProvider(VGL);
-
-const workerUrl = new URL("../build/web/vue-grid-layout.worker.js", window.location.href).href;
 
 const createOrderedLayout = count => {
   const layout = [];

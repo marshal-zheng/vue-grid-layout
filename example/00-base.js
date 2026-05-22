@@ -1,7 +1,7 @@
-const {VueGridLayout: VGL, Vue: VueInstance} = window;
-const { createApp, ref, h, reactive, onMounted } = VueInstance
+import { createApp, ref, h, reactive, onMounted } from "vue/dist/vue.esm-bundler.js";
+import VGL, { WidthProvider } from "@marsio/vue-grid-layout";
 
-const { WidthProvider, Responsive } = VGL
+const VueGridLayout = WidthProvider(VGL);
 
 const customHandle = h('span', { class: 'custom-handle custom-handle-se' });
 const len = 14

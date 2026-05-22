@@ -1,5 +1,11 @@
-const { VueGridLayout: VGL, Vue: VueInstance } = window;
-const { createApp, computed, ref } = VueInstance;
+import { createApp, computed, ref } from "vue/dist/vue.esm-bundler.js";
+import {
+  DashboardResponsiveVueGridLayout,
+  serializeDashboardLayoutDocument,
+  useDashboardResponsiveProfileModel
+} from "@marsio/vue-grid-layout/dashboard";
+import { internalGridEditorClipboard } from "@marsio/vue-grid-layout/editor";
+import { useDashboardEditorShell } from "@marsio/vue-grid-layout/dashboard-editor-shell";
 
 const style = document.createElement("style");
 style.textContent = `
@@ -715,7 +721,7 @@ const nextLocalId = base => {
   return `${base}-${localIdCounter.toString(36)}`;
 };
 
-const createDocument = () => VGL.serializeDashboardLayoutDocument({
+const createDocument = () => serializeDashboardLayoutDocument({
   widgets: {
     revenue: { col: 0, row: 0, sizeX: 4, sizeY: 3, minSizeX: 3, mobileOrder: 0, mobileHeight: 3 },
     pipeline: { col: 4, row: 0, sizeX: 4, sizeY: 3, minSizeX: 3, mobileOrder: 1, mobileHeight: 3 },
@@ -824,7 +830,7 @@ const geometryFor = (layout, id) => {
 
 const App = {
   components: {
-    DashboardGrid: VGL.DashboardResponsiveVueGridLayout
+    DashboardGrid: DashboardResponsiveVueGridLayout
   },
   setup() {
     const documentRef = ref(createDocument());
@@ -891,7 +897,7 @@ const App = {
         .filter(patch => patch.type === "remove" && patch.id)
         .map(patch => patch.id);
 
-    const model = VGL.useDashboardResponsiveProfileModel({
+    const model = useDashboardResponsiveProfileModel({
       document: documentRef,
       width: gridWidth,
       breakpoints,
@@ -902,7 +908,7 @@ const App = {
       createMissingProfileOnEdit: true,
       editor: {
         commandPolicy: "skip-blocked",
-        clipboard: VGL.internalGridEditorClipboard,
+        clipboard: internalGridEditorClipboard,
         layoutEngineOptions: {
           cols: 12,
           maxRows: Infinity,
@@ -918,7 +924,7 @@ const App = {
       }
     });
 
-    const shell = VGL.useDashboardEditorShell({
+    const shell = useDashboardEditorShell({
       document: documentRef,
       model,
       gridElement: gridRef,
@@ -1241,7 +1247,7 @@ const App = {
     };
 
     const resetDemo = () => {
-      VGL.internalGridEditorClipboard.clear?.();
+      internalGridEditorClipboard.clear?.();
       revisionIndex = 0;
       localIdCounter = 0;
       documentRef.value = createDocument();

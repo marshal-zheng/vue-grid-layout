@@ -1,5 +1,4 @@
-const { Vue: VueInstance } = window;
-const { createApp } = VueInstance;
+import { createApp } from "vue/dist/vue.esm-bundler.js";
 
 const demos = [
   ["Main responsive playground", "example"],

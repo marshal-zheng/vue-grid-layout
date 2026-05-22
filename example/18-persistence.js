@@ -1,8 +1,8 @@
-const { VueGridLayout: VGL, Vue: VueInstance } = window;
-const { createApp, onMounted, reactive, ref } = VueInstance;
+import { createApp, onMounted, reactive, ref } from "vue/dist/vue.esm-bundler.js";
+import { WidthProvider } from "@marsio/vue-grid-layout";
+import { PersistentGridLayout, localStorageAdapter } from "@marsio/vue-grid-layout/persistence";
 
-const { WidthProvider, localStorageAdapter } = VGL;
-const VueGridLayout = WidthProvider(VGL);
+const VueGridLayout = WidthProvider(PersistentGridLayout);
 
 const storagePrefix = "vgl:";
 const storageKey = "persistence-localstorage-demo";

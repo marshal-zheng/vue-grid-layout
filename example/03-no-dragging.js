@@ -1,7 +1,6 @@
-const {VueGridLayout: VGL, Vue: VueInstance} = window;
-const { createApp, ref, h, reactive, onMounted } = VueInstance
+import { createApp, ref, h, reactive, onMounted } from "vue/dist/vue.esm-bundler.js";
+import VGL, { WidthProvider } from "@marsio/vue-grid-layout";
 
-const { WidthProvider } = VGL
 const VueGridLayout = WidthProvider(VGL);
 
 const len = 30

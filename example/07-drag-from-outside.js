@@ -1,7 +1,7 @@
-const {VueGridLayout: VGL, Vue: VueInstance} = window;
-const { createApp, ref, h, reactive, onMounted } = VueInstance
+import { createApp, ref, h, reactive, onMounted } from "vue/dist/vue.esm-bundler.js";
+import VGL, { WidthProvider } from "@marsio/vue-grid-layout";
+import { ResponsiveVueGridLayout as Responsive } from "@marsio/vue-grid-layout/responsive";
 
-const { WidthProvider, Responsive } = VGL
 const ResponsiveVueGridLayout = WidthProvider(Responsive);
 
 const len = 3

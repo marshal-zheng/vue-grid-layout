@@ -1,12 +1,8 @@
-const { VueGridLayout: VGL, Vue: VueInstance } = window;
-const { createApp, reactive, watch, onMounted, ref } = VueInstance;
-const { createPinia } = window.Pinia || {};
+import { createApp, reactive, onMounted, ref } from "vue/dist/vue.esm-bundler.js";
+import { createPinia } from "pinia";
+import VGL, { WidthProvider } from "@marsio/vue-grid-layout";
+import { useGridHistoryStore } from "@marsio/vue-grid-layout/history";
 
-if (!createPinia) {
-  throw new Error('Pinia IIFE not found. Ensure pinia.iife.js is loaded before 16-history.js');
-}
-
-const { WidthProvider } = VGL;
 const VueGridLayout = WidthProvider(VGL);
 
 const initialLayout = [
@@ -25,7 +21,7 @@ const App = {
       layout: initialLayout.map(item => ({ ...item })),
       mounted: false
     });
-    const history = VGL.history.useGridHistoryStore({ pinia, maxSize: 200 });
+    const history = useGridHistoryStore({ pinia, maxSize: 200 });
 
     // Initialize snapshot
     history.replacePresent(state.layout);
@@ -44,16 +40,14 @@ const App = {
       if (snap) state.layout.splice(0, state.layout.length, ...snap);
     };
 
-    // Keep store synced if layout is changed externally
-    watch(
-      () => state.layout,
-      next => history.replacePresent(next),
-      { deep: true }
-    );
+    const handleLayoutChange = layout => {
+      history.push(layout);
+    };
 
     return {
       state,
       history,
+      handleLayoutChange,
       undo,
       redo
     };
@@ -84,7 +78,7 @@ const App = {
         :cols="12"
         :rowHeight="30"
         :useCSSTransforms="state.mounted"
-        :historyStore="history"
+        @layoutChange="handleLayoutChange"
       >
         <div v-for="item in state.layout" :key="item.i">
           <span class="text">{{ item.i }}</span>

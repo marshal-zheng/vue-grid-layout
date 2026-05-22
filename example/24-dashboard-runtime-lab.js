@@ -1,8 +1,15 @@
-const { VueGridLayout: VGL, Vue: VueInstance } = window;
-const { createApp, computed, onBeforeUnmount, onMounted, ref, watch } = VueInstance;
-const { createPinia } = window.Pinia || {};
-
-const DashboardResponsiveVueGridLayout = VGL.DashboardResponsiveVueGridLayout;
+import { createApp, computed, onBeforeUnmount, onMounted, ref, watch } from "vue/dist/vue.esm-bundler.js";
+import { createPinia } from "pinia";
+import {
+  DASHBOARD_SCHEMA_VERSION,
+  DashboardResponsiveVueGridLayout,
+  migrateDashboardLayoutSettings,
+  repairDashboardLayoutCollisions,
+  resolveDashboardResponsiveProfile,
+  serializeDashboardLayoutDocument,
+  writeDashboardResponsiveRuntimeToDocument
+} from "@marsio/vue-grid-layout/dashboard";
+import { bindKeyboardShortcuts, useGridHistoryStore } from "@marsio/vue-grid-layout/history";
 
 const style = document.createElement("style");
 style.textContent = `
@@ -556,7 +563,7 @@ const isActionableDiagnostic = item => {
   return item.level === "warning" || item.level === "error";
 };
 
-const serializeDocument = documentLike => VGL.serializeDashboardLayoutDocument(documentLike, {
+const serializeDocument = documentLike => serializeDashboardLayoutDocument(documentLike, {
   key: "dashboard-migration-example",
   sourceId: "example-dashboard-migration",
   revision: () => `migration-demo-${++revisionIndex}`,
@@ -564,7 +571,7 @@ const serializeDocument = documentLike => VGL.serializeDashboardLayoutDocument(d
 });
 
 const createDashboardDocument = () => serializeDocument({
-  dashboardSchemaVersion: VGL.DASHBOARD_SCHEMA_VERSION,
+  dashboardSchemaVersion: DASHBOARD_SCHEMA_VERSION,
   kind: "dashboard-layout",
   key: "dashboard-migration-example",
   revision: "seed",
@@ -713,7 +720,7 @@ const App = {
     const operationDiagnostics = ref([]);
     const canvasHost = ref(null);
     const history = createPinia
-      ? VGL.history.useGridHistoryStore({ pinia: createPinia(), maxSize: 100 })
+      ? useGridHistoryStore({ pinia: createPinia(), maxSize: 100 })
       : null;
     let unbindHistoryShortcuts = null;
     let stopCanvasMeasure = null;
@@ -786,7 +793,7 @@ const App = {
     ]);
 
     const resolveRuntime = () => {
-      const result = VGL.resolveDashboardResponsiveProfile(dashboardDocument.value, {
+      const result = resolveDashboardResponsiveProfile(dashboardDocument.value, {
         width: gridWidth.value,
         breakpoints,
         breakpoint: selectedBreakpoint.value,
@@ -845,7 +852,7 @@ const App = {
 
     const applyHistoryLayout = (layout, label) => {
       if (!layout || !runtime.value) return;
-      const result = VGL.writeDashboardResponsiveRuntimeToDocument(
+      const result = writeDashboardResponsiveRuntimeToDocument(
         dashboardDocument.value,
         runtime.value,
         layout,
@@ -894,7 +901,7 @@ const App = {
     });
 
     const runMigration = (label, nextSettings) => {
-      const result = VGL.migrateDashboardLayoutSettings(dashboardDocument.value, {
+      const result = migrateDashboardLayoutSettings(dashboardDocument.value, {
         profileId: profileIdFor(selectedBreakpoint.value),
         previousSettings: clone(currentSettings.value),
         nextSettings,
@@ -914,7 +921,7 @@ const App = {
     };
 
     const repairActive = () => {
-      const result = VGL.repairDashboardLayoutCollisions(dashboardDocument.value, {
+      const result = repairDashboardLayoutCollisions(dashboardDocument.value, {
         profileId: profileIdFor(selectedBreakpoint.value),
         validation: "strict",
         policy: migrationPolicy().repair
@@ -923,7 +930,7 @@ const App = {
     };
 
     const repairImportSlot = () => {
-      const result = VGL.repairDashboardLayoutCollisions(dashboardDocument.value, {
+      const result = repairDashboardLayoutCollisions(dashboardDocument.value, {
         layoutId: "importSlot",
         validation: "strict",
         policy: migrationPolicy().repair
@@ -997,7 +1004,7 @@ const App = {
       }
       resolveRuntime();
       if (history) {
-        unbindHistoryShortcuts = VGL.bindKeyboardShortcuts(history, {
+        unbindHistoryShortcuts = bindKeyboardShortcuts(history, {
           onUndo: layout => applyHistoryLayout(layout, "Undo layout"),
           onRedo: layout => applyHistoryLayout(layout, "Redo layout")
         });
