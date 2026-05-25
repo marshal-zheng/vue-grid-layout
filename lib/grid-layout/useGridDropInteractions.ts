@@ -1,19 +1,34 @@
-import { h, markRaw, ref } from "vue";
+import { markRaw, ref } from "vue";
 import {
-  cloneLayout,
+  cloneLayoutItem,
   compact,
   compactType,
-  findFirstFit,
   findNearestFit,
   getAllCollisions,
-  getLayoutItem,
-  withLayoutItem
+  getLayoutItem
 } from "../utils";
-import type { LayoutItem } from "../utils";
-import { calcXY, type PositionParams } from "../calculateUtils";
+import type {
+  Layout,
+  LayoutItem
+} from "../utils";
+import {
+  calcGridItemPosition,
+  calcXY,
+  type PositionParams
+} from "../calculateUtils";
 import type { GridInteractionCommonOptions } from "./gridInteractionTypes";
 import { useGridInteractionMachine } from "./useGridInteractionMachine";
 import type { GridInteractionEffect } from "../interaction-state-machine";
+import {
+  applyExternalDropPreviewResult,
+  blockExternalDropSession,
+  buildDropFitOperationFromSession,
+  commitExternalDropSession,
+  createExternalDropSession,
+  resolveExternalDropCandidate,
+  type ExternalDropPreviewResult,
+  type ExternalDropSession
+} from "./externalDropSession";
 
 type UseGridDropInteractionsOptions = GridInteractionCommonOptions & {
   isFirefox: boolean;
@@ -53,7 +68,7 @@ export function useGridDropInteractions({
 
   const ensureDropInteraction = (itemId: string) => {
     if (!activeDropInteractionId) {
-      const nextInteractionId = nextInteractionRequestId("drop-interaction", itemId);
+      const nextInteractionId = nextInteractionRequestId("drop", itemId);
       const transition = interactionMachine.dispatch({
         type: "ENTER_DROP",
         interactionId: nextInteractionId,
@@ -88,216 +103,261 @@ export function useGridDropInteractions({
     activeDropInteractionId = null;
   };
 
-  const removeDroppingPlaceholder = (reason = "drop-cleanup", preserveLayout = false) => {
-    frameUpdate.cancel();
-    const { droppingItem, cols } = props;
-    const { layout } = state;
-    const newLayout = compact(
-      layout.filter(l => l.i !== droppingItem.i),
-      compactType(props),
-      cols,
-      props.allowOverlap
-    );
+  const setExternalDropSession = (session: ExternalDropSession | null) => {
+    state.externalDropSession = session ? markRaw(session) : null;
+  };
 
-    state.suppressLayoutChange = true;
-    if (!preserveLayout) {
-      state.layout = markRaw(newLayout);
+  const getBaseLayout = (id: string): Layout =>
+    state.layout.filter(item => item.i !== id);
+
+  const ensureSession = (): ExternalDropSession | null => {
+    const droppingId = String(props.droppingItem.i);
+    const interactionId = ensureDropInteraction(droppingId);
+    if (!interactionId) return null;
+
+    const current = state.externalDropSession;
+    if (current && current.id === droppingId && current.status !== "committing") {
+      return current;
     }
-    state.droppingDOMNode = null;
-    state.activeDrag = null;
-    state.droppingPosition = undefined;
+
+    const session = createExternalDropSession({
+      id: droppingId,
+      interactionId,
+      sourceItem: props.droppingItem,
+      baseLayout: getBaseLayout(droppingId),
+      strategy: props.dropStrategy
+    });
+    setExternalDropSession(session);
+    return session;
+  };
+
+  const cleanupExternalDrop = (reason = "drop-cleanup") => {
+    setExternalDropSession(null);
     autoScroll.reset();
     editor.clearGuides();
     resetDropInteraction(reason);
   };
 
-  const onDrop = (e: Event) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const { droppingItem, cols, maxRows, dropStrategy } = props;
-    const { layout } = state;
-    let item = layout.find(l => l.i === droppingItem.i);
-
-    if (!isLegacyLayoutEngine()) {
-      const droppingId = String(droppingItem.i);
-      const dropInteractionId = ensureDropInteraction(droppingId);
-      if (!dropInteractionId) return;
-      const dropTransition = interactionMachine.dispatch({
-        type: "COMMIT_DROP",
-        interactionId: dropInteractionId
-      });
-      const coreDropCommitEffect = hasEffect(dropTransition.effects, "COMMIT_DROP");
-      if (!coreDropCommitEffect) {
-        removeDroppingPlaceholder("drop-commit-rejected");
-        return;
-      }
-      const baseLayout = cloneLayout(layout.filter(l => l.i !== droppingId));
-      const targetItem = item || state.activeDrag || null;
-      const target = targetItem
-        ? { x: targetItem.x, y: targetItem.y }
-        : undefined;
-
-      resetInteractionController(baseLayout);
-      engineBridge.start({
-        id: nextInteractionRequestId("drop-commit-start", droppingId),
-        type: "drop",
-        itemId: droppingId
-      });
-
-      runEngineCommit(
-        coreDropCommitEffect.requestId,
-        {
-          type: "dropFit",
-          item: {
-            i: droppingId,
-            w: droppingItem.w,
-            h: droppingItem.h
-          },
-          strategy: dropStrategy === "auto" ? "auto" : "cursor",
-          target
-        },
-        result => {
-          void (async () => {
-          if (result.status === "stale") return;
-          if (!interactionMachine.isCurrentRequest(coreDropCommitEffect.interactionId, coreDropCommitEffect.requestId)) return;
-          const coreStatus = result.status === "cancelled" ? "error" : result.status;
-          interactionMachine.dispatch({
-            type: "APPLY_RESULT",
-            interactionId: dropInteractionId,
-            requestId: coreDropCommitEffect.requestId,
-            status: coreStatus
-          });
-          const committedItem = result.placeholder || targetItem || undefined;
-          let cleanItem: LayoutItem | undefined;
-          if (committedItem) {
-            cleanItem = { ...committedItem };
-            delete cleanItem.isDraggable;
-            delete cleanItem.isResizable;
-          }
-          const committedLayout = result.status === "changed" || result.status === "fallback"
-            ? result.layout
-            : baseLayout;
-          const commandResult = result.status === "changed" || result.status === "fallback"
-            ? (state.suppressLayoutChange = true, await editor.commitDrop?.({
-              id: droppingId,
-              beforeLayout: baseLayout,
-              afterLayout: committedLayout,
-              item: cleanItem,
-              event: e
-            }))
-            : null;
-          if (
-            commandResult &&
-            commandResult.status !== "changed" &&
-            commandResult.status !== "noop"
-          ) {
-            state.suppressLayoutChange = true;
-            state.layout = markRaw(baseLayout);
-            editor.rollbackInteraction?.(baseLayout, commandResult.status);
-            dragEnterCounter.value = 0;
-            removeDroppingPlaceholder(commandResult.status);
-            return;
-          }
-          dragEnterCounter.value = 0;
-          eventBridge.emitDrop(
-            committedLayout.filter(l => l.i !== droppingId),
-            e,
-            cleanItem
-          );
-          removeDroppingPlaceholder("drop-cleanup", Boolean(commandResult));
-          })();
-        },
-        baseLayout.length >= (getLayoutEngineProp()?.scheduler?.auto?.workerMinItems || 1000)
-      );
-      return;
+  const applyPreviewResult = (
+    session: ExternalDropSession,
+    result: ExternalDropPreviewResult
+  ) => {
+    const nextSession = applyExternalDropPreviewResult(session, result);
+    setExternalDropSession(nextSession);
+    if (nextSession.status === "ready" && nextSession.ghostItem) {
+      editor.updateIntelligence(nextSession.id, nextSession.ghostItem, nextSession.ghostItem);
     }
+  };
 
-    if (!item && dropStrategy === "auto") {
-      const fit = findFirstFit(
-        layout.filter(l => l.i !== droppingItem.i),
-        { w: droppingItem.w, h: droppingItem.h },
+  const buildLegacyLayoutResult = (
+    session: ExternalDropSession,
+    item: LayoutItem
+  ): ExternalDropPreviewResult => {
+    const nextLayout = compact(
+      [...session.baseLayout.map(cloneLayoutItem), cloneLayoutItem(item)],
+      compactType(props),
+      props.cols,
+      props.allowOverlap
+    );
+    const finalItem = getLayoutItem(nextLayout, session.id) || item;
+    return {
+      status: "changed",
+      layout: nextLayout,
+      placeholder: finalItem
+    };
+  };
+
+  const previewLegacyExternalDrop = (session: ExternalDropSession): ExternalDropPreviewResult => {
+    const { cols, maxRows, allowOverlap } = props;
+    const target = session.target || { x: session.resolvedItem.x, y: session.resolvedItem.y };
+    let nextItem: LayoutItem | null = null;
+
+    if (session.strategy === "auto") {
+      const fit = findNearestFit(
+        session.baseLayout,
+        { w: session.resolvedItem.w, h: session.resolvedItem.h },
         cols,
+        target.x,
+        target.y,
         maxRows
       );
       if (fit) {
-        item = {
-          ...droppingItem,
+        const rawItem = {
+          ...session.resolvedItem,
           x: fit.x,
           y: fit.y,
-          static: false,
-        } as LayoutItem;
+          static: false
+        };
+        nextItem = editor.snapCandidate(session.id, rawItem, rawItem, session.baseLayout);
       }
-    }
-
-    let cleanItem: LayoutItem | undefined;
-    if (item) {
-      cleanItem = { ...item };
-      delete cleanItem.isDraggable;
-      delete cleanItem.isResizable;
-      if (dropStrategy === "cursor") {
-        const collisions = getAllCollisions(
-          layout.filter(l => l.i !== droppingItem.i),
-          cleanItem
-        );
+    } else {
+      nextItem = cloneLayoutItem(session.resolvedItem);
+      if (!allowOverlap) {
+        const collisions = getAllCollisions(session.baseLayout, nextItem);
         if (collisions.length > 0) {
-          cleanItem.x = Math.min(...collisions.map(collision => collision.x));
-          cleanItem.y = Math.max(...collisions.map(collision => collision.y + collision.h));
+          nextItem.x = Math.min(...collisions.map(collision => collision.x));
+          nextItem.y = Math.max(...collisions.map(collision => collision.y + collision.h));
         }
       }
     }
 
-    const legacyDropInteractionId = ensureDropInteraction(String(droppingItem.i));
-    if (!legacyDropInteractionId) return;
-    const legacyDropCommit = interactionMachine.dispatch({
-      type: "COMMIT_DROP",
-      interactionId: legacyDropInteractionId
-    });
-    const legacyDropCommitEffect = hasEffect(legacyDropCommit.effects, "COMMIT_DROP");
-    if (legacyDropCommitEffect) {
-      interactionMachine.dispatch({
-        type: "APPLY_RESULT",
-        interactionId: legacyDropInteractionId,
-        requestId: legacyDropCommitEffect.requestId,
-        status: cleanItem ? "changed" : "noop"
-      });
+    if (!nextItem || nextItem.y + nextItem.h > maxRows) {
+      return {
+        status: "blocked",
+        layout: session.baseLayout,
+        blocked: { reason: "maxRows", itemIds: [session.id] },
+        placeholder: nextItem || session.resolvedItem
+      };
     }
 
-    void (async () => {
-      const droppingId = String(droppingItem.i);
-      const baseLayout = cloneLayout(layout.filter(l => l.i !== droppingId));
-      const committedLayout = cleanItem ? [...baseLayout, cleanItem] : baseLayout;
-      const commandResult = cleanItem
-        ? (state.suppressLayoutChange = true, await editor.commitDrop?.({
-          id: droppingId,
-          beforeLayout: baseLayout,
+    return buildLegacyLayoutResult(session, nextItem);
+  };
+
+  const commitLegacyExternalDrop = (session: ExternalDropSession): ExternalDropPreviewResult => {
+    const finalItem = session.ghostItem || session.resolvedItem;
+    return buildLegacyLayoutResult(session, finalItem);
+  };
+
+  const handleCommitResult = async (
+    session: ExternalDropSession,
+    result: ExternalDropPreviewResult,
+    event: Event,
+    interactionId: string,
+    requestId: string
+  ) => {
+    if (result.status === "stale") return;
+    if (!interactionMachine.isCurrentRequest(interactionId, requestId)) return;
+
+    const coreStatus = result.status === "cancelled" ? "error" : result.status;
+    interactionMachine.dispatch({
+      type: "APPLY_RESULT",
+      interactionId,
+      requestId,
+      status: coreStatus
+    });
+
+    if (result.status === "blocked" || result.status === "cancelled" || result.status === "error") {
+      const blocked = blockExternalDropSession(session, result.drop?.reason || result.blocked?.reason || "commit-rejected", {
+        geometry: result.placeholder || session.ghostItem || session.resolvedItem,
+        message: result.error?.message,
+        itemIds: result.blocked?.itemIds
+      });
+      setExternalDropSession(blocked);
+      cleanupExternalDrop(blocked.blocked?.reason || "drop-commit-rejected");
+      return;
+    }
+
+    const { committedLayout, committedItem, eventLayout } = commitExternalDropSession(session, result);
+    const commandResult = committedItem
+      ? (state.suppressLayoutChange = true, await editor.commitDrop?.({
+          id: session.id,
+          beforeLayout: session.baseLayout,
           afterLayout: committedLayout,
-          item: cleanItem,
-          event: e
+          item: committedItem,
+          event
         }))
-        : null;
-      if (
-        commandResult &&
-        commandResult.status !== "changed" &&
-        commandResult.status !== "noop"
-      ) {
-        state.suppressLayoutChange = true;
-        state.layout = markRaw(baseLayout);
-        editor.rollbackInteraction?.(baseLayout, commandResult.status);
-        dragEnterCounter.value = 0;
-        removeDroppingPlaceholder(commandResult.status);
-        return;
-      }
+      : null;
+
+    if (
+      commandResult &&
+      commandResult.status !== "changed" &&
+      commandResult.status !== "noop"
+    ) {
+      state.suppressLayoutChange = true;
+      state.layout = markRaw(session.baseLayout);
+      editor.rollbackInteraction?.(session.baseLayout, commandResult.status);
       dragEnterCounter.value = 0;
-      eventBridge.emitDrop(baseLayout, e, cleanItem);
-      removeDroppingPlaceholder("drop-cleanup", Boolean(commandResult));
-    })();
+      cleanupExternalDrop(commandResult.status);
+      return;
+    }
+
+    dragEnterCounter.value = 0;
+    eventBridge.emitDrop(eventLayout, event, committedItem);
+    cleanupExternalDrop("drop-cleanup");
+  };
+
+  const onDrop = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const session = state.externalDropSession;
+    const hasVisibleCommitTarget = Boolean(
+      session &&
+      !session.blocked &&
+      (
+        session.status === "ready" ||
+        (session.status === "previewing" && session.ghostItem)
+      )
+    );
+    if (!session || !hasVisibleCommitTarget) {
+      dragEnterCounter.value = 0;
+      cleanupExternalDrop(session?.blocked?.reason || "drop-commit-rejected");
+      return;
+    }
+
+    const dropInteractionId = ensureDropInteraction(session.id);
+    if (!dropInteractionId) {
+      cleanupExternalDrop("drop-commit-rejected");
+      return;
+    }
+
+    const dropTransition = interactionMachine.dispatch({
+      type: "COMMIT_DROP",
+      interactionId: dropInteractionId
+    });
+    const dropCommitEffect = hasEffect(dropTransition.effects, "COMMIT_DROP");
+    if (!dropCommitEffect) {
+      cleanupExternalDrop("drop-commit-rejected");
+      return;
+    }
+
+    const committingSession: ExternalDropSession = {
+      ...session,
+      status: "committing",
+      requestId: dropCommitEffect.requestId
+    };
+    const commitOperation = buildDropFitOperationFromSession(committingSession, "commit");
+    setExternalDropSession(committingSession);
+
+    if (isLegacyLayoutEngine()) {
+      void handleCommitResult(
+        committingSession,
+        commitLegacyExternalDrop(committingSession),
+        e,
+        dropCommitEffect.interactionId,
+        dropCommitEffect.requestId
+      );
+      return;
+    }
+
+    resetInteractionController(committingSession.baseLayout);
+    engineBridge.start({
+      id: nextInteractionRequestId("drop-commit", committingSession.id),
+      type: "drop",
+      itemId: committingSession.id
+    });
+
+    runEngineCommit(
+      dropCommitEffect.requestId,
+      commitOperation,
+      result => {
+        void handleCommitResult(
+          committingSession,
+          result,
+          e,
+          dropCommitEffect.interactionId,
+          dropCommitEffect.requestId
+        );
+      },
+      committingSession.baseLayout.length >= (getLayoutEngineProp()?.scheduler?.auto?.workerMinItems || 1000)
+    );
   };
 
   const onDragEnter = (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (dragEnterCounter.value === 0) {
-      ensureDropInteraction(String(props.droppingItem.i));
+      ensureSession();
     }
     dragEnterCounter.value++;
   };
@@ -308,14 +368,7 @@ export function useGridDropInteractions({
     dragEnterCounter.value = Math.max(0, dragEnterCounter.value - 1);
 
     if (dragEnterCounter.value === 0) {
-      if (activeDropInteractionId) {
-        interactionMachine.dispatch({
-          type: "LEAVE_DROP",
-          interactionId: activeDropInteractionId,
-          reason: "drag-leave"
-        });
-      }
-      removeDroppingPlaceholder("drag-leave");
+      cleanupExternalDrop("drag-leave");
     }
   };
 
@@ -327,325 +380,118 @@ export function useGridDropInteractions({
       return false;
     }
 
-    const { droppingItem, margin, cols, rowHeight, maxRows, width, containerPadding, transformScale, dropStrategy } = props;
+    const session = ensureSession();
+    if (!session) return false;
+
     const onDragOverResult = eventBridge.callDropDragOver(e);
     if (onDragOverResult === false) {
-      if (activeDropInteractionId) {
-        interactionMachine.dispatch({
-          type: "REJECT_DROP",
-          interactionId: activeDropInteractionId,
-          reason: "drop-drag-over-rejected"
-        });
-      }
-      if (state.droppingDOMNode) {
-        removeDroppingPlaceholder("drop-drag-over-rejected");
-      } else {
-        resetDropInteraction("drop-drag-over-rejected");
-      }
+      cleanupExternalDrop("drop-drag-over-rejected");
       return false;
     }
-    const finalDroppingItem = { ...droppingItem, ...(onDragOverResult || {}) };
-    const { layout } = state;
 
-    if (dropStrategy === "auto") {
-      const gridRect = e.currentTarget instanceof Element ? e.currentTarget.getBoundingClientRect() : { left: 0, top: 0 };
-      const layerX = (e.clientX - gridRect.left) / transformScale;
-      const layerY = (e.clientY - gridRect.top) / transformScale;
-
-      const positionParams: PositionParams = {
-        cols,
-        margin,
-        maxRows,
-        rowHeight,
-        containerWidth: width || 0,
-        containerPadding: containerPadding || margin
-      };
-      const cursorGridPos = calcXY(positionParams, layerY, layerX, finalDroppingItem.w, finalDroppingItem.h);
-
-      const baseLayout = cloneLayout(layout.filter(l => l.i !== finalDroppingItem.i));
-      if (!isLegacyLayoutEngine()) {
-        const droppingId = String(finalDroppingItem.i);
-        const dropCandidate = {
-          ...finalDroppingItem,
-          i: droppingId,
-          x: cursorGridPos.x,
-          y: cursorGridPos.y,
-          static: false
-        } as LayoutItem;
-        const snappedDrop = editor.snapCandidate(
-          droppingId,
-          dropCandidate,
-          dropCandidate,
-          baseLayout
-        );
-        const previewEffect = shouldPreviewDrop(
-          droppingId,
-          { x: snappedDrop.x, y: snappedDrop.y },
-          { w: finalDroppingItem.w, h: finalDroppingItem.h },
-          "auto"
-        );
-        if (!previewEffect) return;
-        resetInteractionController(baseLayout);
-        engineBridge.start({
-          id: activeDropInteractionId || previewEffect.interactionId,
-          type: "drop",
-          itemId: droppingId
-        });
-        runEnginePreview(
-          previewEffect.requestId,
-          {
-            type: "dropFit",
-            item: {
-              i: droppingId,
-              w: finalDroppingItem.w,
-              h: finalDroppingItem.h
-            },
-            strategy: "cursor",
-            target: { x: snappedDrop.x, y: snappedDrop.y }
-          },
-          result => {
-            if (result.status === "stale") return;
-            if (!interactionMachine.isCurrentPreviewRequest(previewEffect.interactionId, previewEffect.requestId)) return;
-            if (!result.drop?.position) {
-              if (state.droppingDOMNode) {
-                removeDroppingPlaceholder();
-              }
-              return;
-            }
-            if (!state.droppingDOMNode) {
-              state.droppingDOMNode = markRaw(h("div", { key: finalDroppingItem.i }));
-            }
-            state.droppingPosition = undefined;
-            state.suppressLayoutChange = true;
-            state.layout = markRaw(result.layout);
-            state.activeDrag = result.placeholder ? markRaw(result.placeholder) : null;
-            if (result.placeholder) {
-              editor.updateIntelligence(String(finalDroppingItem.i), result.placeholder, result.placeholder);
-            }
-          },
-          baseLayout.length >= (getLayoutEngineProp()?.scheduler?.auto?.workerMinItems || 1000)
-        );
-        return;
-      }
-
-      const fit = findNearestFit(baseLayout, { w: finalDroppingItem.w, h: finalDroppingItem.h }, cols, cursorGridPos.x, cursorGridPos.y, maxRows);
-      if (!fit) {
-        if (state.droppingDOMNode) {
-          removeDroppingPlaceholder();
-        }
-        return;
-      }
-
-      if (!state.droppingDOMNode) {
-        state.droppingDOMNode = markRaw(h("div", { key: finalDroppingItem.i }));
-      }
-
-      state.droppingPosition = undefined;
-      const droppingItemId = String(finalDroppingItem.i);
-      const previewEffect = shouldPreviewDrop(
-        droppingItemId,
-        { x: fit.x, y: fit.y },
-        { w: finalDroppingItem.w, h: finalDroppingItem.h },
-        "auto"
-      );
-      if (!previewEffect) return;
-      const existingDroppingItem = getLayoutItem(layout, droppingItemId);
-
-      if (!existingDroppingItem) {
-        const rawDroppingItem = {
-          ...finalDroppingItem,
-          x: fit.x,
-          y: fit.y,
-          static: false,
-          isDraggable: false,
-          isResizable: false,
-          i: droppingItemId
-        } as LayoutItem;
-        const nextDroppingItem = editor.snapCandidate(
-          droppingItemId,
-          rawDroppingItem,
-          rawDroppingItem,
-          baseLayout
-        );
-        state.suppressLayoutChange = true;
-        state.layout = markRaw([
-          ...baseLayout,
-          nextDroppingItem
-        ]);
-        state.activeDrag = markRaw({ ...nextDroppingItem, placeholder: true });
-        editor.updateIntelligence(droppingItemId, nextDroppingItem, nextDroppingItem);
-        return;
-      }
-
-      const snappedExisting = editor.snapCandidate(
-        droppingItemId,
-        existingDroppingItem,
-        {
-          ...existingDroppingItem,
-          ...finalDroppingItem,
-          x: fit.x,
-          y: fit.y,
-          static: false,
-          isDraggable: false,
-          isResizable: false
-        } as LayoutItem,
-        baseLayout
-      );
-      const [nextLayout] = withLayoutItem(layout, droppingItemId, current => ({
-        ...current,
-        ...finalDroppingItem,
-        x: snappedExisting.x,
-        y: snappedExisting.y,
-        static: false,
-        isDraggable: false,
-        isResizable: false
-      }));
-      state.suppressLayoutChange = true;
-      state.layout = markRaw(nextLayout);
-      state.activeDrag = markRaw({ ...snappedExisting, placeholder: true });
-      editor.updateIntelligence(droppingItemId, existingDroppingItem, {
-        ...existingDroppingItem,
-        ...finalDroppingItem,
-        x: snappedExisting.x,
-        y: snappedExisting.y
-      } as LayoutItem);
-      return;
-    }
-
-    const gridRect = e.currentTarget instanceof Element ? e.currentTarget.getBoundingClientRect() : { left: 0, top: 0 };
+    const {
+      margin,
+      cols,
+      rowHeight,
+      maxRows,
+      width,
+      containerPadding,
+      transformScale,
+      dropStrategy
+    } = props;
+    const gridRect = e.currentTarget instanceof Element
+      ? e.currentTarget.getBoundingClientRect()
+      : { left: 0, top: 0 };
     const layerX = (e.clientX - gridRect.left) / transformScale;
     const layerY = (e.clientY - gridRect.top) / transformScale;
-    const cursorDroppingItem = finalDroppingItem;
+    const overrideW = typeof onDragOverResult?.w === "number"
+      ? onDragOverResult.w
+      : props.droppingItem.w;
+    const overrideH = typeof onDragOverResult?.h === "number"
+      ? onDragOverResult.h
+      : props.droppingItem.h;
     const positionParams: PositionParams = {
       cols,
       margin,
       maxRows,
       rowHeight,
       containerWidth: width || 0,
-      containerPadding: containerPadding || margin
+      containerPadding: containerPadding || margin,
+      renderPrecision: props.renderPrecision || undefined
     };
-    const calculatedPosition = calcXY(positionParams, layerY, layerX, cursorDroppingItem.w, cursorDroppingItem.h);
-    const droppingItemId = String(cursorDroppingItem.i);
-    const baseLayout = cloneLayout(layout.filter(l => l.i !== droppingItemId));
-    const rawDroppingItem = {
-      ...cursorDroppingItem,
-      i: droppingItemId,
-      x: calculatedPosition.x,
-      y: calculatedPosition.y,
-      static: false,
-      isDraggable: false,
-      isResizable: false
+    const droppingSize = calcGridItemPosition(positionParams, 0, 0, overrideW, overrideH);
+    const cursorGridPos = calcXY(
+      positionParams,
+      layerY - droppingSize.height / 2,
+      layerX - droppingSize.width / 2,
+      overrideW,
+      overrideH
+    );
+    const baseLayout = getBaseLayout(session.id);
+    const rawCandidate = {
+      ...session.resolvedItem,
+      ...props.droppingItem,
+      i: session.id,
+      w: overrideW,
+      h: overrideH,
+      x: cursorGridPos.x,
+      y: cursorGridPos.y,
+      static: false
     } as LayoutItem;
-    const snappedDrop = editor.snapCandidate(
-      droppingItemId,
-      rawDroppingItem,
-      rawDroppingItem,
-      baseLayout
-    );
+    const snappedTarget = editor.snapCandidate(session.id, rawCandidate, rawCandidate, baseLayout);
+    const resolvedSession = resolveExternalDropCandidate(session, {
+      overrides: onDragOverResult || null,
+      target: { x: snappedTarget.x, y: snappedTarget.y },
+      strategy: dropStrategy,
+      baseLayout,
+      snapCandidate: () => snappedTarget
+    });
+
     const previewEffect = shouldPreviewDrop(
-      droppingItemId,
-      { x: snappedDrop.x, y: snappedDrop.y },
-      { w: cursorDroppingItem.w, h: cursorDroppingItem.h },
-      "cursor"
+      resolvedSession.id,
+      { x: resolvedSession.resolvedItem.x, y: resolvedSession.resolvedItem.y },
+      { w: resolvedSession.resolvedItem.w, h: resolvedSession.resolvedItem.h },
+      dropStrategy
     );
-    if (!previewEffect) return;
-
-    if (!isLegacyLayoutEngine()) {
-      resetInteractionController(baseLayout);
-      engineBridge.start({
-        id: activeDropInteractionId || previewEffect.interactionId,
-        type: "drop",
-        itemId: droppingItemId
-      });
-      runEnginePreview(
-        previewEffect.requestId,
-        {
-          type: "dropFit",
-          item: {
-            i: droppingItemId,
-            w: cursorDroppingItem.w,
-            h: cursorDroppingItem.h
-          },
-          strategy: "cursor",
-          target: { x: snappedDrop.x, y: snappedDrop.y }
-        },
-        result => {
-          if (result.status === "stale") return;
-          if (!interactionMachine.isCurrentPreviewRequest(previewEffect.interactionId, previewEffect.requestId)) return;
-          if (!result.drop?.position) {
-            if (state.droppingDOMNode) {
-              removeDroppingPlaceholder();
-            }
-            return;
-          }
-          if (!state.droppingDOMNode) {
-            state.droppingDOMNode = markRaw(h("div", { key: droppingItemId }));
-          }
-          state.droppingPosition = undefined;
-          state.suppressLayoutChange = true;
-          state.layout = markRaw(result.layout);
-          state.activeDrag = result.placeholder ? markRaw(result.placeholder) : null;
-          if (result.placeholder) {
-            editor.updateIntelligence(droppingItemId, result.placeholder, result.placeholder);
-          }
-        },
-        baseLayout.length >= (getLayoutEngineProp()?.scheduler?.auto?.workerMinItems || 1000)
-      );
+    if (!previewEffect) {
+      setExternalDropSession(resolvedSession);
       return;
     }
 
-    if (!state.droppingDOMNode) {
-      state.droppingDOMNode = markRaw(h("div", { key: droppingItemId }));
-    }
-    state.droppingPosition = undefined;
-    const existingDroppingItem = getLayoutItem(layout, droppingItemId);
-    if (!existingDroppingItem) {
-      const nextDroppingItem = {
-        ...snappedDrop,
-        i: droppingItemId,
-        static: false,
-        isDraggable: false,
-        isResizable: false
-      } as LayoutItem;
-      state.suppressLayoutChange = true;
-      state.layout = markRaw([
-        ...baseLayout,
-        nextDroppingItem
-      ]);
-      state.activeDrag = markRaw({ ...nextDroppingItem, placeholder: true });
-      editor.updateIntelligence(droppingItemId, nextDroppingItem, nextDroppingItem);
+    const previewSession: ExternalDropSession = {
+      ...resolvedSession,
+      requestId: previewEffect.requestId,
+      status: "previewing"
+    };
+    const previewOperation = buildDropFitOperationFromSession(previewSession, "preview");
+    setExternalDropSession(previewSession);
+
+    if (isLegacyLayoutEngine()) {
+      applyPreviewResult(previewSession, previewLegacyExternalDrop(previewSession));
       return;
     }
 
-    const [nextLayout] = withLayoutItem(layout, droppingItemId, current => ({
-      ...current,
-      ...cursorDroppingItem,
-      x: snappedDrop.x,
-      y: snappedDrop.y,
-      static: false,
-      isDraggable: false,
-      isResizable: false
-    }));
-    state.suppressLayoutChange = true;
-    state.layout = markRaw(nextLayout);
-    state.activeDrag = markRaw({
-      ...existingDroppingItem,
-      ...cursorDroppingItem,
-      x: snappedDrop.x,
-      y: snappedDrop.y,
-      placeholder: true
-    } as LayoutItem);
-    editor.updateIntelligence(droppingItemId, existingDroppingItem, {
-      ...existingDroppingItem,
-      ...cursorDroppingItem,
-      x: snappedDrop.x,
-      y: snappedDrop.y
-    } as LayoutItem);
+    resetInteractionController(previewSession.baseLayout);
+    engineBridge.start({
+      id: activeDropInteractionId || previewEffect.interactionId,
+      type: "drop",
+      itemId: previewSession.id
+    });
+    runEnginePreview(
+      previewEffect.requestId,
+      previewOperation,
+      result => {
+        if (result.status === "stale") return;
+        if (!interactionMachine.isCurrentPreviewRequest(previewEffect.interactionId, previewEffect.requestId)) return;
+        applyPreviewResult(previewSession, result);
+      },
+      previewSession.baseLayout.length >= (getLayoutEngineProp()?.scheduler?.auto?.workerMinItems || 1000)
+    );
   };
 
   return {
-    clearDropInteraction: () => resetDropInteraction("clear-active-interaction"),
-    removeDroppingPlaceholder,
+    clearDropInteraction: () => cleanupExternalDrop("clear-active-interaction"),
+    removeDroppingPlaceholder: cleanupExternalDrop,
     onDrop,
     onDragEnter,
     onDragLeave,

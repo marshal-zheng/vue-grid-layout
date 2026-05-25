@@ -430,6 +430,24 @@ function testResizeDropResponsive() {
   assert.equal(resizedItem?.x, 1)
   assert.equal(resizedItem?.y, 0)
 
+  const noCompactResize = executeLayoutOperation({
+    id: 'resize-null-compact-collision-repair',
+    phase: 'preview',
+    layout: [
+      { i: 'revenue', x: 0, y: 0, w: 4, h: 3 },
+      { i: 'pipeline', x: 4, y: 0, w: 4, h: 3 },
+      { i: 'health', x: 8, y: 0, w: 4, h: 3, static: true }
+    ],
+    operation: { type: 'resize', id: 'revenue', x: 0, y: 0, w: 7, h: 3, handle: 'e' },
+    options: { ...options, compactType: null, preventCollision: false }
+  })
+  assert.equal(noCompactResize.status, 'changed')
+  assert.equal(getLayoutItem(noCompactResize.layout, 'revenue')?.w, 7)
+  assert.equal(getLayoutItem(noCompactResize.layout, 'pipeline')?.y, 3)
+  for (const item of noCompactResize.layout) {
+    assert.equal(getAllCollisions(noCompactResize.layout, item).length, 0, `${item.i} should not collide after resize`)
+  }
+
   const drop = executeLayoutOperation({
     id: 'drop',
     phase: 'preview',
@@ -440,6 +458,23 @@ function testResizeDropResponsive() {
   assert.equal(drop.status, 'changed')
   assert.ok(drop.drop?.position)
   assert.ok(getLayoutItem(drop.layout, 'drop'))
+
+  const compactedDrop = executeLayoutOperation({
+    id: 'drop-compacted-placeholder',
+    phase: 'preview',
+    layout: [{ i: 'a', x: 0, y: 0, w: 2, h: 2 }],
+    operation: {
+      type: 'dropFit',
+      item: { i: 'drop', w: 2, h: 2 },
+      strategy: 'cursor',
+      target: { x: 4, y: 4 }
+    },
+    options
+  })
+  const compactedDropItem = getLayoutItem(compactedDrop.layout, 'drop')
+  assert.ok(compactedDropItem)
+  assert.equal(compactedDrop.placeholder?.x, compactedDropItem?.x)
+  assert.equal(compactedDrop.placeholder?.y, compactedDropItem?.y)
 
   const responsive = executeLayoutOperation({
     id: 'responsive',

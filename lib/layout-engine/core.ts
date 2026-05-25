@@ -386,7 +386,7 @@ const applyFinalCompaction = (
   layout: Layout,
   options: GridLayoutEngineOptions
 ): Layout => {
-  if (options.allowOverlap || options.compactType == null) return layout;
+  if (options.allowOverlap) return layout;
   return compact(layout, options.compactType, options.cols, options.allowOverlap);
 };
 
@@ -995,12 +995,13 @@ const executeDropFit = (
   };
   const nextLayout = [...baseLayout.map(cloneLayoutItem), nextItem];
   const finalLayout = applyFinalCompaction(nextLayout, request.options);
+  const finalItem = getLayoutItem(finalLayout, id) || nextItem;
   const patches = collectPatches(request.layout, finalLayout, request.options.compactType);
 
   return makeResult(request, "changed", finalLayout, patches, [], start, true, {
-    placeholder: cloneLayoutItem(nextItem),
+    placeholder: cloneLayoutItem(finalItem),
     drop: {
-      position,
+      position: { x: finalItem.x, y: finalItem.y },
       strategy: operation.strategy,
       fallback
     }

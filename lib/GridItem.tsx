@@ -87,6 +87,7 @@ const GridItem = defineComponent({
     class: { type: String, default: '' },
     handle: { type: String, default: '' },
     cancel: { type: String, default: '' },
+    cancelInteractiveElements: { type: Boolean, default: true },
     droppingPosition: { type: Object as PropType<DroppingPosition | null>, default: null },
     usePercentages: { type: Boolean },
     style: { type: Object as PropType<CSSProperties>, default: () => ({}) },
@@ -138,6 +139,7 @@ const GridItem = defineComponent({
           stopFn={drag.onDragStop}
           handle={props.handle}
           cancel={`.vue-resizable-handle${props.cancel ? `,${props.cancel}` : ''}`}
+          cancelInteractiveElements={props.cancelInteractiveElements}
           scale={props.transformScale}
           nodeRef={elementRef}
           enableClickSuppression={true}

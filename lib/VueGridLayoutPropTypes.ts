@@ -56,6 +56,7 @@ export type Props = {
   dragActivationDistance?: GridDragActivationDistance
   cols: number
   draggableCancel: string
+  draggableCancelInteractiveElements: boolean
   draggableHandle: string
   verticalCompact: boolean
   compactType: CompactType
@@ -138,6 +139,11 @@ export const basicProps = {
   draggableCancel: {
     type: String as PropType<string>,
     default: ''
+  },
+  /** Prevent native interactive descendants from starting a drag. */
+  draggableCancelInteractiveElements: {
+    type: Boolean as PropType<boolean>,
+    default: true
   },
   /** CSS selector for drag handle elements (requires . prefix) */
   draggableHandle: {

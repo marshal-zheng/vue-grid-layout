@@ -1057,6 +1057,10 @@ cols?: number = 12,
 // .vue-resizable-handle" is always prepended to this value.
 draggableCancel?: string = '',
 
+// If true, native interactive descendants such as button, input, select,
+// textarea, link, and contenteditable elements will not start a drag.
+draggableCancelInteractiveElements?: boolean = true,
+
 // A CSS selector for tags that will act as the draggable handle.
 // For example: draggableHandle:'.MyDragHandleClassName'
 // If you forget the leading . it will not work.

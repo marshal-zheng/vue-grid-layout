@@ -13,6 +13,19 @@ import { useGridAutoScroll } from '../lib/grid-layout/useGridAutoScroll'
 import { useGridDragResizeInteractions } from '../lib/grid-layout/useGridDragResizeInteractions'
 import { useGridDropInteractions } from '../lib/grid-layout/useGridDropInteractions'
 import { useGridEditorRuntime } from '../lib/grid-layout/useGridEditorRuntime'
+import {
+  applyExternalDropPreviewResult,
+  blockExternalDropSession,
+  buildDropFitOperationFromSession,
+  clearExternalDropSession,
+  commitExternalDropSession,
+  createExternalDropSession,
+  getExternalDropGhost,
+  getExternalDropRenderLayout,
+  isExternalDropBlocked,
+  isExternalDropping,
+  resolveExternalDropCandidate
+} from '../lib/grid-layout/externalDropSession'
 import { useGridItemDrag } from '../lib/grid-item/useGridItemDrag'
 import { createGridEditorOverlayGeometry } from '../lib/grid-layout/GridEditorOverlay'
 import { calcGridItemPosition } from '../lib/calculateUtils'
@@ -65,6 +78,99 @@ function testEventBridge() {
   bridge.emitDrag(layout, oldItem, item, undefined, event, node)
   assert.deepEqual(emitted[0], ['drag', layout, oldItem, item, undefined, event, node])
   assert.equal(bridge.callDropDragOver({ type: 'dragover' } as DragEvent), false)
+}
+
+function testExternalDropSessionHelpers() {
+  const baseLayout: Layout = [{ i: 'a', x: 0, y: 0, w: 2, h: 2 }]
+  const session = createExternalDropSession({
+    interactionId: 'drop-interaction:drop',
+    sourceItem: { i: 'drop', w: 1, h: 1 },
+    baseLayout: [...baseLayout, { i: 'drop', x: 9, y: 9, w: 1, h: 1 }],
+    strategy: 'auto'
+  })
+
+  assert.equal(session.id, 'drop')
+  assert.deepEqual(
+    session.baseLayout.map(item => ({ i: item.i, x: item.x, y: item.y, w: item.w, h: item.h })),
+    baseLayout
+  )
+  assert.equal(session.ghostItem, null)
+
+  const resolved = resolveExternalDropCandidate(session, {
+    overrides: { w: 3, h: 2 },
+    target: { x: 4, y: 1 },
+    snapCandidate: (_activeId, _activeItem, candidate) => ({ ...candidate, x: candidate.x + 1 })
+  })
+  assert.deepEqual(
+    { x: resolved.resolvedItem.x, y: resolved.resolvedItem.y, w: resolved.resolvedItem.w, h: resolved.resolvedItem.h },
+    { x: 5, y: 1, w: 3, h: 2 }
+  )
+
+  const previewOperation = buildDropFitOperationFromSession(resolved, 'preview')
+  assert.deepEqual(previewOperation, {
+    type: 'dropFit',
+    item: { i: 'drop', w: 3, h: 2 },
+    strategy: 'cursor',
+    target: { x: 4, y: 1 }
+  })
+
+  const previewed = applyExternalDropPreviewResult(resolved, {
+    id: 'preview',
+    status: 'changed',
+    layout: [...baseLayout, { i: 'drop', x: 2, y: 3, w: 3, h: 2 }],
+    placeholder: { i: 'drop', x: 2, y: 3, w: 3, h: 2 },
+    drop: { position: { x: 2, y: 3 }, strategy: 'cursor' }
+  })
+  assert.equal(previewed.status, 'ready')
+  const previewGhost = getExternalDropGhost({ externalDropSession: previewed })
+  assert.deepEqual(
+    previewGhost && { i: previewGhost.i, x: previewGhost.x, y: previewGhost.y, w: previewGhost.w, h: previewGhost.h },
+    { i: 'drop', x: 2, y: 3, w: 3, h: 2 }
+  )
+  assert.deepEqual(
+    getExternalDropRenderLayout({ externalDropSession: previewed }, baseLayout)
+      .map(item => ({ i: item.i, x: item.x, y: item.y, w: item.w, h: item.h })),
+    baseLayout
+  )
+
+  const commitOperation = buildDropFitOperationFromSession(previewed, 'commit')
+  assert.deepEqual(commitOperation, {
+    type: 'dropFit',
+    item: { i: 'drop', w: 3, h: 2 },
+    strategy: 'cursor',
+    target: { x: 2, y: 3 }
+  })
+
+  const committed = commitExternalDropSession(previewed, {
+    id: 'commit',
+    status: 'changed',
+    layout: [...baseLayout, { i: 'drop', x: 2, y: 3, w: 3, h: 2, isDraggable: false }],
+    placeholder: { i: 'drop', x: 2, y: 3, w: 3, h: 2, isDraggable: false },
+    drop: { position: { x: 2, y: 3 }, strategy: 'cursor' }
+  })
+  assert.deepEqual(
+    committed.eventLayout.map(item => ({ i: item.i, x: item.x, y: item.y, w: item.w, h: item.h })),
+    baseLayout
+  )
+  assert.deepEqual(
+    committed.committedItem && {
+      i: committed.committedItem.i,
+      x: committed.committedItem.x,
+      y: committed.committedItem.y,
+      w: committed.committedItem.w,
+      h: committed.committedItem.h,
+      isDraggable: committed.committedItem.isDraggable
+    },
+    { i: 'drop', x: 2, y: 3, w: 3, h: 2, isDraggable: undefined }
+  )
+
+  const blocked = blockExternalDropSession(previewed, 'no-fit', {
+    geometry: { i: 'drop', x: 8, y: 8, w: 3, h: 2 }
+  })
+  assert.equal(isExternalDropping({ externalDropSession: blocked }), true)
+  assert.equal(isExternalDropBlocked({ externalDropSession: blocked }), true)
+  assert.deepEqual(blocked.ghostItem && { x: blocked.ghostItem.x, y: blocked.ghostItem.y }, { x: 8, y: 8 })
+  assert.equal(clearExternalDropSession(), null)
 }
 
 function testFrameUpdate() {
@@ -1071,6 +1177,7 @@ function testDropNoopDoesNotRepeatPreview() {
       oldResizeItem: null,
       droppingDOMNode: null,
       droppingPosition: undefined,
+      externalDropSession: null as any,
       suppressLayoutChange: false,
       resizing: false
     }
@@ -1166,7 +1273,667 @@ function testDropNoopDoesNotRepeatPreview() {
 
     assert.equal(previews, 1)
     assert.equal(guideUpdates, 1)
-    assert.equal(state.suppressLayoutChange, true)
+    assert.equal(state.activeDrag, null)
+    assert.deepEqual(
+      state.externalDropSession?.ghostItem && {
+        i: state.externalDropSession.ghostItem.i,
+        x: state.externalDropSession.ghostItem.x,
+        y: state.externalDropSession.ghostItem.y
+      },
+      { i: 'drop', x: 1, y: 1 }
+    )
+    assert.equal(state.layout.length, 0)
+  } finally {
+    ;(globalThis as { Element?: unknown }).Element = previousElement
+  }
+}
+
+function testExternalDropCursorTargetCentersGhostUnderPointer() {
+  const previousElement = (globalThis as { Element?: unknown }).Element
+  class FakeElement {
+    classList = { contains: () => true }
+    getBoundingClientRect() {
+      return { left: 0, top: 0 }
+    }
+  }
+  ;(globalThis as { Element?: unknown }).Element = FakeElement
+  try {
+    const state = {
+      layout: [] as Layout,
+      oldLayout: null,
+      activeDrag: null,
+      oldDragItem: null,
+      oldResizeItem: null,
+      droppingDOMNode: null,
+      droppingPosition: undefined,
+      externalDropSession: null as any,
+      suppressLayoutChange: false,
+      resizing: false
+    }
+    let previewOperation: Extract<LayoutOperation, { type: 'dropFit' }> | null = null
+    const interactions = useGridDropInteractions({
+      props: {
+        autoScroll: false,
+        allowOverlap: false,
+        cols: 12,
+        compactType: 'vertical',
+        containerPadding: [0, 0],
+        dropStrategy: 'cursor',
+        droppingItem: { i: 'drop', w: 2, h: 2 },
+        margin: [0, 0],
+        maxRows: Infinity,
+        preventCollision: false,
+        rowHeight: 10,
+        transformScale: 1,
+        verticalCompact: true,
+        width: 120
+      },
+      state,
+      eventBridge: {
+        emitDragStart: () => undefined,
+        emitDrag: () => undefined,
+        emitDragStop: () => undefined,
+        emitResizeStart: () => undefined,
+        emitResize: () => undefined,
+        emitResizeStop: () => undefined,
+        emitDrop: () => undefined,
+        callDropDragOver: () => undefined
+      },
+      engineBridge: {
+        getLayoutEngineProp: () => ({}),
+        isLegacyLayoutEngine: () => false,
+        reset: () => undefined,
+        start: () => undefined,
+        getCommitted: () => [],
+        preview: (_id, operation, apply) => {
+          previewOperation = operation as Extract<LayoutOperation, { type: 'dropFit' }>
+          const target = previewOperation.target || { x: 0, y: 0 }
+          const item = {
+            i: 'drop',
+            x: target.x,
+            y: target.y,
+            w: previewOperation.item.w,
+            h: previewOperation.item.h
+          }
+          apply({
+            id: 'drop-preview',
+            status: 'changed',
+            layout: [item],
+            patches: [],
+            affectedIds: ['drop'],
+            collisions: [],
+            placeholder: item,
+            drop: { position: target, strategy: previewOperation.strategy }
+          })
+          return null
+        },
+        commit: () => null
+      } as never,
+      frameUpdate: {
+        cancel: () => undefined,
+        schedule: () => undefined,
+        resetMovedFlags: () => undefined
+      } as never,
+      autoScroll: {
+        init: () => undefined,
+        maybeScroll: () => undefined,
+        reset: () => undefined
+      } as never,
+      editor: {
+        clearGuides: () => undefined,
+        resetSnap: () => undefined,
+        snapCandidate: (_activeId, _activeItem, candidate) => candidate,
+        updateIntelligence: () => undefined,
+        resolveMoveDrag: input => ({ kind: 'single', id: input.id }),
+        notifyMoveBlocked: () => undefined
+      },
+      nextInteractionRequestId: (kind, id) => `${kind}:${id}`,
+      isFirefox: false,
+      layoutClassName: 'vue-grid-layout'
+    } as never)
+
+    const event = {
+      preventDefault: () => undefined,
+      stopPropagation: () => undefined,
+      currentTarget: new FakeElement(),
+      clientX: 30,
+      clientY: 30
+    } as never
+
+    interactions.onDragEnter(event)
+    interactions.onDragOver(event)
+
+    assert.deepEqual(
+      (previewOperation as { target?: { x: number; y: number } } | null)?.target,
+      { x: 2, y: 2 }
+    )
+    assert.deepEqual(
+      state.externalDropSession?.ghostItem && {
+        x: state.externalDropSession.ghostItem.x,
+        y: state.externalDropSession.ghostItem.y
+      },
+      { x: 2, y: 2 }
+    )
+  } finally {
+    ;(globalThis as { Element?: unknown }).Element = previousElement
+  }
+}
+
+async function testAutoDropCommitUsesSessionPreviewTarget() {
+  const previousElement = (globalThis as { Element?: unknown }).Element
+  class FakeElement {
+    classList = { contains: () => true }
+    getBoundingClientRect() {
+      return { left: 0, top: 0 }
+    }
+  }
+  ;(globalThis as { Element?: unknown }).Element = FakeElement
+  try {
+    const baseLayout: Layout = [
+      { i: 'a', x: 0, y: 0, w: 2, h: 2 },
+      { i: 'b', x: 6, y: 0, w: 2, h: 2 }
+    ]
+    const state = {
+      layout: baseLayout,
+      oldLayout: null,
+      activeDrag: null as LayoutItem | null,
+      oldDragItem: null,
+      oldResizeItem: null,
+      droppingDOMNode: null,
+      droppingPosition: undefined,
+      externalDropSession: null as any,
+      suppressLayoutChange: false,
+      resizing: false
+    }
+    let commitOperation: LayoutOperation | null = null
+    let emittedItem: LayoutItem | undefined
+    const interactions = useGridDropInteractions({
+      props: {
+        autoScroll: false,
+        allowOverlap: false,
+        cols: 12,
+        compactType: 'vertical',
+        containerPadding: [0, 0],
+        dropStrategy: 'auto',
+        droppingItem: { i: 'drop', w: 2, h: 2 },
+        margin: [0, 0],
+        maxRows: Infinity,
+        preventCollision: false,
+        rowHeight: 10,
+        transformScale: 1,
+        verticalCompact: true,
+        width: 120
+      },
+      state,
+      eventBridge: {
+        emitDragStart: () => undefined,
+        emitDrag: () => undefined,
+        emitDragStop: () => undefined,
+        emitResizeStart: () => undefined,
+        emitResize: () => undefined,
+        emitResizeStop: () => undefined,
+        emitDrop: (_layout, _event, item) => {
+          emittedItem = item
+        },
+        callDropDragOver: () => ({ w: 4, h: 2 })
+      },
+      engineBridge: {
+        getLayoutEngineProp: () => ({}),
+        isLegacyLayoutEngine: () => false,
+        reset: () => undefined,
+        start: () => undefined,
+        getCommitted: () => baseLayout,
+        preview: (_id, operation, apply) => {
+          const target = operation.target || { x: 0, y: 0 }
+          const item = {
+            i: 'drop',
+            x: target.x,
+            y: target.y,
+            w: operation.item.w,
+            h: operation.item.h
+          }
+          apply({
+            id: 'drop-preview',
+            status: 'changed',
+            layout: [...baseLayout, item],
+            patches: [],
+            affectedIds: ['drop'],
+            collisions: [],
+            placeholder: item,
+            drop: { position: target, strategy: 'cursor' }
+          })
+          return null
+        },
+        commit: (_id, operation, apply) => {
+          commitOperation = operation
+          const fallbackPosition = { x: 8, y: 0 }
+          const target = operation.strategy === 'cursor' && operation.target
+            ? operation.target
+            : fallbackPosition
+          const item = {
+            i: 'drop',
+            x: target.x,
+            y: target.y,
+            w: operation.item.w,
+            h: operation.item.h
+          }
+          apply({
+            id: 'drop-commit',
+            status: 'changed',
+            layout: [...baseLayout, item],
+            patches: [],
+            affectedIds: ['drop'],
+            collisions: [],
+            placeholder: item,
+            drop: { position: target, strategy: operation.strategy }
+          })
+          return null
+        }
+      } as never,
+      frameUpdate: {
+        cancel: () => undefined,
+        schedule: () => undefined,
+        resetMovedFlags: () => undefined
+      } as never,
+      autoScroll: {
+        init: () => undefined,
+        maybeScroll: () => undefined,
+        reset: () => undefined
+      } as never,
+      editor: {
+        clearGuides: () => undefined,
+        resetSnap: () => undefined,
+        snapCandidate: (_activeId, _activeItem, candidate) => candidate,
+        updateIntelligence: () => undefined,
+        resolveMoveDrag: input => ({ kind: 'single', id: input.id }),
+        notifyMoveBlocked: () => undefined
+      },
+      nextInteractionRequestId: (kind, id) => `${kind}:${id}`,
+      isFirefox: false,
+      layoutClassName: 'vue-grid-layout'
+    } as never)
+
+    const event = {
+      preventDefault: () => undefined,
+      stopPropagation: () => undefined,
+      currentTarget: new FakeElement(),
+      clientX: 40,
+      clientY: 30
+    } as never
+
+    interactions.onDragEnter(event)
+    interactions.onDragOver(event)
+    const ghost = state.externalDropSession?.ghostItem
+    interactions.onDrop(event)
+    await Promise.resolve()
+
+    const dropOperation = commitOperation as Extract<LayoutOperation, { type: 'dropFit' }> | null
+    assert.equal(state.activeDrag, null)
+    assert.equal(dropOperation?.strategy, 'cursor')
+    assert.deepEqual(dropOperation?.target, ghost && { x: ghost.x, y: ghost.y })
+    assert.equal(dropOperation?.item.w, ghost?.w)
+    assert.equal(dropOperation?.item.h, ghost?.h)
+    assert.equal(emittedItem?.x, ghost?.x)
+    assert.equal(emittedItem?.y, ghost?.y)
+    assert.equal(emittedItem?.w, ghost?.w)
+    assert.equal(emittedItem?.h, ghost?.h)
+  } finally {
+    ;(globalThis as { Element?: unknown }).Element = previousElement
+  }
+}
+
+async function testDropCommitsVisibleGhostWhilePreviewPending() {
+  const previousElement = (globalThis as { Element?: unknown }).Element
+  class FakeElement {
+    classList = { contains: () => true }
+    getBoundingClientRect() {
+      return { left: 0, top: 0 }
+    }
+  }
+  ;(globalThis as { Element?: unknown }).Element = FakeElement
+  try {
+    const baseLayout: Layout = [
+      { i: 'a', x: 0, y: 0, w: 2, h: 2 }
+    ]
+    const state = {
+      layout: baseLayout,
+      oldLayout: null,
+      activeDrag: null as LayoutItem | null,
+      oldDragItem: null,
+      oldResizeItem: null,
+      droppingDOMNode: null,
+      droppingPosition: undefined,
+      externalDropSession: null as any,
+      suppressLayoutChange: false,
+      resizing: false
+    }
+    let previewCalls = 0
+    let commitOperation: LayoutOperation | null = null
+    let emittedItem: LayoutItem | undefined
+    const interactions = useGridDropInteractions({
+      props: {
+        autoScroll: false,
+        allowOverlap: false,
+        cols: 12,
+        compactType: 'vertical',
+        containerPadding: [0, 0],
+        dropStrategy: 'auto',
+        droppingItem: { i: 'drop', w: 2, h: 2 },
+        margin: [0, 0],
+        maxRows: Infinity,
+        preventCollision: false,
+        rowHeight: 10,
+        transformScale: 1,
+        verticalCompact: true,
+        width: 120
+      },
+      state,
+      eventBridge: {
+        emitDragStart: () => undefined,
+        emitDrag: () => undefined,
+        emitDragStop: () => undefined,
+        emitResizeStart: () => undefined,
+        emitResize: () => undefined,
+        emitResizeStop: () => undefined,
+        emitDrop: (_layout, _event, item) => {
+          emittedItem = item
+        },
+        callDropDragOver: () => ({ w: 2, h: 2 })
+      },
+      engineBridge: {
+        getLayoutEngineProp: () => ({}),
+        isLegacyLayoutEngine: () => false,
+        reset: () => undefined,
+        start: () => undefined,
+        getCommitted: () => baseLayout,
+        preview: (_id, operation, apply) => {
+          previewCalls += 1
+          const target = operation.target || { x: 0, y: 0 }
+          const item = {
+            i: 'drop',
+            x: target.x,
+            y: target.y,
+            w: operation.item.w,
+            h: operation.item.h
+          }
+          if (previewCalls === 1) {
+            apply({
+              id: 'drop-preview-ready',
+              status: 'changed',
+              layout: [...baseLayout, item],
+              patches: [],
+              affectedIds: ['drop'],
+              collisions: [],
+              placeholder: item,
+              drop: { position: target, strategy: 'cursor' }
+            })
+          }
+          return null
+        },
+        commit: (_id, operation, apply) => {
+          commitOperation = operation
+          const target = operation.target || { x: 0, y: 0 }
+          const item = {
+            i: 'drop',
+            x: target.x,
+            y: target.y,
+            w: operation.item.w,
+            h: operation.item.h
+          }
+          apply({
+            id: 'drop-commit',
+            status: 'changed',
+            layout: [...baseLayout, item],
+            patches: [],
+            affectedIds: ['drop'],
+            collisions: [],
+            placeholder: item,
+            drop: { position: target, strategy: operation.strategy }
+          })
+          return null
+        }
+      } as never,
+      frameUpdate: {
+        cancel: () => undefined,
+        schedule: () => undefined,
+        resetMovedFlags: () => undefined
+      } as never,
+      autoScroll: {
+        init: () => undefined,
+        maybeScroll: () => undefined,
+        reset: () => undefined
+      } as never,
+      editor: {
+        clearGuides: () => undefined,
+        resetSnap: () => undefined,
+        snapCandidate: (_activeId, _activeItem, candidate) => candidate,
+        updateIntelligence: () => undefined,
+        resolveMoveDrag: input => ({ kind: 'single', id: input.id }),
+        notifyMoveBlocked: () => undefined
+      },
+      nextInteractionRequestId: (kind, id) => `${kind}:${id}`,
+      isFirefox: false,
+      layoutClassName: 'vue-grid-layout'
+    } as never)
+
+    const makeEvent = (clientX: number) => ({
+      preventDefault: () => undefined,
+      stopPropagation: () => undefined,
+      currentTarget: new FakeElement(),
+      clientX,
+      clientY: 30
+    }) as never
+    const firstEvent = makeEvent(40)
+    const secondEvent = makeEvent(60)
+
+    interactions.onDragEnter(firstEvent)
+    interactions.onDragOver(firstEvent)
+    const visibleGhost = state.externalDropSession?.ghostItem
+    interactions.onDragOver(secondEvent)
+    assert.equal(state.externalDropSession?.status, 'previewing')
+    assert.equal(state.externalDropSession?.ghostItem?.x, visibleGhost?.x)
+    interactions.onDrop(secondEvent)
+    await Promise.resolve()
+
+    const dropOperation = commitOperation as Extract<LayoutOperation, { type: 'dropFit' }> | null
+    assert.equal(previewCalls, 2)
+    assert.equal(dropOperation?.strategy, 'cursor')
+    assert.deepEqual(dropOperation?.target, visibleGhost && { x: visibleGhost.x, y: visibleGhost.y })
+    assert.equal(emittedItem?.x, visibleGhost?.x)
+    assert.equal(emittedItem?.y, visibleGhost?.y)
+    assert.equal(emittedItem?.w, visibleGhost?.w)
+    assert.equal(emittedItem?.h, visibleGhost?.h)
+  } finally {
+    ;(globalThis as { Element?: unknown }).Element = previousElement
+  }
+}
+
+async function testLegacyDropSessionPreviewBlockedAndCleanup() {
+  const previousElement = (globalThis as { Element?: unknown }).Element
+  class FakeElement {
+    classList = { contains: () => true }
+    getBoundingClientRect() {
+      return { left: 0, top: 0 }
+    }
+  }
+  ;(globalThis as { Element?: unknown }).Element = FakeElement
+  try {
+    const state = {
+      layout: [{ i: 'a', x: 0, y: 0, w: 2, h: 2 }],
+      oldLayout: null,
+      activeDrag: null as LayoutItem | null,
+      oldDragItem: null,
+      oldResizeItem: null,
+      droppingDOMNode: null,
+      droppingPosition: undefined,
+      externalDropSession: null as any,
+      suppressLayoutChange: false,
+      resizing: false
+    }
+    let emittedItem: LayoutItem | undefined
+    const interactions = useGridDropInteractions({
+      props: {
+        autoScroll: false,
+        allowOverlap: false,
+        cols: 12,
+        compactType: null,
+        containerPadding: [0, 0],
+        dropStrategy: 'cursor',
+        droppingItem: { i: 'drop', w: 2, h: 2 },
+        margin: [0, 0],
+        maxRows: Infinity,
+        preventCollision: false,
+        rowHeight: 10,
+        transformScale: 1,
+        verticalCompact: false,
+        width: 120
+      },
+      state,
+      eventBridge: {
+        emitDragStart: () => undefined,
+        emitDrag: () => undefined,
+        emitDragStop: () => undefined,
+        emitResizeStart: () => undefined,
+        emitResize: () => undefined,
+        emitResizeStop: () => undefined,
+        emitDrop: (_layout, _event, item) => {
+          emittedItem = item
+        },
+        callDropDragOver: () => undefined
+      },
+      engineBridge: {
+        getLayoutEngineProp: () => null,
+        isLegacyLayoutEngine: () => true,
+        reset: () => undefined,
+        start: () => undefined,
+        getCommitted: () => state.layout,
+        preview: () => null,
+        commit: () => null
+      } as never,
+      frameUpdate: {
+        cancel: () => undefined,
+        schedule: () => undefined,
+        resetMovedFlags: () => undefined
+      } as never,
+      autoScroll: {
+        init: () => undefined,
+        maybeScroll: () => undefined,
+        reset: () => undefined
+      } as never,
+      editor: {
+        clearGuides: () => undefined,
+        resetSnap: () => undefined,
+        snapCandidate: (_activeId, _activeItem, candidate) => candidate,
+        updateIntelligence: () => undefined,
+        resolveMoveDrag: input => ({ kind: 'single', id: input.id }),
+        notifyMoveBlocked: () => undefined
+      },
+      nextInteractionRequestId: (kind, id) => `${kind}:${id}`,
+      isFirefox: false,
+      layoutClassName: 'vue-grid-layout'
+    } as never)
+
+    const event = {
+      preventDefault: () => undefined,
+      stopPropagation: () => undefined,
+      currentTarget: new FakeElement(),
+      clientX: 0,
+      clientY: 0
+    } as never
+
+    interactions.onDragEnter(event)
+    interactions.onDragOver(event)
+    assert.equal(state.activeDrag, null)
+    assert.deepEqual(
+      state.externalDropSession?.ghostItem && {
+        x: state.externalDropSession.ghostItem.x,
+        y: state.externalDropSession.ghostItem.y
+      },
+      { x: 0, y: 2 }
+    )
+    interactions.onDrop(event)
+    await Promise.resolve()
+    assert.equal(emittedItem?.x, 0)
+    assert.equal(emittedItem?.y, 2)
+    assert.equal(state.externalDropSession, null)
+
+    const blockedState = {
+      ...state,
+      layout: [{ i: 'a', x: 0, y: 0, w: 12, h: 1 }],
+      externalDropSession: null as any
+    }
+    const blockedInteractions = useGridDropInteractions({
+      props: {
+        autoScroll: false,
+        allowOverlap: false,
+        cols: 12,
+        compactType: null,
+        containerPadding: [0, 0],
+        dropStrategy: 'auto',
+        droppingItem: { i: 'drop', w: 12, h: 2 },
+        margin: [0, 0],
+        maxRows: 2,
+        preventCollision: false,
+        rowHeight: 10,
+        transformScale: 1,
+        verticalCompact: false,
+        width: 120
+      },
+      state: blockedState,
+      eventBridge: {
+        emitDragStart: () => undefined,
+        emitDrag: () => undefined,
+        emitDragStop: () => undefined,
+        emitResizeStart: () => undefined,
+        emitResize: () => undefined,
+        emitResizeStop: () => undefined,
+        emitDrop: () => {
+          throw new Error('blocked drop should not emit')
+        },
+        callDropDragOver: () => undefined
+      },
+      engineBridge: {
+        getLayoutEngineProp: () => null,
+        isLegacyLayoutEngine: () => true,
+        reset: () => undefined,
+        start: () => undefined,
+        getCommitted: () => blockedState.layout,
+        preview: () => null,
+        commit: () => null
+      } as never,
+      frameUpdate: {
+        cancel: () => undefined,
+        schedule: () => undefined,
+        resetMovedFlags: () => undefined
+      } as never,
+      autoScroll: {
+        init: () => undefined,
+        maybeScroll: () => undefined,
+        reset: () => undefined
+      } as never,
+      editor: {
+        clearGuides: () => undefined,
+        resetSnap: () => undefined,
+        snapCandidate: (_activeId, _activeItem, candidate) => candidate,
+        updateIntelligence: () => undefined,
+        resolveMoveDrag: input => ({ kind: 'single', id: input.id }),
+        notifyMoveBlocked: () => undefined
+      },
+      nextInteractionRequestId: (kind, id) => `${kind}:${id}`,
+      isFirefox: false,
+      layoutClassName: 'vue-grid-layout'
+    } as never)
+    blockedInteractions.onDragEnter(event)
+    blockedInteractions.onDragOver(event)
+    assert.equal(blockedState.externalDropSession?.status, 'blocked')
+    assert.equal(blockedState.externalDropSession?.blocked?.reason, 'maxRows')
+    blockedInteractions.onDrop(event)
+    assert.equal(blockedState.externalDropSession, null)
+
+    blockedInteractions.onDragEnter(event)
+    blockedInteractions.onDragOver(event)
+    blockedInteractions.onDragLeave(event)
+    assert.equal(blockedState.externalDropSession, null)
   } finally {
     ;(globalThis as { Element?: unknown }).Element = previousElement
   }
@@ -1376,6 +2143,7 @@ async function testPointerCommandGuardRollback() {
 
 testRootAttrsSplit()
 testEventBridge()
+testExternalDropSessionHelpers()
 testFrameUpdate()
 testAutoScroll()
 testOverlayGeometry()
@@ -1390,8 +2158,13 @@ testResizeIntentCarriesConstraintThroughPreviewAndCommit()
 testRuntimeSidecarResizeWithoutEditorController()
 testRuntimeLegacyHistorySync()
 testDropNoopDoesNotRepeatPreview()
+testExternalDropCursorTargetCentersGhostUnderPointer()
 testRuntimeSkipBlockedSingleAllowedGroupIntent()
-void testPointerCommandGuardRollback().then(() => {
+void testLegacyDropSessionPreviewBlockedAndCleanup()
+  .then(() => testAutoDropCommitUsesSessionPreviewTarget())
+  .then(() => testDropCommitsVisibleGhostWhilePreviewPending())
+  .then(() => testPointerCommandGuardRollback())
+  .then(() => {
   console.log('grid-layout-internal-core tests passed')
 }).catch(error => {
   console.error(error)

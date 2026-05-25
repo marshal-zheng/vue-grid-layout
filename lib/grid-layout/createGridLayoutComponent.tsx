@@ -17,6 +17,7 @@ import {
   splitGridRootAttrs
 } from "./contract";
 import { useGridLayoutModel } from "./useGridLayoutModel";
+import { getExternalDropRenderLayout } from "./externalDropSession";
 import { useGridLayoutEngineBridge } from "./useGridLayoutEngineBridge";
 import { useGridFrameUpdate } from "./useGridFrameUpdate";
 import { useGridAutoScroll } from "./useGridAutoScroll";
@@ -58,7 +59,6 @@ export const createGridLayoutComponent = ({
     const eventBridge = createGridLayoutEventBridge(emit, getCurrentInstance());
     const model = useGridLayoutModel({
       props: gridProps,
-      slots,
       emitModelValue: layout => eventBridge.emitModelValue(layout),
       emitLayoutChange: layout => eventBridge.emitLayoutChange(layout)
     });
@@ -104,7 +104,7 @@ export const createGridLayoutComponent = ({
       getLayout: () => state.layout,
       getOldDragItem: () => state.oldDragItem,
       getOldResizeItem: () => state.oldResizeItem,
-      isDropping: () => Boolean(state.droppingDOMNode),
+      isDropping: () => Boolean(state.externalDropSession),
       getInteractionState: () => interactionState.current
         ? {
             activeDragId: interactionState.current.activeDragId.value,
@@ -154,7 +154,7 @@ export const createGridLayoutComponent = ({
     });
     interactionState.current = interactions;
 
-    model.watchLayoutDependencies({
+    const layoutDependencyOptions = {
       reconcileSynchronizedLayout: layout => {
         if (!engineBridge.isLegacyLayoutEngine() && (interactions.activeDragId.value || interactions.activeResizeId.value)) {
           const rebased = engineBridge.rebase(layout);
@@ -170,10 +170,12 @@ export const createGridLayoutComponent = ({
         return undefined;
       },
       clearActiveInteraction: () => interactions.clearActiveInteraction()
-    });
+    };
+    model.watchLayoutDependencies(layoutDependencyOptions);
 
     onBeforeUnmount(() => {
       frameUpdate.cancel();
+      interactions.removeDroppingPlaceholder("component-unmounted");
       autoScroll.reset();
       engineBridge.dispose("component unmounted");
       model.stop();
@@ -205,9 +207,10 @@ export const createGridLayoutComponent = ({
       emitHeightRuntimeChange();
     });
 
-    // Create a placeholder element
-    const placeholder = (): VNode | null => {
-      const { activeDrag } = state;
+    // Create the visible ghost for internal drag/resize or external drop.
+    const renderGhost = (): VNode | null => {
+      const externalGhost = state.externalDropSession?.ghostItem || null;
+      const activeDrag = externalGhost || state.activeDrag;
       if (!activeDrag) return null;
       const { width = 0, cols, margin, containerPadding, maxRows, useCSSTransforms, transformScale } = gridProps;
       const runtime = heightRuntime.value;
@@ -221,7 +224,9 @@ export const createGridLayoutComponent = ({
           i={activeDrag.i}
           class={clsx("vue-grid-placeholder", {
             "placeholder-resizing": state.resizing,
-            "placeholder-blocked": interactions.dragBlocked.value || interactions.resizeBlocked.value
+            "placeholder-blocked": externalGhost
+              ? state.externalDropSession?.status === "blocked"
+              : interactions.dragBlocked.value || interactions.resizeBlocked.value
           })}
           containerWidth={width}
           cols={cols}
@@ -266,6 +271,7 @@ export const createGridLayoutComponent = ({
         useCSSTransforms,
         transformScale,
         draggableCancel,
+        draggableCancelInteractiveElements,
         draggableHandle,
         resizeHandles,
         resizeHandle
@@ -297,6 +303,7 @@ export const createGridLayoutComponent = ({
           dragActivationDistance={gridProps.dragActivationDistance}
           renderPrecision={runtime.renderPrecision}
           cancel={draggableCancel}
+          cancelInteractiveElements={draggableCancelInteractiveElements}
           handle={draggableHandle}
           onDragStop={interactions.onDragStop}
           onDragStart={interactions.onDragStart}
@@ -352,9 +359,11 @@ export const createGridLayoutComponent = ({
       };
 
       const children: VNode[] = slots.default ? getNonFragmentChildren(h(Fragment, null, slots.default())) : [];
+      const synchronizedLayout = model.syncRenderedChildren(children, layoutDependencyOptions);
+      const renderLayout = getExternalDropRenderLayout(state, synchronizedLayout);
       layoutItemById.clear();
-      for (let i = 0; i < state.layout.length; i++) {
-        const item = state.layout[i];
+      for (let i = 0; i < renderLayout.length; i++) {
+        const item = renderLayout[i];
         layoutItemById.set(item.i, item);
       }
       const overlayGeometry = {
@@ -387,14 +396,11 @@ export const createGridLayoutComponent = ({
           onDragover={dropEnabled ? interactions.onDragOver : noop}
         >
           {children.map(child => processGridItem(child, layoutItemById))}
-          {dropEnabled &&
-            state.droppingDOMNode &&
-            processGridItem(state.droppingDOMNode, layoutItemById, true)}
-          {placeholder()}
+          {renderGhost()}
           {runtimeExtension.renderOverlay({
             geometry: overlayGeometry,
             itemMap: layoutItemById,
-            layout: state.layout
+            layout: renderLayout
           })}
         </div>
       );

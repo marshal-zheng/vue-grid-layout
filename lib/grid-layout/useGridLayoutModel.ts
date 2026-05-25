@@ -1,10 +1,9 @@
-import { Fragment, computed, h, markRaw, reactive, watch, type VNode } from "vue";
+import { markRaw, reactive, watch, type VNode } from "vue";
 import { deepEqual } from "fast-equals";
 import {
   childrenEqual,
   cloneLayout,
   compactType,
-  getNonFragmentChildren,
   synchronizeLayoutWithChildren
 } from "../utils";
 import type {
@@ -13,6 +12,7 @@ import type {
   Layout,
   LayoutItem
 } from "../utils";
+import type { ExternalDropSession } from "./externalDropSession";
 
 export type GridLayoutState = {
   activeDrag: LayoutItem | null,
@@ -24,6 +24,7 @@ export type GridLayoutState = {
   resizing: boolean,
   droppingDOMNode?: VNode | null,
   droppingPosition?: DroppingPosition,
+  externalDropSession: ExternalDropSession | null,
   suppressLayoutChange?: boolean,
   compactType?: CompactType,
   children: VNode[]
@@ -49,36 +50,18 @@ type GridLayoutModelProps = {
 
 type UseGridLayoutModelOptions = {
   props: GridLayoutModelProps;
-  slots: {
-    default?: () => VNode[];
-  };
   emitModelValue: (layout: Layout | undefined) => void;
   emitLayoutChange: (layout: Layout | undefined) => void;
 };
 
 export function useGridLayoutModel({
   props,
-  slots,
   emitModelValue,
   emitLayoutChange
 }: UseGridLayoutModelOptions) {
-  const children: VNode[] = slots.default ? getNonFragmentChildren(h(Fragment, null, slots.default())) : [];
-
   const state: GridLayoutState = reactive({
     activeDrag: null,
-    layout: markRaw(
-      synchronizeLayoutWithChildren(
-        props.modelValue,
-        children,
-        props.cols,
-        compactType(props),
-        props.allowOverlap,
-        layout => {
-          emitModelValue(layout);
-          emitLayoutChange(layout);
-        }
-      )
-    ),
+    layout: markRaw(cloneLayout(props.modelValue || [])),
     mounted: false,
     oldDragItem: null,
     oldLayout: null,
@@ -86,9 +69,10 @@ export function useGridLayoutModel({
     resizing: false,
     droppingDOMNode: null,
     droppingPosition: undefined,
+    externalDropSession: null,
     suppressLayoutChange: false,
     compactType: props.compactType,
-    children: []
+    children: markRaw([])
   });
 
   let lastObservedModelValue = cloneLayout(props.modelValue || []);
@@ -111,7 +95,7 @@ export function useGridLayoutModel({
         state.suppressLayoutChange = false;
         return;
       }
-      if (state.activeDrag || state.droppingDOMNode || state.droppingPosition) return;
+      if (state.activeDrag || state.externalDropSession || state.droppingDOMNode || state.droppingPosition) return;
 
       const interactionOldLayout = state.oldLayout;
       if (interactionOldLayout) {
@@ -124,36 +108,15 @@ export function useGridLayoutModel({
     }
   );
 
-  const layoutDependencies = computed(() => {
-    const defaultSlot = slots.default ? slots.default() : [];
-    const nonFragmentChildren = getNonFragmentChildren({ type: Fragment, children: defaultSlot } as VNode);
-    const childrenSignature = nonFragmentChildren.map(c => {
-      const gridProps = c.props?.["data-grid"];
-      return {
-        key: c.key,
-        grid: gridProps ? {
-          w: gridProps.w, h: gridProps.h, x: gridProps.x, y: gridProps.y
-        } : null
-      };
-    });
-
-    return {
-      children: markRaw(nonFragmentChildren),
-      props: {
-        compactType: props.compactType,
-        modelValue: props.modelValue,
-        verticalCompact: props.verticalCompact,
-        cols: props.cols,
-        allowOverlap: props.allowOverlap
-      },
-      signature: childrenSignature
-    };
-  });
-
   const watchLayoutDependencies = (options: WatchLayoutDependenciesOptions = {}) => watch(
-    layoutDependencies,
-    ({ children: newChildren, props: nextProps }, { children: oldChildren, props: prevProps }) => {
-      const childrenMatch = childrenEqual(newChildren, oldChildren);
+    () => ({
+      compactType: props.compactType,
+      modelValue: props.modelValue,
+      verticalCompact: props.verticalCompact,
+      cols: props.cols,
+      allowOverlap: props.allowOverlap
+    }),
+    (nextProps, prevProps) => {
       const modelValueChanged = !deepEqual(nextProps.modelValue, lastObservedModelValue);
       const modelValueMatches = deepEqual(nextProps.modelValue, state.layout);
       const layoutPropsMatch =
@@ -162,18 +125,18 @@ export function useGridLayoutModel({
         nextProps.allowOverlap === prevProps.allowOverlap &&
         nextProps.verticalCompact === prevProps.verticalCompact;
 
-      if (childrenMatch && !modelValueChanged && layoutPropsMatch) {
+      if (!modelValueChanged && layoutPropsMatch) {
         return;
       }
       lastObservedModelValue = cloneLayout(nextProps.modelValue || []);
 
-      if (childrenMatch && modelValueMatches && layoutPropsMatch) {
+      if (modelValueMatches && layoutPropsMatch) {
         return;
       }
 
       const layout = synchronizeLayoutWithChildren(
         nextProps.modelValue,
-        newChildren,
+        state.children,
         nextProps.cols,
         compactType(nextProps),
         nextProps.allowOverlap
@@ -194,9 +157,53 @@ export function useGridLayoutModel({
     { deep: true }
   );
 
+  const syncRenderedChildren = (
+    newChildren: VNode[],
+    options: WatchLayoutDependenciesOptions = {}
+  ): Layout => {
+    if (childrenEqual(newChildren, state.children)) {
+      return state.layout;
+    }
+
+    state.children = markRaw(newChildren);
+
+    const stateLayoutIds = new Set(state.layout.map(item => item.i));
+    const modelLayoutIds = new Set((props.modelValue || []).map(item => item.i));
+    const hasNewChildInModel = newChildren.some(child =>
+      child?.key != null &&
+      !stateLayoutIds.has(String(child.key)) &&
+      modelLayoutIds.has(String(child.key))
+    );
+    const sourceLayout = hasNewChildInModel
+      ? props.modelValue
+      : state.layout;
+    const layout = synchronizeLayoutWithChildren(
+      sourceLayout,
+      newChildren,
+      props.cols,
+      compactType(props),
+      props.allowOverlap
+    );
+
+    const reconcileResult = options.reconcileSynchronizedLayout?.(layout);
+    if (reconcileResult?.clearActive) {
+      state.activeDrag = null;
+      options.clearActiveInteraction?.();
+    } else if (reconcileResult && "placeholder" in reconcileResult) {
+      state.activeDrag = reconcileResult.placeholder ? markRaw(reconcileResult.placeholder) : null;
+    }
+
+    if (!deepEqual(layout, state.layout)) {
+      state.layout = markRaw(layout);
+    }
+    state.compactType = props.compactType;
+    return layout;
+  };
+
   return {
     state,
     onLayoutMaybeChanged,
+    syncRenderedChildren,
     watchLayoutDependencies,
     stop: () => undefined
   };
