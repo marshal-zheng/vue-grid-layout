@@ -1,5 +1,6 @@
 import { type VNode } from "vue";
 import type { CompactType, DroppingPosition, Layout, LayoutItem } from "../utils";
+import type { ExternalDropSession } from "./externalDropSession";
 export type GridLayoutState = {
     activeDrag: LayoutItem | null;
     layout: Layout;
@@ -10,6 +11,7 @@ export type GridLayoutState = {
     resizing: boolean;
     droppingDOMNode?: VNode | null;
     droppingPosition?: DroppingPosition;
+    externalDropSession: ExternalDropSession | null;
     suppressLayoutChange?: boolean;
     compactType?: CompactType;
     children: VNode[];
@@ -31,15 +33,13 @@ type GridLayoutModelProps = {
 };
 type UseGridLayoutModelOptions = {
     props: GridLayoutModelProps;
-    slots: {
-        default?: () => VNode[];
-    };
     emitModelValue: (layout: Layout | undefined) => void;
     emitLayoutChange: (layout: Layout | undefined) => void;
 };
-export declare function useGridLayoutModel({ props, slots, emitModelValue, emitLayoutChange }: UseGridLayoutModelOptions): {
+export declare function useGridLayoutModel({ props, emitModelValue, emitLayoutChange }: UseGridLayoutModelOptions): {
     state: GridLayoutState;
     onLayoutMaybeChanged: (newLayout: Layout, oldLayout?: Layout | null) => void;
+    syncRenderedChildren: (newChildren: VNode[], options?: WatchLayoutDependenciesOptions) => Layout;
     watchLayoutDependencies: (options?: WatchLayoutDependenciesOptions) => import("vue").WatchHandle;
     stop: () => undefined;
 };

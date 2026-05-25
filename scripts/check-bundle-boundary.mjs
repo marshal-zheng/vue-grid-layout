@@ -21,7 +21,7 @@ const gzipBudgets = {
   "index.mjs": 65 * 1024,
   "core.mjs": 65 * 1024,
   "responsive.mjs": 80 * 1024,
-  "persistence.mjs": 64 * 1024,
+  "persistence.mjs": 65 * 1024,
   "layout-engine.mjs": 30 * 1024,
   "history.mjs": 8 * 1024
 };

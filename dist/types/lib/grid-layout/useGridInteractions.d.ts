@@ -6,7 +6,7 @@ type UseGridInteractionsOptions = GridInteractionCommonOptions & GridInteraction
 export declare function useGridInteractions(options: UseGridInteractionsOptions): {
     clearActiveInteraction: () => void;
     clearDropInteraction: () => void;
-    removeDroppingPlaceholder: (reason?: string, preserveLayout?: boolean) => void;
+    removeDroppingPlaceholder: (reason?: string) => void;
     onDrop: (e: Event) => void;
     onDragEnter: (e: DragEvent) => void;
     onDragLeave: (e: DragEvent) => void;

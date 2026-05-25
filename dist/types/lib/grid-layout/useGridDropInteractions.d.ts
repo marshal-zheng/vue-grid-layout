@@ -5,7 +5,7 @@ type UseGridDropInteractionsOptions = GridInteractionCommonOptions & {
 };
 export declare function useGridDropInteractions({ props, state, eventBridge, engineBridge, frameUpdate, autoScroll, editor, isFirefox, layoutClassName, interactionMachine: providedInteractionMachine, nextInteractionRequestId }: UseGridDropInteractionsOptions): {
     clearDropInteraction: () => void;
-    removeDroppingPlaceholder: (reason?: string, preserveLayout?: boolean) => void;
+    removeDroppingPlaceholder: (reason?: string) => void;
     onDrop: (e: Event) => void;
     onDragEnter: (e: DragEvent) => void;
     onDragLeave: (e: DragEvent) => void;

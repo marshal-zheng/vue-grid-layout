@@ -1,7 +1,7 @@
-import { a as b, f as T, j as Y, k as Z, l as q, d as x, o as g, s as O, E as oo } from "./utils-BCVYGne6.mjs";
+import { a as b, f as E, j as Y, k as Z, l as q, d as x, o as h, s as T, E as oo } from "./utils-BCVYGne6.mjs";
 import { k as j, a as to, c as no, b as eo, e as ao, f as io } from "./migration-CPonYzEY.mjs";
 function co(o, e) {
-  const t = B(o);
+  const t = z(o);
   let n = t[0];
   for (let a = 1, i = t.length; a < i; a++) {
     const c = t[a];
@@ -19,7 +19,7 @@ function so(o, e) {
 function U(o, e, t, n, a, i) {
   if (o[t]) return b(o[t]);
   let c = o[n];
-  const s = B(e), l = s.slice(
+  const s = z(e), l = s.slice(
     s.indexOf(t)
   );
   for (let p = 0, y = l.length; p < y; p++) {
@@ -29,9 +29,9 @@ function U(o, e, t, n, a, i) {
       break;
     }
   }
-  return c = b(c || []), T(Y(c, { cols: a }), i, a);
+  return c = b(c || []), E(Y(c, { cols: a }), i, a);
 }
-function B(o) {
+function z(o) {
   return Object.keys(o).sort(function(t, n) {
     return o[t] - o[n];
   });
@@ -41,7 +41,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   findOrGenerateResponsiveLayout: U,
   getBreakpointFromWidth: co,
   getColsFromBreakpoint: so,
-  sortBreakpoints: B
+  sortBreakpoints: z
 }, Symbol.toStringTag, { value: "Module" })), V = 1 / 0, K = "__dropping-elem__", X = () => {
   const o = typeof performance != "undefined" ? performance : null;
   return o && typeof o.now == "function" ? o.now() : Date.now();
@@ -55,7 +55,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   allowOverlap: !!o.allowOverlap,
   preventCollision: !!o.preventCollision,
   indexStrategy: o.indexStrategy || j()
-}), E = (o) => typeof o == "number" && Number.isFinite(o) && o > 0, yo = (o) => o === "sw" || o === "w" || o === "nw", fo = (o) => o === "ne" || o === "n" || o === "nw", N = (o, e, t) => Math.max(e, Math.min(o, t)), F = (o) => b(o), G = (o) => `${o.x}:${o.y}:${o.w}:${o.h}:${!!o.moved}`, R = (o, e) => {
+}), F = (o) => typeof o == "number" && Number.isFinite(o) && o > 0, yo = (o) => o === "sw" || o === "w" || o === "nw", fo = (o) => o === "ne" || o === "n" || o === "nw", N = (o, e, t) => Math.max(e, Math.min(o, t)), S = (o) => b(o), G = (o) => `${o.x}:${o.y}:${o.w}:${o.h}:${!!o.moved}`, k = (o, e) => {
   if (o === e) return !0;
   if (o.length !== e.length) return !1;
   for (let t = 0; t < o.length; t++) {
@@ -63,7 +63,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     if (!n || !a || n.i !== a.i || G(n) !== G(a)) return !1;
   }
   return !0;
-}, k = (o, e, t) => {
+}, M = (o, e, t) => {
   const n = [], a = /* @__PURE__ */ new Map(), i = /* @__PURE__ */ new Map();
   return o.forEach((c) => a.set(c.i, c)), e.forEach((c) => i.set(c.i, c)), e.forEach((c) => {
     const s = a.get(c.i);
@@ -88,12 +88,12 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     type: "compact",
     affectedIds: n.map((c) => c.type === "add" ? c.item.i : c.type === "compact" ? "" : c.id).filter(Boolean)
   }), n;
-}, z = (o, e) => {
+}, A = (o, e) => {
   const t = /* @__PURE__ */ new Set();
   return o.forEach((n) => {
     n.type === "compact" ? n.affectedIds.forEach((a) => t.add(a)) : n.type === "add" ? t.add(n.item.i) : t.add(n.id);
   }), e.forEach((n) => t.add(n.i)), Array.from(t);
-}, M = (o, e) => (e.indexStrategy || j()).build(o, {
+}, C = (o, e) => (e.indexStrategy || j()).build(o, {
   cols: e.cols,
   maxRows: e.maxRows,
   compactType: e.compactType,
@@ -132,7 +132,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     operationType: o.operation.type,
     phase: o.phase,
     layoutSize: o.layout.length,
-    affectedCount: z(n, a).length,
+    affectedCount: A(n, a).length,
     collisionCount: a.length,
     indexHit: c,
     schedulerMode: (y = o.options.scheduler) == null ? void 0 : y.mode,
@@ -150,7 +150,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   operation: o.operation,
   result: {
     status: e,
-    affectedIds: z(n, a),
+    affectedIds: A(n, a),
     collisionIds: a.map((c) => c.i),
     blockedReason: i
   }
@@ -179,7 +179,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   });
 }, v = (o, e, t, n, a, i, c, s = {}) => {
   var d;
-  const { diagnostics: l, ...p } = s, y = z(n, a), r = ho(
+  const { diagnostics: l, ...p } = s, y = A(n, a), r = ho(
     o,
     e,
     t,
@@ -211,10 +211,10 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   itemId: e.itemId,
   reason: e.field,
   details: e.details
-})), u = (o, e, t, n, a, i = t.map((s) => s.i), c = []) => v(o, "blocked", o.layout, [], t, n, a, {
+})), m = (o, e, t, n, a, i = t.map((s) => s.i), c = []) => v(o, "blocked", o.layout, [], t, n, a, {
   blocked: { reason: e, itemIds: i },
   diagnostics: c.length > 0 ? { details: c } : void 0
-}), C = (o, e, t, n) => v(o, "noop", o.layout, [], [], e, t, { placeholder: n }), I = (o, e) => e.allowOverlap || e.compactType == null ? o : T(o, e.compactType, e.cols, e.allowOverlap), S = (o) => {
+}), O = (o, e, t, n) => v(o, "noop", o.layout, [], [], e, t, { placeholder: n }), L = (o, e) => e.allowOverlap || e.compactType == null ? o : E(o, e.compactType, e.cols, e.allowOverlap), $ = (o) => {
   for (let e = 0; e < o.length; e++)
     o[e].moved && (o[e].moved = !1);
   return o;
@@ -226,33 +226,33 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
 }, bo = (o, e) => {
   const t = o.operation;
   if (t.type !== "groupMove")
-    return { ok: !1, result: L(o, "invalid groupMove operation", e) };
+    return { ok: !1, result: R(o, "invalid groupMove operation", e) };
   if (!Number.isFinite(t.dx) || !Number.isFinite(t.dy))
     return {
       ok: !1,
-      result: u(o, "invalid-input", [], e, !0)
+      result: m(o, "invalid-input", [], e, !0)
     };
   const n = [], a = /* @__PURE__ */ new Set();
   if (t.ids.forEach((d) => {
     if (typeof d != "string") return;
-    const m = d.trim();
-    !m || a.has(m) || (a.add(m), n.push(m));
+    const u = d.trim();
+    !u || a.has(u) || (a.add(u), n.push(u));
   }), n.length === 0)
     return {
       ok: !1,
-      result: u(o, "invalid-input", [], e, !0)
+      result: m(o, "invalid-input", [], e, !0)
     };
-  const i = n.filter((d) => !g(o.layout, d));
+  const i = n.filter((d) => !h(o.layout, d));
   if (i.length > 0)
     return {
       ok: !1,
-      result: u(o, "missing-item", [], e, !0, i)
+      result: m(o, "missing-item", [], e, !0, i)
     };
-  const c = n.map((d) => g(o.layout, d)).filter(Boolean), s = c.filter((d) => d.static);
+  const c = n.map((d) => h(o.layout, d)).filter(Boolean), s = c.filter((d) => d.static);
   if (s.length > 0)
     return {
       ok: !1,
-      result: u(
+      result: m(
         o,
         "static-item",
         s,
@@ -294,36 +294,36 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     )
   )
 ), Ro = (o, e, t) => {
-  const n = F(o);
+  const n = S(o);
   return e.targetItems.forEach((a) => {
-    const i = g(n, a.i);
+    const i = h(n, a.i);
     i && (i.x = a.x, i.y = a.y, i.moved = !0, t && (i.static = !0));
   }), n;
 }, ko = (o, e) => (e.movingItems.forEach((t) => {
-  const n = g(o, t.i);
+  const n = h(o, t.i);
   n && (typeof t.static == "undefined" ? delete n.static : n.static = t.static);
 }), o), Mo = (o, e, t, n, a) => {
   const i = t.movingItems[0], c = t.targetItems[0];
   if (!i || !c)
-    return u(o, "invalid-input", [], n, !0);
+    return m(o, "invalid-input", [], n, !0);
   if (i.x === c.x && i.y === c.y)
-    return C(o, n, !0, x(i));
-  if (a.some((m) => m.static)) {
-    const m = a.filter((h) => h.static);
-    return u(
+    return O(o, n, !0, x(i));
+  if (a.some((u) => u.static)) {
+    const u = a.filter((g) => g.static);
+    return m(
       o,
       "static-item",
-      m,
+      u,
       n,
       !0,
-      m.map((h) => h.i)
+      u.map((g) => g.i)
     );
   }
   if (a.length > 0 && o.options.preventCollision && !o.options.allowOverlap)
-    return u(o, "collision", a, n, !0);
-  const s = F(o.layout), l = g(s, i.i);
-  if (!l) return u(o, "missing-item", [], n, !0, [i.i]);
-  const p = O(
+    return m(o, "collision", a, n, !0);
+  const s = S(o.layout), l = h(s, i.i);
+  if (!l) return m(o, "missing-item", [], n, !0, [i.i]);
+  const p = T(
     s,
     l,
     o.options.compactType,
@@ -333,7 +333,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     c.y,
     o.operation.type === "groupMove" ? o.operation.userAction !== !1 : !0,
     o.options.preventCollision
-  ), y = S(I(p, o.options)), r = k(o.layout, y, o.options.compactType), f = g(y, i.i) || l, d = r.length === 0 || R(o.layout, y) ? "noop" : "changed";
+  ), y = $(L(p, o.options)), r = M(o.layout, y, o.options.compactType), f = h(y, i.i) || l, d = r.length === 0 || k(o.layout, y) ? "noop" : "changed";
   return v(
     o,
     d,
@@ -347,38 +347,38 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
 }, Co = (o, e, t) => {
   const n = bo(o, t);
   if (!n.ok) return n.result;
-  const a = n.value, i = a.movingItems.find((h) => h.i === a.activeId) || a.movingItems[0], c = Io(a, o.options);
+  const a = n.value, i = a.movingItems.find((g) => g.i === a.activeId) || a.movingItems[0], c = Io(a, o.options);
   if (c)
-    return u(o, c.reason, [], t, !0, c.itemIds);
+    return m(o, c.reason, [], t, !0, c.itemIds);
   if (a.dx === 0 && a.dy === 0 && i)
-    return C(o, t, !0, x(i));
-  const s = Lo(a, e), l = s.filter((h) => h.static);
+    return O(o, t, !0, x(i));
+  const s = Lo(a, e), l = s.filter((g) => g.static);
   if (l.length > 0)
-    return u(
+    return m(
       o,
       "static-item",
       l,
       t,
       !0,
-      l.map((h) => h.i)
+      l.map((g) => g.i)
     );
   if (a.ids.length === 1)
     return Mo(o, e, a, t, s);
   if (s.length > 0 && o.options.preventCollision && !o.options.allowOverlap)
-    return u(o, "collision", s, t, !0);
+    return m(o, "collision", s, t, !0);
   const p = !o.options.allowOverlap, y = Ro(o.layout, a, p);
   let r = y;
-  o.options.allowOverlap || (r = T(
+  o.options.allowOverlap || (r = E(
     y,
     o.options.compactType,
     o.options.cols,
     o.options.allowOverlap
-  )), r = S(ko(r, a));
-  const f = k(o.layout, r, o.options.compactType), d = g(r, a.activeId) || i, m = f.length === 0 || R(o.layout, r) ? "noop" : "changed";
+  )), r = $(ko(r, a));
+  const f = M(o.layout, r, o.options.compactType), d = h(r, a.activeId) || i, u = f.length === 0 || k(o.layout, r) ? "noop" : "changed";
   return v(
     o,
-    m,
-    m === "noop" ? o.layout : r,
+    u,
+    u === "noop" ? o.layout : r,
     f,
     s,
     t,
@@ -387,19 +387,19 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   );
 }, Oo = (o, e, t) => {
   const n = o.operation;
-  if (n.type !== "move") return L(o, "invalid move operation", t);
-  const a = g(o.layout, n.id);
-  if (!a) return u(o, "missing-item", [], t, !0, [n.id]);
+  if (n.type !== "move") return R(o, "invalid move operation", t);
+  const a = h(o.layout, n.id);
+  if (!a) return m(o, "missing-item", [], t, !0, [n.id]);
   if (a.static)
-    return u(o, "static-item", [], t, !0, [n.id]);
+    return m(o, "static-item", [], t, !0, [n.id]);
   if (a.x === n.x && a.y === n.y)
-    return C(o, t, !0, x(a));
+    return O(o, t, !0, x(a));
   const i = { ...a, x: n.x, y: n.y }, c = e.queryAllCollisions(i);
   if (c.length > 0 && o.options.preventCollision && !o.options.allowOverlap)
-    return u(o, "collision", c, t, !0);
-  const s = F(o.layout), l = g(s, n.id);
-  if (!l) return u(o, "missing-item", [], t, !0, [n.id]);
-  const p = O(
+    return m(o, "collision", c, t, !0);
+  const s = S(o.layout), l = h(s, n.id);
+  if (!l) return m(o, "missing-item", [], t, !0, [n.id]);
+  const p = T(
     s,
     l,
     o.options.compactType,
@@ -409,12 +409,12 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     n.y,
     n.userAction !== !1,
     o.options.preventCollision
-  ), y = S(I(p, o.options)), r = k(o.layout, y, o.options.compactType), f = g(y, n.id) || l, d = r.length === 0 || R(o.layout, y) ? "noop" : "changed";
+  ), y = $(L(p, o.options)), r = M(o.layout, y, o.options.compactType), f = h(y, n.id) || l, d = r.length === 0 || k(o.layout, y) ? "noop" : "changed";
   return v(o, d, d === "noop" ? o.layout : y, r, c, t, !0, {
     placeholder: x(f)
   });
 }, To = (o, e, t) => {
-  var p, y, r, f, d, m, h, A, H, W, _, D;
+  var p, y, r, f, d, u, g, I, H, W, _, D;
   const n = (y = (p = e.constraint) == null ? void 0 : p.handlePolicy) == null ? void 0 : y.allowedHandles;
   if (n && n.indexOf(e.handle) === -1)
     return {
@@ -456,35 +456,35 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
         maxW: o.maxW,
         maxH: o.maxH
       }
-    }), $ = vo(w.diagnostics);
+    }), B = vo(w.diagnostics);
     if (w.kind === "blocked")
       return {
-        x: (m = (d = w.candidate) == null ? void 0 : d.x) != null ? m : c,
-        y: (A = (h = w.candidate) == null ? void 0 : h.y) != null ? A : s,
+        x: (u = (d = w.candidate) == null ? void 0 : d.x) != null ? u : c,
+        y: (I = (g = w.candidate) == null ? void 0 : g.y) != null ? I : s,
         w: (W = (H = w.candidate) == null ? void 0 : H.w) != null ? W : a,
         h: (D = (_ = w.candidate) == null ? void 0 : _.h) != null ? D : i,
         moved: l,
         reason: w.reason,
-        details: $
+        details: B
       };
-    if (c = w.candidate.x, s = w.candidate.y, a = w.candidate.w, i = w.candidate.h, l = l || c !== o.x || s !== o.y, $.length > 0)
-      return { x: c, y: s, w: a, h: i, moved: l, details: $ };
+    if (c = w.candidate.x, s = w.candidate.y, a = w.candidate.w, i = w.candidate.h, l = l || c !== o.x || s !== o.y, B.length > 0)
+      return { x: c, y: s, w: a, h: i, moved: l, details: B };
   }
   return c < 0 || s < 0 ? { x: c, y: s, w: a, h: i, moved: l, reason: "bounds" } : c + a > t.cols ? { x: c, y: s, w: a, h: i, moved: l, reason: "bounds" } : Number.isFinite(t.maxRows) && s + i > t.maxRows ? { x: c, y: s, w: a, h: i, moved: l, reason: "maxRows" } : { x: c, y: s, w: a, h: i, moved: l || c !== o.x || s !== o.y };
 }, Eo = (o, e, t) => {
   const n = o.operation;
-  if (n.type !== "resize") return L(o, "invalid resize operation", t);
-  const a = g(o.layout, n.id);
-  if (!a) return u(o, "missing-item", [], t, !0, [n.id]);
+  if (n.type !== "resize") return R(o, "invalid resize operation", t);
+  const a = h(o.layout, n.id);
+  if (!a) return m(o, "missing-item", [], t, !0, [n.id]);
   if (a.static)
-    return u(o, "static-item", [], t, !0, [n.id]);
-  if (!E(n.w) || !E(n.h))
-    return u(o, "invalid-input", [], t, !0, [n.id]);
+    return m(o, "static-item", [], t, !0, [n.id]);
+  if (!F(n.w) || !F(n.h))
+    return m(o, "invalid-input", [], t, !0, [n.id]);
   const i = To(a, n, o.options);
   if (i.reason)
-    return u(o, i.reason, [], t, !0, [n.id], i.details);
+    return m(o, i.reason, [], t, !0, [n.id], i.details);
   if (a.w === i.w && a.h === i.h && a.x === i.x && a.y === i.y)
-    return C(o, t, !0, x(a));
+    return O(o, t, !0, x(a));
   const c = {
     ...a,
     x: i.x,
@@ -493,12 +493,12 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     h: i.h
   }, s = e.queryAllCollisions(c);
   if (s.length > 0 && o.options.preventCollision && !o.options.allowOverlap)
-    return u(o, "collision", s, t, !0);
-  const l = F(o.layout), p = g(l, n.id);
-  if (!p) return u(o, "missing-item", [], t, !0, [n.id]);
+    return m(o, "collision", s, t, !0);
+  const l = S(o.layout), p = h(l, n.id);
+  if (!p) return m(o, "missing-item", [], t, !0, [n.id]);
   p.w = i.w, p.h = i.h;
   let y = l;
-  i.moved ? y = O(
+  i.moved ? y = T(
     l,
     p,
     o.options.compactType,
@@ -509,28 +509,28 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     !0,
     o.options.preventCollision
   ) : (p.x = i.x, p.y = i.y);
-  const r = S(I(y, o.options)), f = k(o.layout, r, o.options.compactType), d = g(r, n.id) || p, m = f.length === 0 || R(o.layout, r) ? "noop" : "changed";
-  return v(o, m, m === "noop" ? o.layout : r, f, s, t, !0, {
+  const r = $(L(y, o.options)), f = M(o.layout, r, o.options.compactType), d = h(r, n.id) || p, u = f.length === 0 || k(o.layout, r) ? "noop" : "changed";
+  return v(o, u, u === "noop" ? o.layout : r, f, s, t, !0, {
     placeholder: x(d),
     diagnostics: i.details && i.details.length > 0 ? { details: i.details } : void 0
   });
 }, Fo = (o, e, t) => {
   const n = o.operation;
-  if (n.type !== "dropFit") return L(o, "invalid dropFit operation", t);
+  if (n.type !== "dropFit") return R(o, "invalid dropFit operation", t);
   const a = Math.floor(n.item.w), i = Math.floor(n.item.h);
-  if (!E(a) || !E(i))
-    return u(o, "invalid-input", [], t, !0);
-  const c = n.item.i || K, s = o.layout.filter((h) => h.i !== c), l = M(s, o.options);
+  if (!F(a) || !F(i))
+    return m(o, "invalid-input", [], t, !0);
+  const c = n.item.i || K, s = o.layout.filter((I) => I.i !== c), l = C(s, o.options);
   let p = null, y = "none";
   if (n.strategy === "cursor" && n.target) {
-    const h = {
+    const I = {
       i: c,
       x: Math.max(0, Math.floor(n.target.x)),
       y: Math.max(0, Math.floor(n.target.y)),
       w: a,
       h: i
     };
-    l.canPlace(h) ? p = { x: h.x, y: h.y } : (p = l.findNearestFit({ w: a, h: i }, n.target), y = p ? "nearest-fit" : "none");
+    l.canPlace(I) ? p = { x: I.x, y: I.y } : (p = l.findNearestFit({ w: a, h: i }, n.target), y = p ? "nearest-fit" : "none");
   } else
     p = l.findFirstFit({ w: a, h: i }), y = p ? "first-fit" : "none";
   if (!p)
@@ -551,28 +551,28 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     w: a,
     h: i,
     static: !1
-  }, f = [...s.map(x), r], d = I(f, o.options), m = k(o.layout, d, o.options.compactType);
-  return v(o, "changed", d, m, [], t, !0, {
-    placeholder: x(r),
+  }, f = [...s.map(x), r], d = L(f, o.options), u = h(d, c) || r, g = M(o.layout, d, o.options.compactType);
+  return v(o, "changed", d, g, [], t, !0, {
+    placeholder: x(u),
     drop: {
-      position: p,
+      position: { x: u.x, y: u.y },
       strategy: n.strategy,
       fallback: y
     }
   });
 }, So = (o, e) => {
   if (o.options.allowOverlap || o.options.compactType == null)
-    return C(o, e, !1);
-  const t = T(
+    return O(o, e, !1);
+  const t = E(
     o.layout,
     o.options.compactType,
     o.options.cols,
     o.options.allowOverlap
-  ), n = k(o.layout, t, o.options.compactType), a = n.length === 0 || R(o.layout, t) ? "noop" : "changed";
+  ), n = M(o.layout, t, o.options.compactType), a = n.length === 0 || k(o.layout, t) ? "noop" : "changed";
   return v(o, a, a === "noop" ? o.layout : t, n, [], e, !1);
 }, $o = (o, e) => {
   try {
-    return oo(o.layout, "LayoutEngine.layout"), C(o, e, !1);
+    return oo(o.layout, "LayoutEngine.layout"), O(o, e, !1);
   } catch (t) {
     return v(o, "error", o.layout, [], [], e, !1, {
       error: {
@@ -584,7 +584,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
 }, Bo = (o, e) => {
   const t = o.operation;
   if (t.type !== "generateResponsiveLayout")
-    return L(o, "invalid responsive operation", e);
+    return R(o, "invalid responsive operation", e);
   const n = t.breakpoints || { [t.breakpoint]: 0 }, a = t.layouts || { [t.sourceBreakpoint || t.breakpoint]: o.layout }, i = U(
     a,
     n,
@@ -592,17 +592,17 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     t.sourceBreakpoint || t.breakpoint,
     t.cols,
     o.options.compactType
-  ), c = k(o.layout, i, o.options.compactType), s = c.length === 0 || R(o.layout, i) ? "noop" : "changed";
+  ), c = M(o.layout, i, o.options.compactType), s = c.length === 0 || k(o.layout, i) ? "noop" : "changed";
   return v(o, s, s === "noop" ? o.layout : i, c, [], e, !1);
-}, L = (o, e, t, n) => v(o, "error", o.layout, [], [], t, !1, {
+}, R = (o, e, t, n) => v(o, "error", o.layout, [], [], t, !1, {
   error: { message: e, cause: n }
 }), zo = (o) => {
   const e = o.options;
   switch (o.operation.type) {
     case "move": {
-      const t = b(o.layout), n = g(t, o.operation.id);
+      const t = b(o.layout), n = h(t, o.operation.id);
       if (!n) return o.layout;
-      const a = O(
+      const a = T(
         t,
         n,
         e.compactType,
@@ -613,14 +613,14 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
         o.operation.userAction !== !1,
         e.preventCollision
       );
-      return I(a, e);
+      return L(a, e);
     }
     case "groupMove": {
       const t = Array.from(new Set(o.operation.ids.filter(Boolean)));
       if (t.length !== 1) return o.layout;
-      const n = b(o.layout), a = g(n, t[0]);
+      const n = b(o.layout), a = h(n, t[0]);
       if (!a) return o.layout;
-      const i = O(
+      const i = T(
         n,
         a,
         e.compactType,
@@ -631,10 +631,10 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
         o.operation.userAction !== !1,
         e.preventCollision
       );
-      return I(i, e);
+      return L(i, e);
     }
     case "compact":
-      return e.allowOverlap || e.compactType == null ? o.layout : T(o.layout, e.compactType, e.cols, e.allowOverlap);
+      return e.allowOverlap || e.compactType == null ? o.layout : E(o.layout, e.compactType, e.cols, e.allowOverlap);
     case "dropFit": {
       const t = o.operation.item.i || K, n = o.layout.filter((i) => i.i !== t), a = o.operation.strategy === "auto" || !o.operation.target ? Z(n, o.operation.item, e.cols, e.maxRows) : q(
         n,
@@ -644,7 +644,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
         o.operation.target.y,
         e.maxRows
       );
-      return a ? I([
+      return a ? L([
         ...n.map(x),
         {
           ...o.operation.item,
@@ -686,7 +686,7 @@ function P(o, e) {
 function Q(o, e) {
   const t = X(), n = J(o.options), a = { ...o, options: n };
   try {
-    const i = e || M(a.layout, n);
+    const i = e || C(a.layout, n);
     switch (a.operation.type) {
       case "move":
         return Oo(a, i, t);
@@ -711,10 +711,10 @@ function Q(o, e) {
       case "placeItems":
         return to(a, t);
       default:
-        return L(a, "unknown layout operation", t);
+        return R(a, "unknown layout operation", t);
     }
   } catch (i) {
-    return L(
+    return R(
       a,
       i instanceof Error ? i.message : String(i),
       t,
@@ -727,12 +727,12 @@ function Ao(o) {
 }
 function Do(o, e = []) {
   const t = J(o);
-  let n = b(e), a = M(n, t), i = 0;
+  let n = b(e), a = C(n, t), i = 0;
   const c = (l) => {
-    n = b(l), a = M(n, t), i++;
+    n = b(l), a = C(n, t), i++;
   }, s = (l) => {
     var f;
-    const p = l.layout === n || R(l.layout, n), y = p ? a : M(l.layout, t), r = Q(l, y);
+    const p = l.layout === n || k(l.layout, n), y = p ? a : C(l.layout, t), r = Q(l, y);
     if (t.compareLegacy) {
       const d = P(l, r);
       d.matches || (f = t.onEvent) == null || f.call(t, {
@@ -745,7 +745,7 @@ function Do(o, e = []) {
     }
     if (r.status === "changed" || r.status === "fallback") {
       const d = n;
-      n = b(r.layout), p && r.patches.length > 0 && mo(a, d, n, r.patches) || (a = M(n, t)), i++;
+      n = b(r.layout), p && r.patches.length > 0 && mo(a, d, n, r.patches) || (a = C(n, t)), i++;
     }
     return r;
   };
@@ -773,5 +773,5 @@ export {
   U as f,
   co as g,
   _o as r,
-  B as s
+  z as s
 };

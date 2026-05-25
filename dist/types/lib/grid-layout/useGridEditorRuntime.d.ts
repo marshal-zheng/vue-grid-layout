@@ -165,6 +165,7 @@ export declare function useGridEditorRuntime({ props, layoutRef, persistenceCont
         event?: Event;
     }) => Promise<GridEditorCommandResult | null>;
     rollbackInteraction: (layout: Layout) => void;
+    syncHistory: (layout: Layout, mode?: "push" | "replace") => void;
     getItemRenderState: (item: LayoutItem, defaults: GridEditorItemDefaults, isDroppingItem?: boolean) => {
         visible: boolean;
         draggable: boolean;

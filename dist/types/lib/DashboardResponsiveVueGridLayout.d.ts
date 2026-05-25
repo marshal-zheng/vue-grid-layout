@@ -1,6 +1,7 @@
 import { type PropType } from "vue";
 import { type Layout } from "./utils";
 import type { GridEditorProp } from "./editor";
+import type { GridHistoryStore } from "./history";
 import type { GridLayoutEngineProp } from "./layout-engine";
 import type { DashboardLayoutDocument, DashboardResponsiveMode, DashboardTargetView, DashboardTargetViewRule } from "./dashboard-responsive";
 import type { LayoutValidationMode } from "./persistence";
@@ -58,6 +59,10 @@ declare const DashboardResponsiveVueGridLayout: import("vue").DefineComponent<im
     editor: {
         type: PropType<false | GridEditorProp>;
         default: boolean;
+    };
+    historyStore: {
+        type: PropType<GridHistoryStore | undefined>;
+        default: undefined;
     };
     class: {
         type: PropType<string>;
@@ -259,6 +264,10 @@ declare const DashboardResponsiveVueGridLayout: import("vue").DefineComponent<im
         type: PropType<false | GridEditorProp>;
         default: boolean;
     };
+    historyStore: {
+        type: PropType<GridHistoryStore | undefined>;
+        default: undefined;
+    };
     class: {
         type: PropType<string>;
         default: string;
@@ -451,5 +460,6 @@ declare const DashboardResponsiveVueGridLayout: import("vue").DefineComponent<im
     createMissingProfileOnEdit: boolean;
     targetViewRule: DashboardTargetViewRule;
     allowUnknownProfileItems: boolean;
+    historyStore: GridHistoryStore | undefined;
 }, {}, {}, {}, string, import("vue").ComponentProvideOptions, true, {}, any>;
 export default DashboardResponsiveVueGridLayout;

@@ -1,6 +1,7 @@
 import type { Ref } from "vue";
 import type { DashboardBreakpointProfile, DashboardDiagnostic, DashboardDocumentError, DashboardGridSettings, DashboardItemLayout, DashboardItemLayoutOverride, DashboardLayoutDocument, DashboardLayoutDefinition, DashboardWriteResult, ResolvedDashboardGridSettings } from "../dashboard";
 import type { GridEditorController, GridEditorMetaById, GridEditorProp } from "../editor";
+import type { GridHistoryStore } from "../history";
 import type { GridLayoutEngineProp } from "../layout-engine";
 import type { GridItemAspectRatioConstraint, ResolvedGridItemCapability } from "../item-capabilities";
 import type { Layout } from "../utils";
@@ -197,6 +198,7 @@ export type DashboardResponsiveComponentProps = {
     createMissingProfileOnEdit?: boolean;
     layoutEngine?: false | GridLayoutEngineProp;
     editor?: false | GridEditorProp;
+    historyStore?: GridHistoryStore;
     heightMode?: GridHeightMode | null;
     containerHeight?: number | null;
     autoMeasureContainerHeight?: boolean;
