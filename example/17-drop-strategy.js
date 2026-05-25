@@ -22,6 +22,7 @@ const App = {
       layout: [],
       layouts: { lg: generateLayout() },
       dropStrategy: 'auto',
+      dropSize: 'compact',
       dropCount: 5,
     })
 
@@ -52,11 +53,28 @@ const App = {
     };
 
     const onDropDragOver = (e) => {
-      return { w: 2, h: 2 };
+      return state.dropSize === 'wide' ? { w: 3, h: 2 } : { w: 2, h: 2 };
+    };
+
+    const onExternalDragStart = (e) => {
+      e.dataTransfer.setData('text/plain', '');
+      const dragImage = document.createElement('div');
+      dragImage.style.width = '1px';
+      dragImage.style.height = '1px';
+      dragImage.style.position = 'fixed';
+      dragImage.style.top = '-1000px';
+      dragImage.style.opacity = '0';
+      document.body.appendChild(dragImage);
+      e.dataTransfer.setDragImage(dragImage, 0, 0);
+      requestAnimationFrame(() => dragImage.remove());
     };
 
     const toggleDropStrategy = () => {
       state.dropStrategy = state.dropStrategy === 'auto' ? 'cursor' : 'auto'
+    };
+
+    const toggleDropSize = () => {
+      state.dropSize = state.dropSize === 'compact' ? 'wide' : 'compact'
     };
 
     return {
@@ -66,7 +84,9 @@ const App = {
       onLayoutChange,
       onDrop,
       onDropDragOver,
+      onExternalDragStart,
       toggleDropStrategy,
+      toggleDropSize,
     }
   },
   components: {
@@ -86,6 +106,9 @@ const App = {
       <div style="margin: 10px 0;">
         <button @click="toggleDropStrategy" style="margin-right: 10px;">
           切换策略: {{ state.dropStrategy }}
+        </button>
+        <button @click="toggleDropSize" style="margin-right: 10px;">
+          切换尺寸: {{ state.dropSize === 'wide' ? '3x2' : '2x2' }}
         </button>
         <button @click="resetLayout">
           重置布局
@@ -113,7 +136,7 @@ const App = {
         class="droppable-element"
         :draggable="true"
         unselectable="on"
-        onDragStart="(e) => e.dataTransfer.setData('text/plain', '')"
+        @dragstart="onExternalDragStart"
       >
         拖拽我到下方网格！
       </div>

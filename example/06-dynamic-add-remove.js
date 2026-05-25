@@ -109,6 +109,7 @@ const App = {
         @breakpointChange="onBreakpointChange"
         :rowHeight="30"
         :containerPadding="[16, 16]"
+        draggableCancel=".remove,.add"
       >
         <div v-for="(el, i) in state.items" :key="el.add ? '+' : el.i" :data-grid="el">
           <span

@@ -58,6 +58,18 @@ const App = {
     const onDropDragOver  = (e) => {
       return { w: 2, h: 2 };
     };
+    const onExternalDragStart = (e) => {
+      e.dataTransfer.setData('text/plain', '');
+      const dragImage = document.createElement('div');
+      dragImage.style.width = '1px';
+      dragImage.style.height = '1px';
+      dragImage.style.position = 'fixed';
+      dragImage.style.top = '-1000px';
+      dragImage.style.opacity = '0';
+      document.body.appendChild(dragImage);
+      e.dataTransfer.setDragImage(dragImage, 0, 0);
+      requestAnimationFrame(() => dragImage.remove());
+    };
     const onDragStop  = (layout, oldLay, newLay) => {
       // console.log('onDragStop')
     };
@@ -68,7 +80,8 @@ const App = {
       onBreakpointChange,
       onLayoutChange,
       onDrop,
-      onDropDragOver
+      onDropDragOver,
+      onExternalDragStart
     }
   },
   components: {
@@ -91,7 +104,7 @@ const App = {
         class="droppable-element"
         :draggable="true"
         unselectable="on"
-        onDragStart="(e) => e.dataTransfer.setData('text/plain', '')"
+        @dragstart="onExternalDragStart"
       >
         Droppable Element (Drag me!)
       </div>
