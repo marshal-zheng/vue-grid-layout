@@ -107,11 +107,11 @@ _需求追溯: R3.AC6, R9.AC4, R10.AC1, R10.AC7_
 
 _需求追溯: R3.AC1, R3.AC2, R3.AC3, R3.AC6_
 
-- [ ] 5.3 确保 pointer/resize/drop 的 blocked、cancelled、timeout、error、stale 与 noop 分支清理 pending shell transaction、placeholder、guides、active interaction 和 auto-scroll。
+- [x] 5.3 确保 pointer/resize/drop 的 blocked、cancelled、timeout、error、stale 与 noop 分支清理 pending shell transaction、placeholder、guides、active interaction 和 auto-scroll。
 
 _需求追溯: R3.AC4, R3.AC5, R7.AC3_
 
-- [ ] 5.4 为 pointer/resize/drop 增加 shell integration 测试，断言 result stream 包含 command id、action id/source、affected ids、write-back status 和 diagnostics。
+- [x] 5.4 为 pointer/resize/drop 增加 shell integration 测试，断言 result stream 包含 command id、action id/source、affected ids、write-back status 和 diagnostics。
 
 _需求追溯: R3.AC1, R3.AC2, R3.AC3, R3.AC6, R9.AC4, R9.AC6, R10.AC4_
 
