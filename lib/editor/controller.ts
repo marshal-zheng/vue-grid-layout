@@ -114,6 +114,7 @@ import type {
   GridEditorAlignPayload,
   GridEditorDistributePayload,
   GridEditorEvent,
+  GridEditorEventListener,
   GridEditorGuideState,
   GridEditorHistoryController,
   GridEditorHistorySnapshot,
@@ -122,6 +123,7 @@ import type {
   GridEditorMetadataPatch,
   GridEditorMode,
   GridEditorPasteStrategy,
+  GridEditorRollbackCheckpoint,
   GridEditorTransaction,
   GridEditorTransactionPreview,
   GridEditorTidyPayload,
@@ -323,8 +325,13 @@ export const createGridEditorController = (
   const focusId = ref<string | null>(selection.value.activeId);
   const stopped = ref(false);
   const stopHandles: WatchStopHandle[] = [];
+  const eventListeners = new Set<GridEditorEventListener>();
   let stateRevision = 0;
   let internalStateWriteDepth = 0;
+
+  if (options.onEvent) {
+    eventListeners.add(options.onEvent);
+  }
 
   const withInternalStateWrite = <T>(fn: () => T): T => {
     internalStateWriteDepth += 1;
@@ -336,22 +343,40 @@ export const createGridEditorController = (
   };
 
   const emit = (event: GridEditorEvent) => {
-    try {
-      options.onEvent?.(event);
-    } catch (error) {
-      if (event.type !== "editor-error") {
-        try {
-          options.onEvent?.({
-            type: "editor-error",
-            code: "editor-event-listener-error",
-            message: "Grid editor event listener failed.",
-            details: error
-          });
-        } catch {
-          // Event listeners are observational; listener failures must not change command results.
-        }
+    const listenerErrors: unknown[] = [];
+    for (const listener of Array.from(eventListeners)) {
+      try {
+        listener(event);
+      } catch (error) {
+        listenerErrors.push(error);
       }
     }
+    if (listenerErrors.length === 0 || event.type === "editor-error") return;
+    const diagnostic: GridEditorEvent = {
+      type: "editor-error",
+      code: "editor-event-listener-error",
+      message: "Grid editor event listener failed.",
+      details: listenerErrors.length === 1 ? listenerErrors[0] : listenerErrors
+    };
+    for (const listener of Array.from(eventListeners)) {
+      try {
+        listener(diagnostic);
+      } catch {
+        // Event listeners are observational; listener failures must not change command results.
+      }
+    }
+  };
+
+  const subscribe = (listener: GridEditorEventListener) => {
+    let active = true;
+    if (!stopped.value) {
+      eventListeners.add(listener);
+    }
+    return () => {
+      if (!active) return;
+      active = false;
+      eventListeners.delete(listener);
+    };
   };
 
   const getLayout = (): Layout => kind === "responsive"
@@ -431,6 +456,35 @@ export const createGridEditorController = (
       ? null
       : options.history || createGridEditorHistory();
   history?.replacePresent(createSnapshot());
+
+  const createRollbackCheckpoint = (
+    reason?: string
+  ): GridEditorRollbackCheckpoint => ({
+    id: `editor-rollback-checkpoint:${Date.now()}:${Math.random().toString(36).slice(2)}`,
+    kind: "grid-editor-rollback-checkpoint",
+    snapshot: createSnapshot(),
+    history: history?.checkpoint(),
+    revision: stateRevision,
+    reason
+  });
+
+  const restoreRollbackCheckpoint = (
+    checkpoint: GridEditorRollbackCheckpoint,
+    reason = checkpoint.reason || "rollback-checkpoint-restore"
+  ) => {
+    commandKernel.abortPending(reason);
+    interaction.value = null;
+    clearPlacementSession(reason);
+    applySnapshot(checkpoint.snapshot);
+    if (history && checkpoint.history) {
+      history.restore(checkpoint.history);
+    }
+    emit({
+      type: "editor-state-change",
+      state: state.value,
+      reason
+    });
+  };
 
   const dirty = computed(() => !deepEqual(createSnapshot(), lastSavedSnapshot.value));
 
@@ -2992,6 +3046,9 @@ export const createGridEditorController = (
     conflict,
     guides,
     lastResult,
+    subscribe,
+    createRollbackCheckpoint,
+    restoreRollbackCheckpoint,
     execute,
     canExecute,
     beginPlacement,
@@ -3013,6 +3070,7 @@ export const createGridEditorController = (
       clearPlacementSession("editor-stop");
       stopHandles.forEach(stop => stop());
       persistenceController?.stop();
+      eventListeners.clear();
     }
   };
 

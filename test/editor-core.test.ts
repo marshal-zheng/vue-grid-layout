@@ -7,7 +7,9 @@ import {
   computeGridEditorGuides,
   createGridEditorController,
   createGridEditorHistory,
+  createGridEditorHistoryEntry,
   createGridEditorClipboardPayload,
+  createGridEditorSelection,
   createGridEditorPlacementSession,
   createGridEditorPersistenceEnvelope,
   createGridEditorTransactionPreview,
@@ -32,7 +34,7 @@ import {
   memoryPersistenceAdapter,
   useGridLayoutPersistence
 } from '../lib/persistence'
-import type { GridEditorSectionRowState } from '../lib/editor'
+import type { GridEditorHistorySnapshot, GridEditorSectionRowState } from '../lib/editor'
 import type { Layout } from '../lib/utils'
 
 const baseLayout = (): Layout => [
@@ -51,6 +53,37 @@ const keyboardEvent = (
   target: null,
   ...input
 }) as KeyboardEvent
+
+const historySnapshot = (
+  x: number,
+  selectedIds: string[] = []
+): GridEditorHistorySnapshot => ({
+  kind: 'layout',
+  layout: [{ i: 'a', x, y: 0, w: 2, h: 2 }],
+  editorMetaById: {
+    a: {
+      label: `Widget ${x}`,
+      resizeHandles: ['se'],
+      data: { x }
+    }
+  },
+  sectionRows: {
+    version: 1,
+    items: {
+      row: {
+        id: 'row',
+        kind: 'row',
+        order: 1,
+        itemIds: ['a']
+      }
+    },
+    itemMembership: {
+      a: { rowId: 'row' }
+    }
+  },
+  selection: createGridEditorSelection(selectedIds),
+  focusId: selectedIds[0] || null
+})
 
 async function testModeAndGuard() {
   const layout = ref(baseLayout())
@@ -1245,6 +1278,169 @@ async function testCommandKernelContracts() {
   assert.equal(invalid.blocked?.reason, 'invalid-input')
 }
 
+function testHistoryCheckpointRestore() {
+  const mergedHistory = createGridEditorHistory({ mergeWindowMs: 1000 })
+  mergedHistory.push(createGridEditorHistoryEntry({
+    id: 'merge-1',
+    commandId: 'merge-command-1',
+    commandType: 'move',
+    before: historySnapshot(0),
+    after: historySnapshot(1, ['a']),
+    createdAt: '2026-01-01T00:00:00.000Z',
+    mergeKey: 'move:a',
+    affectedIds: ['a']
+  }))
+  mergedHistory.push(createGridEditorHistoryEntry({
+    id: 'merge-2',
+    commandId: 'merge-command-2',
+    commandType: 'move',
+    before: historySnapshot(1, ['a']),
+    after: historySnapshot(2, ['a']),
+    createdAt: '2026-01-01T00:00:00.300Z',
+    mergeKey: 'move:a',
+    affectedIds: ['a']
+  }))
+  const mergedCheckpoint = mergedHistory.checkpoint()
+  mergedHistory.push(createGridEditorHistoryEntry({
+    id: 'merge-extra',
+    commandId: 'merge-command-extra',
+    commandType: 'move',
+    before: historySnapshot(2, ['a']),
+    after: historySnapshot(9, ['a']),
+    createdAt: '2026-01-01T00:00:01.500Z',
+    affectedIds: ['a']
+  }))
+  mergedHistory.restore(mergedCheckpoint)
+  const mergedUndo = mergedHistory.undo()
+  assert.ok(mergedUndo)
+  assert.equal(mergedUndo.before.kind, 'layout')
+  assert.equal(mergedUndo.after.kind, 'layout')
+  assert.equal(mergedUndo.before.kind === 'layout' ? mergedUndo.before.layout[0].x : -1, 0)
+  assert.equal(mergedUndo.after.kind === 'layout' ? mergedUndo.after.layout[0].x : -1, 2)
+  assert.deepEqual(
+    mergedUndo?.after.editorMetaById.a.resizeHandles,
+    ['se']
+  )
+  assert.deepEqual(
+    mergedUndo?.after.sectionRows.items.row.itemIds,
+    ['a']
+  )
+
+  const redoHistory = createGridEditorHistory()
+  redoHistory.push(createGridEditorHistoryEntry({
+    id: 'redo-1',
+    commandId: 'redo-command-1',
+    commandType: 'move',
+    before: historySnapshot(0),
+    after: historySnapshot(1),
+    createdAt: '2026-01-01T00:00:00.000Z',
+    affectedIds: ['a']
+  }))
+  redoHistory.push(createGridEditorHistoryEntry({
+    id: 'redo-2',
+    commandId: 'redo-command-2',
+    commandType: 'move',
+    before: historySnapshot(1),
+    after: historySnapshot(2),
+    createdAt: '2026-01-01T00:00:01.000Z',
+    affectedIds: ['a']
+  }))
+  assert.equal(redoHistory.undo()?.id, 'redo-2')
+  const redoCheckpoint = redoHistory.checkpoint()
+  redoHistory.push(createGridEditorHistoryEntry({
+    id: 'redo-extra',
+    commandId: 'redo-command-extra',
+    commandType: 'move',
+    before: historySnapshot(1),
+    after: historySnapshot(5),
+    createdAt: '2026-01-01T00:00:02.000Z',
+    affectedIds: ['a']
+  }))
+  assert.equal(redoHistory.canRedo.value, false)
+  redoHistory.restore(redoCheckpoint)
+  assert.equal(redoHistory.canUndo.value, true)
+  assert.equal(redoHistory.canRedo.value, true)
+  assert.equal(redoHistory.redo()?.id, 'redo-2')
+  assert.equal(redoHistory.canRedo.value, false)
+}
+
+async function testEditorEventSubscriptionAndRollbackCheckpoint() {
+  const layout = ref(baseLayout())
+  const initialEvents: string[] = []
+  const subscribedEvents: string[] = []
+  const diagnosticCodes: string[] = []
+  let eventThrows = true
+  const editor = createGridEditorController({
+    layout,
+    defaultMode: 'edit',
+    onEvent: event => {
+      initialEvents.push(event.type)
+      if (eventThrows && event.type === 'command-commit') {
+        throw new Error('primary listener failed')
+      }
+    }
+  })
+  const unsubscribe = editor.subscribe(event => {
+    subscribedEvents.push(event.type)
+  })
+  const unsubscribeDiagnostics = editor.subscribe(event => {
+    if (event.type === 'editor-error') {
+      diagnosticCodes.push(event.code)
+    }
+  })
+
+  const firstMove = await editor.execute({ type: 'move', targetIds: ['a'], payload: { dx: 1 } })
+  assert.equal(firstMove.status, 'changed')
+  assert.equal(layout.value.find(item => item.i === 'a')?.x, 1)
+  assert.ok(initialEvents.includes('command-commit'))
+  assert.ok(subscribedEvents.includes('command-commit'))
+  assert.ok(subscribedEvents.includes('editor-error'))
+  assert.deepEqual(diagnosticCodes, ['editor-event-listener-error'])
+
+  eventThrows = false
+  const subscribedCommitCount = subscribedEvents.filter(type => type === 'command-commit').length
+  unsubscribe()
+  unsubscribe()
+  const secondMove = await editor.execute({ type: 'move', targetIds: ['a'], payload: { dx: 1 } })
+  assert.equal(secondMove.status, 'changed')
+  assert.equal(
+    subscribedEvents.filter(type => type === 'command-commit').length,
+    subscribedCommitCount
+  )
+  unsubscribeDiagnostics()
+
+  const checkpoint = editor.createRollbackCheckpoint('before-shell-write-back')
+  const failedMove = await editor.execute({ type: 'move', targetIds: ['a'], payload: { dx: 5 } })
+  assert.equal(failedMove.status, 'changed')
+  assert.equal(layout.value.find(item => item.i === 'a')?.x, 7)
+  editor.restoreRollbackCheckpoint(checkpoint, 'shell-write-back-failed')
+  assert.equal(layout.value.find(item => item.i === 'a')?.x, 2)
+
+  const undo = await editor.undo()
+  assert.equal(undo.status, 'changed')
+  assert.equal(layout.value.find(item => item.i === 'a')?.x, 1)
+  const redo = await editor.redo()
+  assert.equal(redo.status, 'changed')
+  assert.equal(layout.value.find(item => item.i === 'a')?.x, 2)
+  const redoAgain = await editor.redo()
+  assert.equal(redoAgain.status, 'blocked')
+  assert.equal(layout.value.find(item => item.i === 'a')?.x, 2)
+
+  const stoppedLayout = ref(baseLayout())
+  const stoppedEditor = createGridEditorController({
+    layout: stoppedLayout,
+    defaultMode: 'edit'
+  })
+  let stopListenerCount = 0
+  stoppedEditor.subscribe(() => {
+    stopListenerCount += 1
+  })
+  stoppedEditor.stop()
+  const countAfterStop = stopListenerCount
+  stoppedEditor.setExternalLayout(baseLayout(), 'after-stop')
+  assert.equal(stopListenerCount, countAfterStop)
+}
+
 async function testGuardStaleEventIsolationAndExternalRedo() {
   const layout = ref(baseLayout())
   let eventThrows = true
@@ -1645,6 +1841,8 @@ async function run() {
   await testPredictiveGuidesAndChips()
   await testL3IntelligenceSnapCommandsAndSectionRows()
   await testCommandKernelContracts()
+  testHistoryCheckpointRestore()
+  await testEditorEventSubscriptionAndRollbackCheckpoint()
   await testGuardStaleEventIsolationAndExternalRedo()
   await testGuardResultVariantsAndAbort()
   await testCommandPreviewCoverage()

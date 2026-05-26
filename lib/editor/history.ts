@@ -4,11 +4,14 @@ import { cloneLayout } from "../utils";
 import { cloneLayoutsMap } from "../persistence";
 import type {
   GridEditorHistoryController,
+  GridEditorHistoryCheckpoint,
   GridEditorHistoryEntry,
   GridEditorHistoryMark,
   GridEditorHistoryPushOptions,
   GridEditorHistoryReplaceOptions,
-  GridEditorHistorySnapshot
+  GridEditorHistorySnapshot,
+  GridEditorMetaById,
+  GridEditorSectionRowState
 } from "./types";
 
 export type GridEditorHistoryOptions = {
@@ -27,7 +30,8 @@ const cloneSnapshot = (
     return {
       ...snapshot,
       layout: cloneLayout(snapshot.layout),
-      editorMetaById: { ...snapshot.editorMetaById },
+      editorMetaById: cloneMeta(snapshot.editorMetaById),
+      sectionRows: cloneSectionRows(snapshot.sectionRows),
       selection: {
         ...snapshot.selection,
         selectedIds: snapshot.selection.selectedIds.slice()
@@ -37,13 +41,53 @@ const cloneSnapshot = (
   return {
     ...snapshot,
     layouts: cloneLayoutsMap(snapshot.layouts),
-    editorMetaById: { ...snapshot.editorMetaById },
+    editorMetaById: cloneMeta(snapshot.editorMetaById),
+    sectionRows: cloneSectionRows(snapshot.sectionRows),
     selection: {
       ...snapshot.selection,
       selectedIds: snapshot.selection.selectedIds.slice()
     }
   };
 };
+
+const cloneMeta = (metaById: GridEditorMetaById): GridEditorMetaById =>
+  Object.keys(metaById || {}).reduce((acc, id) => {
+    const meta = metaById[id];
+    acc[id] = {
+      ...meta,
+      resizeHandles: meta.resizeHandles ? meta.resizeHandles.slice() : undefined,
+      data: meta.data ? { ...meta.data } : undefined
+    };
+    return acc;
+  }, {} as GridEditorMetaById);
+
+const cloneSectionRows = (
+  rows: GridEditorSectionRowState
+): GridEditorSectionRowState => ({
+  version: 1,
+  items: Object.keys(rows.items || {}).reduce((acc, id) => {
+    const row = rows.items[id];
+    acc[id] = {
+      ...row,
+      bounds: row.bounds ? { ...row.bounds } : undefined,
+      itemIds: row.itemIds ? row.itemIds.slice() : undefined,
+      allowedDropZones: row.allowedDropZones ? row.allowedDropZones.slice() : undefined
+    };
+    return acc;
+  }, {} as GridEditorSectionRowState["items"]),
+  itemMembership: Object.keys(rows.itemMembership || {}).reduce((acc, id) => {
+    acc[id] = { ...(rows.itemMembership?.[id] || {}) };
+    return acc;
+  }, {} as NonNullable<GridEditorSectionRowState["itemMembership"]>)
+});
+
+const cloneEntry = (entry: GridEditorHistoryEntry): GridEditorHistoryEntry => ({
+  ...entry,
+  before: cloneSnapshot(entry.before),
+  after: cloneSnapshot(entry.after),
+  targetIds: entry.targetIds ? entry.targetIds.slice() : undefined,
+  affectedIds: entry.affectedIds ? entry.affectedIds.slice() : undefined
+});
 
 export const createGridEditorHistory = (
   options: GridEditorHistoryOptions = {}
@@ -83,9 +127,7 @@ export const createGridEditorHistory = (
   ) => {
     if (deepEqual(entry.before, entry.after)) return;
     const nextEntry = {
-      ...entry,
-      before: cloneSnapshot(entry.before),
-      after: cloneSnapshot(entry.after)
+      ...cloneEntry(entry)
     };
     const previous = past[past.length - 1];
     if (shouldMerge(previous, nextEntry)) {
@@ -154,6 +196,21 @@ export const createGridEditorHistory = (
         after: cloneSnapshot(entry.after)
       };
       pushEntry(squashed, pushOptions);
+    },
+    checkpoint(): GridEditorHistoryCheckpoint {
+      return {
+        id: `editor-history-checkpoint:${Date.now()}:${Math.random().toString(36).slice(2)}`,
+        kind: "grid-editor-history-checkpoint",
+        past: past.map(cloneEntry),
+        future: future.map(cloneEntry),
+        canUndo: canUndo.value,
+        canRedo: canRedo.value
+      };
+    },
+    restore(checkpoint: GridEditorHistoryCheckpoint) {
+      past = checkpoint.past.map(cloneEntry);
+      future = checkpoint.future.map(cloneEntry);
+      updateFlags();
     }
   };
 };
