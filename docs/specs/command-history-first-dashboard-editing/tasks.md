@@ -135,19 +135,19 @@ _需求追溯: R8.AC1, R8.AC4, R8.AC5, R8.AC6, R8.AC7, R10.AC3, R10.AC4_
 
 ### 7. 迁移 Dogfood Workbench 与示例结果面板
 
-- [ ] 7.1 找到现有 dashboard runtime lab / shell 示例入口，将主流程切到 `useDashboardEditorShell()` + editor command history + shell-managed document write-back。
+- [x] 7.1 找到现有 dashboard runtime lab / shell 示例入口，将主流程切到 `useDashboardEditorShell()` + editor command history + shell-managed document write-back。
 
 _需求追溯: R9.AC1, R1.AC3_
 
-- [ ] 7.2 示例覆盖 drag、resize、drop、toolbar add/remove、paste、undo、redo、profile switch 和 layout settings migration，并在同一 result/diagnostic 面板展示。
+- [x] 7.2 示例覆盖 drag、resize、drop、toolbar add/remove、paste、undo、redo、profile switch 和 layout settings migration，并在同一 result/diagnostic 面板展示。
 
 _需求追溯: R9.AC2, R9.AC4, R9.AC6_
 
-- [ ] 7.3 示例保留 legacy history 展示时明确标记为 compatibility / layout-only，不作为推荐 dashboard editor 主路径。
+- [x] 7.3 示例保留 legacy history 展示时明确标记为 compatibility / layout-only，不作为推荐 dashboard editor 主路径。
 
 _需求追溯: R1.AC4, R6.AC4, R6.AC5, R9.AC3_
 
-- [ ] 7.4 增加 examples/headless 测试，覆盖无重复 `documentChange`、无重复 history push、undo/redo 不分叉和 synthetic pointer/drop result。
+- [x] 7.4 增加 examples/headless 测试，覆盖无重复 `documentChange`、无重复 history push、undo/redo 不分叉和 synthetic pointer/drop result。
 
 _需求追溯: R9.AC5, R9.AC6, R10.AC5_
 

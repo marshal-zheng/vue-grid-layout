@@ -1,6 +1,7 @@
 import { createApp, computed, ref } from "vue/dist/vue.esm-bundler.js";
 import {
   DashboardResponsiveVueGridLayout,
+  migrateDashboardLayoutSettings,
   serializeDashboardLayoutDocument,
   useDashboardResponsiveProfileModel
 } from "@marsio/vue-grid-layout/dashboard";
@@ -530,6 +531,56 @@ style.textContent = `
     white-space: nowrap;
   }
 
+  .result-stream {
+    display: grid;
+    gap: 6px;
+  }
+
+  .result-row {
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    gap: 2px;
+    padding-bottom: 6px;
+  }
+
+  .result-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .result-row strong {
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .result-row span,
+  .diagnostic-row {
+    color: var(--muted);
+    font-size: 12px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .diagnostic-list {
+    display: grid;
+    gap: 5px;
+  }
+
+  .diagnostic-row.warning {
+    color: var(--warning);
+  }
+
+  .diagnostic-row.error {
+    color: var(--danger);
+  }
+
   .menu-title {
     align-items: center;
     display: flex;
@@ -713,12 +764,18 @@ const createWidgetCatalog = () =>
 
 let revisionIndex = 0;
 let localIdCounter = 0;
+let resultEntryIndex = 0;
 
 const nextRevision = () => `dashboard-shell-demo-${++revisionIndex}`;
 
 const nextLocalId = base => {
   localIdCounter += 1;
   return `${base}-${localIdCounter.toString(36)}`;
+};
+
+const nextResultEntryId = base => {
+  resultEntryIndex += 1;
+  return `${base}-${resultEntryIndex.toString(36)}`;
 };
 
 const createDocument = () => serializeDashboardLayoutDocument({
@@ -847,6 +904,8 @@ const App = {
     const adapterStage = ref("Idle");
     const addStrategy = ref("first-fit");
     const placementCollisionPolicy = ref("block");
+    const operationDiagnostics = ref([]);
+    const resultStream = ref([]);
     const placementCollisionOptions = () => ({
       collisionPolicy: placementCollisionPolicy.value,
       compactType: "vertical",
@@ -866,8 +925,56 @@ const App = {
       affected: "none",
       placement: "none",
       shifted: "none",
-      diagnostics: 0
+      diagnostics: 0,
+      writeBack: "none",
+      synthetic: "direct",
+      detail: "Shell managed write-back is active"
     });
+
+    const pushResultEntry = entry => {
+      const normalized = {
+        id: entry.id || nextResultEntryId(String(entry.actionType || "result").toLowerCase().replace(/\s+/g, "-")),
+        actionType: entry.actionType || "Action",
+        status: entry.status || "success",
+        source: entry.source || "api",
+        affected: entry.affected || "none",
+        placement: entry.placement || "none",
+        shifted: entry.shifted || "none",
+        diagnostics: entry.diagnostics || 0,
+        writeBack: entry.writeBack || "none",
+        synthetic: entry.synthetic || "direct",
+        detail: entry.detail || "none"
+      };
+      lastAction.value = normalized;
+      resultStream.value = [normalized, ...resultStream.value].slice(0, 6);
+    };
+
+    const recordManualResult = entry => {
+      operationDiagnostics.value = actionableDiagnostics(entry.diagnostics || []);
+      pushResultEntry({
+        ...entry,
+        diagnostics: operationDiagnostics.value.length
+      });
+    };
+
+    const recordShellResult = event => {
+      const diagnostics = actionableDiagnostics(event.diagnostics);
+      const data = event.data && typeof event.data === "object" ? event.data : {};
+      operationDiagnostics.value = diagnostics;
+      pushResultEntry({
+        id: event.actionId,
+        actionType: actionLabel(event.actionType),
+        status: event.status,
+        source: event.source,
+        affected: event.affectedIds.length ? event.affectedIds.join(", ") : "none",
+        placement: event.placement?.strategy || event.position?.source || "none",
+        shifted: event.placement?.shiftedIds?.length ? event.placement.shiftedIds.join(", ") : "none",
+        diagnostics: diagnostics.length,
+        writeBack: event.writeResult ? (event.writeResult.ok ? "written" : "blocked") : "none",
+        synthetic: data.synthesized ? "synthetic" : "direct",
+        detail: event.commandResult?.type || event.adapter?.stage || "shell action"
+      });
+    };
 
     const widgetForId = id => widgetCatalog.value[id] || fallbackWidget(id);
 
@@ -905,6 +1012,7 @@ const App = {
       targetView,
       mode,
       validation: "strict",
+      documentWriteBack: "shell",
       createMissingProfileOnEdit: true,
       editor: {
         commandPolicy: "skip-blocked",
@@ -916,11 +1024,6 @@ const App = {
           allowOverlap: false,
           preventCollision: false
         }
-      },
-      onEvent: event => {
-        if (event.type === "documentChange") {
-          documentRef.value = event.document;
-        }
       }
     });
 
@@ -930,6 +1033,7 @@ const App = {
       gridElement: gridRef,
       mode,
       controlled: false,
+      documentWriteBack: "shell",
       createMissingProfileOnEdit: true,
       keyboard: {
         enabled: true,
@@ -1083,15 +1187,7 @@ const App = {
       confirm: () => true,
       onEvent: event => {
         if (event.type === "action-result") {
-          lastAction.value = {
-            actionType: actionLabel(event.actionType),
-            status: event.status,
-            source: event.source,
-            affected: event.affectedIds.length ? event.affectedIds.join(", ") : "none",
-            placement: event.placement?.strategy || "none",
-            shifted: event.placement?.shiftedIds?.length ? event.placement.shiftedIds.join(", ") : "none",
-            diagnostics: actionableDiagnostics(event.diagnostics).length
-          };
+          recordShellResult(event);
         }
         if (event.type === "menu-change") {
           menu.value = event.menu;
@@ -1136,6 +1232,16 @@ const App = {
       if (warnings) return { className: "warning", label: `${warnings} warning${warnings === 1 ? "" : "s"}` };
       return { className: "", label: shellState.value.ready ? "Ready" : "Starting" };
     });
+    const diagnosticRows = computed(() => {
+      const rows = operationDiagnostics.value.concat(actionableDiagnostics(shellState.value.diagnostics));
+      const seen = new Set();
+      return rows.filter(item => {
+        const key = `${item.level}:${item.code}:${item.itemId || ""}:${item.profileId || ""}:${item.reason || ""}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).slice(0, 6);
+    });
     const stateRows = computed(() => [
       { label: "Profile", value: model.state.value.resolvedProfileId || "default" },
       { label: "Mode", value: mode.value },
@@ -1156,6 +1262,15 @@ const App = {
       targetView.value = preset.targetView;
       gridWidth.value = preset.width;
       shell.actions.closeMenu("viewport-change");
+      recordManualResult({
+        actionType: "Profile switch",
+        status: "success",
+        source: "toolbar",
+        affected: preset.key,
+        placement: preset.targetView,
+        writeBack: "none",
+        detail: `${preset.width}px ${preset.breakpoint}`
+      });
     };
 
     const setMode = nextMode => {
@@ -1163,8 +1278,134 @@ const App = {
       shell.actions.closeMenu("mode-change");
     };
 
-    const handleGridDocumentChange = document => {
-      documentRef.value = document;
+    const activeMigrationProfileId = () =>
+      selectedViewport.value === "mobile" ? "mobile" : null;
+
+    const migrationPolicy = () => ({
+      axis: "horizontal",
+      sanitizeInvalidItems: true,
+      forceRepair: true,
+      repair: {
+        strategy: "nearest-then-first",
+        createDiagnostics: true,
+        objective: {
+          minimizeMovement: 1,
+          minimizeResize: 1,
+          preserveOrder: 1,
+          preserveStatic: 1
+        }
+      }
+    });
+
+    const runSettingsMigration = (label, nextSettings) => {
+      const previousSettings = clone(model.state.value.gridSettings || {});
+      const result = migrateDashboardLayoutSettings(documentRef.value, {
+        profileId: activeMigrationProfileId(),
+        previousSettings,
+        nextSettings,
+        createMissingProfile: true,
+        validation: "strict",
+        policy: migrationPolicy()
+      });
+      const diagnostics = actionableDiagnostics(result.diagnostics);
+      if (result.ok) {
+        documentRef.value = result.document;
+      }
+      recordManualResult({
+        actionType: "Settings migration",
+        status: result.ok ? result.operation?.status || "success" : result.error?.code || "error",
+        source: "toolbar",
+        affected: result.ok && result.operation?.affectedIds?.length ? result.operation.affectedIds.join(", ") : "active profile",
+        placement: activeMigrationProfileId() || "default",
+        writeBack: result.ok ? "written" : "blocked",
+        detail: label,
+        diagnostics
+      });
+    };
+
+    const migrateColumns = () => {
+      const current = model.state.value.gridSettings?.columns || (selectedViewport.value === "mobile" ? 4 : 12);
+      const target = selectedViewport.value === "mobile"
+        ? (current === 4 ? 5 : 4)
+        : (current === 12 ? 10 : 12);
+      runSettingsMigration(`${current} to ${target} columns`, { columns: target });
+    };
+
+    const toggleDensity = () => {
+      const current = model.state.value.gridSettings?.rowHeight || 58;
+      const compact = current >= 52;
+      runSettingsMigration(compact ? "Compact rows" : "Comfortable rows", {
+        rowHeight: compact ? 44 : 58,
+        renderPrecision: compact ? "integer" : "subpixel"
+      });
+    };
+
+    const editableTargetId = () =>
+      selectedIds.value.find(id => !widgetForId(id).locked) ||
+      currentWidgetIds.value.find(id => !widgetForId(id).locked) ||
+      currentWidgetIds.value[0];
+
+    const runSyntheticEditorCommand = command => {
+      const editor = model.editorController;
+      if (!editor) {
+        recordManualResult({
+          actionType: "Editor command",
+          status: "blocked",
+          source: "toolbar",
+          affected: "none",
+          detail: "missing editor controller"
+        });
+        return;
+      }
+      void editor.execute(command);
+    };
+
+    const simulatePointerMove = () => {
+      const id = editableTargetId();
+      if (!id) return;
+      runSyntheticEditorCommand({
+        type: "move",
+        targetIds: [id],
+        source: "pointer",
+        payload: { dx: 1, dy: 0 }
+      });
+    };
+
+    const simulatePointerResize = () => {
+      const id = editableTargetId();
+      if (!id) return;
+      runSyntheticEditorCommand({
+        type: "resize",
+        targetIds: [id],
+        source: "pointer",
+        payload: { dw: 1, dh: 1 }
+      });
+    };
+
+    const simulateExternalDrop = () => {
+      const id = nextLocalId("dropped-widget");
+      updateWidget(id, null, {
+        title: "Dropped widget",
+        kind: "Drop payload",
+        contract: "external drop",
+        detail: "Synthetic drop command writes through the shell",
+        badge: "drop"
+      });
+      runSyntheticEditorCommand({
+        type: "add",
+        targetIds: [id],
+        source: "drop",
+        payload: {
+          item: { i: id, x: 0, y: 6, w: selectedViewport.value === "mobile" ? 4 : 3, h: 2 },
+          strategy: "cursor",
+          cursor: { x: 0, y: 6 },
+          cols: model.state.value.gridSettings?.columns || 12,
+          maxRows: Infinity,
+          compactType: "vertical",
+          allowOverlap: false,
+          preventCollision: false
+        }
+      });
     };
 
     const selectWidget = id => {
@@ -1255,6 +1496,8 @@ const App = {
       copiedWidgets.value = [];
       adapterStage.value = "Idle";
       message.value = "";
+      operationDiagnostics.value = [];
+      resultStream.value = [];
       lastAction.value = {
         actionType: "Ready",
         status: "success",
@@ -1262,7 +1505,10 @@ const App = {
         affected: "none",
         placement: "none",
         shifted: "none",
-        diagnostics: 0
+        diagnostics: 0,
+        writeBack: "none",
+        synthetic: "direct",
+        detail: "Shell managed write-back is active"
       };
       shell.actions.closeMenu("reset");
     };
@@ -1287,10 +1533,11 @@ const App = {
       formatGeometry,
       gridRef,
       gridWidth,
-      handleGridDocumentChange,
       health,
       lastAction,
       locateWidget,
+      diagnosticRows,
+      migrateColumns,
       menu,
       menuItems,
       message,
@@ -1305,6 +1552,7 @@ const App = {
       redoHistory,
       removeSelected,
       resetDemo,
+      resultStream,
       runMenuAction,
       selectWidget,
       selectedIds,
@@ -1313,8 +1561,12 @@ const App = {
       setViewport,
       shell,
       shellState,
+      simulateExternalDrop,
+      simulatePointerMove,
+      simulatePointerResize,
       stateRows,
       targetView,
+      toggleDensity,
       undoHistory,
       viewportPresets,
       visibleWidgets
@@ -1383,6 +1635,14 @@ const App = {
           </button>
         </div>
         <div class="command-group">
+          <span class="command-label">Dogfood</span>
+          <button class="command-button" @click="simulatePointerMove">Drag +1</button>
+          <button class="command-button" @click="simulatePointerResize">Resize +1</button>
+          <button class="command-button" @click="simulateExternalDrop">Drop widget</button>
+          <button class="command-button" @click="migrateColumns">Migrate columns</button>
+          <button class="command-button" @click="toggleDensity">Toggle density</button>
+        </div>
+        <div class="command-group">
           <button class="command-button" :disabled="!canUndo" @click="undoHistory">Undo</button>
           <button class="command-button" :disabled="!canRedo" @click="redoHistory">Redo</button>
           <button class="command-button" :disabled="!selectedIds.length" @click="copySelected">Copy</button>
@@ -1422,6 +1682,7 @@ const App = {
                 :targetView="targetView"
                 :mode="mode"
                 validation="strict"
+                :documentWriteBack="'shell'"
                 :editor="{ controller: model.editorController }"
                 :createMissingProfileOnEdit="true"
                 :autoSize="true"
@@ -1432,7 +1693,6 @@ const App = {
                 :compactType="'vertical'"
                 :useCSSTransforms="true"
                 :layoutEngine="{ scheduler: { mode: 'auto' }, diagnostics: { debug: true, budgetMs: 10 } }"
-                @documentChange="handleGridDocumentChange"
               >
                 <div
                   v-for="widget in allWidgets"
@@ -1528,15 +1788,34 @@ const App = {
           </section>
 
           <section class="inspector-section">
-            <h3>Last result</h3>
+            <h3>Results and diagnostics</h3>
             <div class="result-box">
               <strong>{{ lastAction.actionType }}</strong>
               <span>Status: {{ lastAction.status }}; source: {{ lastAction.source }}</span>
               <span>Affected: {{ lastAction.affected }}</span>
               <span>Placement: {{ lastAction.placement }}</span>
               <span>Shifted: {{ lastAction.shifted }}</span>
+              <span>Write-back: {{ lastAction.writeBack }}; {{ lastAction.synthetic }}</span>
+              <span>Detail: {{ lastAction.detail }}</span>
               <span>Diagnostics: {{ lastAction.diagnostics }}</span>
               <span>Adapter: {{ adapterStage }}</span>
+            </div>
+            <div class="result-stream" v-if="resultStream.length">
+              <div v-for="entry in resultStream" :key="entry.id" class="result-row">
+                <strong>{{ entry.actionType }} - {{ entry.status }}</strong>
+                <span>{{ entry.source }} - {{ entry.writeBack }} - {{ entry.detail }}</span>
+                <span>{{ entry.affected }} - diagnostics {{ entry.diagnostics }}</span>
+              </div>
+            </div>
+            <div class="diagnostic-list" v-if="diagnosticRows.length">
+              <span
+                v-for="(diagnostic, index) in diagnosticRows"
+                :key="index + diagnostic.code"
+                class="diagnostic-row"
+                :class="diagnostic.level"
+              >
+                {{ diagnostic.level }} - {{ diagnostic.code }} - {{ diagnostic.itemId || diagnostic.profileId || diagnostic.reason || 'dashboard' }}
+              </span>
             </div>
             <p class="shell-message">{{ message }}</p>
           </section>
