@@ -12,6 +12,7 @@ import {
 } from "./dashboard-responsive";
 import type {
   DashboardDiagnostic,
+  DashboardDocumentWriteBackOwner,
   DashboardHeightOptionOverrides,
   DashboardLayoutDocument,
   DashboardResponsiveMode,
@@ -101,6 +102,10 @@ const DashboardResponsiveVueGridLayout = defineComponent({
       type: Boolean,
       default: false
     },
+    documentWriteBack: {
+      type: String as PropType<DashboardDocumentWriteBackOwner>,
+      default: "component"
+    },
     layoutEngine: {
       type: [Boolean, Object] as PropType<false | GridLayoutEngineProp>,
       default: undefined
@@ -122,7 +127,7 @@ const DashboardResponsiveVueGridLayout = defineComponent({
       const configured = props.editor && typeof props.editor === "object"
         ? props.editor
         : null;
-      if (!props.historyStore) return configured || false;
+      if (!props.historyStore || props.documentWriteBack === "shell") return configured || false;
       if (configured) {
         return {
           ...configured,
@@ -146,6 +151,7 @@ const DashboardResponsiveVueGridLayout = defineComponent({
       validation: props.validation,
       layoutEngine: props.layoutEngine,
       editor: resolveEditorProp(),
+      documentWriteBack: props.documentWriteBack,
       createMissingProfileOnEdit: props.createMissingProfileOnEdit,
       allowUnknownProfileItems: props.allowUnknownProfileItems,
       onEvent: event => {
@@ -294,6 +300,7 @@ const DashboardResponsiveVueGridLayout = defineComponent({
         validation,
         allowUnknownProfileItems,
         createMissingProfileOnEdit,
+        documentWriteBack,
         modelValue,
         cols,
         margin,
@@ -319,6 +326,7 @@ const DashboardResponsiveVueGridLayout = defineComponent({
       void validation;
       void allowUnknownProfileItems;
       void createMissingProfileOnEdit;
+      void documentWriteBack;
       void modelValue;
       void cols;
       void margin;

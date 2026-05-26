@@ -1,7 +1,7 @@
 import assert from 'assert'
 import { nextTick, ref } from 'vue'
 import type { Layout } from '../lib/utils'
-import type { GridEditorMetaById } from '../lib/editor'
+import type { GridEditorMetaById, GridEditorSectionRowState } from '../lib/editor'
 import {
   DASHBOARD_SCHEMA_VERSION,
   deserializeDashboardLayoutDocument,
@@ -112,8 +112,29 @@ const baseDefinition = (): DashboardLayoutDefinition => ({
       orphan: { locked: true }
     },
     sectionRows: {
-      version: 2,
-      items: {}
+      version: 1,
+      items: {
+        operations: {
+          id: 'operations',
+          kind: 'section',
+          order: 1,
+          itemIds: ['temperature', 'pressure', 'orphan']
+        },
+        rowA: {
+          id: 'rowA',
+          kind: 'row',
+          order: 2,
+          itemIds: ['temperature']
+        }
+      },
+      itemMembership: {
+        temperature: { sectionId: 'operations', rowId: 'rowA' },
+        pressure: { sectionId: 'operations' },
+        orphan: { sectionId: 'operations' }
+      }
+    },
+    extensions: {
+      editorEnvelopeSafeField: 'preserved'
     }
   },
   extensions: {
@@ -142,6 +163,10 @@ function testSerializeDeserializeValidateAndSanitize() {
   assert.equal(doc.layouts.default.extensions?.owner, 'dashboard-core-test')
   assert.equal(doc.layouts.default.widgets.temperature.extensions?.sensor, 'temperature')
   assert.equal(doc.layouts.default.editor?.editorMetaById?.orphan, undefined)
+  assert.equal(doc.layouts.default.editor?.sectionRows?.version, 1)
+  assert.equal(doc.layouts.default.editor?.sectionRows?.itemMembership?.orphan, undefined)
+  assert.deepEqual(doc.layouts.default.editor?.sectionRows?.items.operations.itemIds, ['temperature', 'pressure'])
+  assert.equal(doc.layouts.default.editor?.extensions?.editorEnvelopeSafeField, 'preserved')
 
   const restored = deserializeDashboardLayoutDocument(JSON.stringify(doc))
   assert.equal(restored.ok, true)
@@ -329,9 +354,32 @@ function testWriteBack() {
     temperature: { label: 'Temperature Updated', resizable: true, visible: false, data: { unit: 'F' } },
     pressure: { locked: true }
   }
+  const runtimeSectionRows: GridEditorSectionRowState = {
+    version: 1,
+    items: {
+      main: {
+        id: 'main',
+        kind: 'section',
+        order: 1,
+        itemIds: ['temperature', 'pressure', 'ghost']
+      },
+      metrics: {
+        id: 'metrics',
+        kind: 'row',
+        order: 2,
+        itemIds: ['temperature']
+      }
+    },
+    itemMembership: {
+      temperature: { sectionId: 'main', rowId: 'metrics' },
+      pressure: { sectionId: 'main' },
+      ghost: { sectionId: 'main' }
+    }
+  }
   const written = writeDashboardRuntimeToDocument(doc, {
     layout: runtimeLayout,
     editorMetaById: runtimeMeta,
+    sectionRows: runtimeSectionRows,
     gridSettings: { columns: 30 }
   }, {
     targetView: 'mobile'
@@ -350,11 +398,34 @@ function testWriteBack() {
   assert.equal(written.ok && written.document.layouts.default.gridSettings?.columns, 30)
   assert.equal(written.ok && written.document.layouts.default.editor?.editorMetaById?.pressure.locked, true)
   assert.equal(written.ok && written.document.layouts.default.editor?.editorMetaById?.temperature.data?.unit, 'F')
+  assert.equal(written.ok && written.document.layouts.default.editor?.version, 2)
+  assert.equal(written.ok && written.document.layouts.default.editor?.extensions?.editorEnvelopeSafeField, 'preserved')
+  assert.deepEqual(written.ok && written.document.layouts.default.editor?.sectionRows?.items.main.itemIds, ['temperature', 'pressure'])
+  assert.deepEqual(written.ok && written.document.layouts.default.editor?.sectionRows?.itemMembership?.temperature, {
+    sectionId: 'main',
+    rowId: 'metrics'
+  })
+  assert.equal(written.ok && written.document.layouts.default.editor?.sectionRows?.itemMembership?.ghost, undefined)
+  assert.ok(written.ok && written.diagnostics.some(item => item.code === 'grid-editor.sectionRows.orphan-membership'))
 
   const profileWrite = writeDashboardRuntimeToDocument(doc, {
     layout: [{ i: 'temperature', x: 9, y: 1, w: 2, h: 2 }],
     editorMetaById: {
       temperature: { label: 'Mobile Temperature', visible: false }
+    },
+    sectionRows: {
+      version: 1,
+      items: {
+        mobileMain: {
+          id: 'mobileMain',
+          kind: 'section',
+          order: 1,
+          itemIds: ['temperature']
+        }
+      },
+      itemMembership: {
+        temperature: { sectionId: 'mobileMain' }
+      }
     }
   }, {
     profileId: 'mobile',
@@ -365,7 +436,12 @@ function testWriteBack() {
   assert.equal(profileWrite.ok && profileWrite.document.layouts.default.profiles?.mobile.widgets?.temperature.col, 9)
   assert.equal(profileWrite.ok && profileWrite.document.layouts.default.profiles?.mobile.widgets?.temperature.mobileHide, true)
   assert.equal(profileWrite.ok && profileWrite.document.layouts.default.profiles?.mobile.editor?.editorMetaById?.temperature.label, 'Mobile Temperature')
+  assert.equal(profileWrite.ok && profileWrite.document.layouts.default.profiles?.mobile.editor?.version, 2)
+  assert.deepEqual(profileWrite.ok && profileWrite.document.layouts.default.profiles?.mobile.editor?.sectionRows?.itemMembership?.temperature, {
+    sectionId: 'mobileMain'
+  })
   assert.equal(profileWrite.ok && profileWrite.document.layouts.default.editor?.editorMetaById?.temperature.label, 'Temperature')
+  assert.equal(profileWrite.ok && profileWrite.document.layouts.default.editor?.sectionRows?.items.operations.itemIds?.includes('pressure'), true)
   assert.equal(profileWrite.ok && profileWrite.document.layouts.default.profiles?.tablet.widgets?.pressure.col, 4)
 
   const unknown = writeDashboardRuntimeToDocument(doc, {
@@ -398,6 +474,18 @@ function testWriteBack() {
   })
   assert.equal(createdProfile.ok, true)
   assert.equal(createdProfile.ok && createdProfile.document.layouts.default.profiles?.watch.widgets?.temperature.sizeY, 1)
+
+  const removed = writeDashboardRuntimeToDocument(doc, {
+    layout: [{ i: 'temperature', x: 0, y: 0, w: 1, h: 1 }]
+  }, {
+    writeItemIds: ['pressure'],
+    removeMissingItems: true
+  })
+  assert.equal(removed.ok, true)
+  assert.equal(removed.ok && removed.document.layouts.default.widgets.pressure, undefined)
+  assert.equal(removed.ok && removed.document.layouts.default.editor?.editorMetaById?.pressure, undefined)
+  assert.equal(removed.ok && removed.document.layouts.default.editor?.sectionRows?.itemMembership?.pressure, undefined)
+  assert.equal(removed.ok && removed.document.layouts.default.editor?.sectionRows?.items.operations.itemIds?.includes('pressure'), false)
 }
 
 function testDashboardLayoutSettingsMigration() {
@@ -777,13 +865,37 @@ function testResponsiveProfileWriteBack() {
   const written = runtime.ok && writeDashboardResponsiveRuntimeToDocument(doc, runtime.runtime, [
     { i: 'temperature', x: 0, y: 0, w: 24, h: 7 },
     { i: 'pressure', x: 0, y: 7, w: 24, h: 2 }
-  ])
+  ], {
+    editorMetaById: {
+      temperature: { label: 'Mobile Runtime Temperature', visible: false }
+    },
+    sectionRows: {
+      version: 1,
+      items: {
+        mobileList: {
+          id: 'mobileList',
+          kind: 'row',
+          order: 1,
+          itemIds: ['temperature', 'pressure']
+        }
+      },
+      itemMembership: {
+        temperature: { rowId: 'mobileList' },
+        pressure: { rowId: 'mobileList' }
+      }
+    }
+  })
   assert.equal(written && written.ok, true)
   assert.deepEqual(doc, original)
   assert.equal(written && written.ok && written.document.layouts.default.widgets.temperature.row, 1)
   assert.equal(written && written.ok && written.document.layouts.default.widgets.temperature.sizeY, 3)
   assert.equal(written && written.ok && written.document.layouts.default.profiles?.mobile.widgets?.temperature.mobileOrder, 0)
   assert.equal(written && written.ok && written.document.layouts.default.profiles?.mobile.widgets?.temperature.mobileHeight, 7)
+  assert.equal(written && written.ok && written.document.layouts.default.profiles?.mobile.widgets?.temperature.mobileHide, true)
+  assert.equal(written && written.ok && written.document.layouts.default.profiles?.mobile.editor?.editorMetaById?.temperature.label, 'Mobile Runtime Temperature')
+  assert.deepEqual(written && written.ok && written.document.layouts.default.profiles?.mobile.editor?.sectionRows?.itemMembership?.pressure, {
+    rowId: 'mobileList'
+  })
   assert.equal(written && written.ok && written.document.layouts.default.profiles?.mobile.widgets?.pressure.mobileOrder, 1)
 
   const desktopListDoc = serializeDashboardLayoutDocument({
@@ -811,10 +923,34 @@ function testResponsiveProfileWriteBack() {
   const desktopWritten = desktopList.ok && writeDashboardResponsiveRuntimeToDocument(desktopListDoc, desktopList.runtime, [
     { i: 'a', x: 0, y: 0, w: 6, h: 5 },
     { i: 'b', x: 0, y: 5, w: 6, h: 4 }
-  ])
+  ], {
+    editorMetaById: {
+      a: { label: 'A', resizable: false }
+    },
+    sectionRows: {
+      version: 1,
+      items: {
+        desktopList: {
+          id: 'desktopList',
+          kind: 'row',
+          order: 1,
+          itemIds: ['a', 'b']
+        }
+      },
+      itemMembership: {
+        a: { rowId: 'desktopList' },
+        b: { rowId: 'desktopList' }
+      }
+    }
+  })
   assert.equal(desktopWritten && desktopWritten.ok, true)
   assert.equal(desktopWritten && desktopWritten.ok && desktopWritten.document.layouts.default.widgets.a.row, 0)
   assert.equal(desktopWritten && desktopWritten.ok && desktopWritten.document.layouts.default.widgets.a.sizeY, 5)
+  assert.equal(desktopWritten && desktopWritten.ok && desktopWritten.document.layouts.default.widgets.a.resizable, false)
+  assert.equal(desktopWritten && desktopWritten.ok && desktopWritten.document.layouts.default.editor?.editorMetaById?.a.label, 'A')
+  assert.deepEqual(desktopWritten && desktopWritten.ok && desktopWritten.document.layouts.default.editor?.sectionRows?.itemMembership?.b, {
+    rowId: 'desktopList'
+  })
   assert.equal(desktopWritten && desktopWritten.ok && desktopWritten.document.layouts.default.widgets.a.mobileHeight, undefined)
 
   const missing = resolveDashboardResponsiveProfile(doc, {
@@ -848,11 +984,28 @@ function testResponsiveProfileWriteBack() {
     { i: 'temperature', x: 0, y: 1, w: 4, h: 3 },
     { i: 'pressure', x: 5, y: 0, w: 3, h: 2 }
   ], {
-    writeItemIds: ['pressure']
+    writeItemIds: ['pressure'],
+    sectionRows: {
+      version: 1,
+      items: {
+        tabletRow: {
+          id: 'tabletRow',
+          kind: 'row',
+          order: 1,
+          itemIds: ['pressure']
+        }
+      },
+      itemMembership: {
+        pressure: { rowId: 'tabletRow' }
+      }
+    }
   })
   assert.equal(profileScoped && profileScoped.ok, true)
   assert.equal(profileScoped && profileScoped.ok && profileScoped.document.layouts.default.profiles?.tablet.widgets?.pressure.col, 5)
   assert.equal(profileScoped && profileScoped.ok && profileScoped.document.layouts.default.profiles?.tablet.widgets?.temperature, undefined)
+  assert.deepEqual(profileScoped && profileScoped.ok && profileScoped.document.layouts.default.profiles?.tablet.editor?.sectionRows?.itemMembership?.pressure, {
+    rowId: 'tabletRow'
+  })
 }
 
 function testResponsiveMigrationHelper() {
@@ -949,6 +1102,27 @@ async function testResponsiveComposableModel() {
     Boolean(event && typeof event === 'object' && (event as { type?: string }).type === 'documentChange')
   )
   assert.equal(documentChange?.document.layouts.default.profiles?.mobile.widgets?.temperature.mobileHeight, 6)
+
+  const shellEvents: string[] = []
+  const shellModel = useDashboardResponsiveProfileModel({
+    document: ref(createDocument()),
+    width: ref(1200),
+    breakpoints: { desktop: 960, mobile: 0 },
+    mode: ref<'edit'>('edit'),
+    documentWriteBack: 'shell',
+    onEvent: event => {
+      shellEvents.push(event.type)
+    }
+  })
+  shellEvents.length = 0
+  shellModel.onLayoutChange([
+    { i: 'pressure', x: 2, y: 0, w: 3, h: 2 },
+    { i: 'temperature', x: 0, y: 2, w: 4, h: 3 }
+  ])
+  assert.equal(shellModel.state.value.layout.find(item => item.i === 'pressure')?.x, 2)
+  assert.ok(shellEvents.includes('projectionChange'))
+  assert.equal(shellEvents.includes('documentChange'), false)
+  shellModel.stop()
 
   events.length = 0
   model.onHeightRuntimeChange({

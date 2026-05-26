@@ -20,6 +20,7 @@ import {
   useDashboardEditorShell
 } from '../lib/dashboard-editor-shell'
 import type {
+  DashboardEditorShellEvent,
   DashboardEditorShellActions,
   DashboardEditorShellMenuContext,
   DashboardEditorShellResolvedPosition
@@ -129,6 +130,14 @@ const createGridElement = () => ({
 
 const layoutGeometry = (layout: Layout): Layout =>
   layout.map(item => ({ i: item.i, x: item.x, y: item.y, w: item.w, h: item.h }))
+
+const flushShellCoordinator = async () => {
+  for (let i = 0; i < 4; i += 1) {
+    await Promise.resolve()
+    await nextTick()
+    await new Promise(resolve => setTimeout(resolve, 0))
+  }
+}
 
 function testPositionHelper() {
   const document = createDocument()
@@ -538,6 +547,230 @@ async function testShellHistoryAndDeleteWriteBack() {
   const undoRemove = await shell.actions.undo({ source: 'keyboard' })
   assert.equal(undoRemove.ok, true)
   assert.equal(Boolean(documentRef.value.layouts.default.widgets.a), true)
+}
+
+async function testShellManagedSyntheticPointerCommitWritesDocumentAndEvent() {
+  const documentRef = ref(createDocument())
+  const runtime = ref(resolveRuntime(documentRef.value))
+  const layoutRef = ref<Layout>(runtime.value.layout.map(item => ({ ...item })))
+  const editor = createGridEditorController({
+    layout: layoutRef,
+    defaultMode: 'edit',
+    editorMetaById: ref(runtime.value.editorMetaById),
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
+  })
+  const events: DashboardEditorShellEvent[] = []
+  const documentChanges: string[] = []
+  const legacyLayouts: Layout[] = []
+  const shell = useDashboardEditorShell({
+    document: documentRef,
+    runtime,
+    editor,
+    gridElement: ref(createGridElement()),
+    mode: ref('edit'),
+    controlled: false,
+    documentWriteBack: 'shell',
+    createMissingProfileOnEdit: true,
+    legacyHistoryStore: {
+      push: (layout: Layout) => {
+        legacyLayouts.push(layoutGeometry(layout))
+      },
+      replacePresent: () => undefined,
+      undo: () => null,
+      redo: () => null,
+      clear: () => undefined
+    } as never,
+    onDocumentChange: event => {
+      documentChanges.push(event.actionId)
+      documentRef.value = event.document
+      runtime.value = resolveRuntime(event.document)
+    },
+    onEvent: event => events.push(event)
+  })
+  await nextTick()
+
+  const moved = await editor.execute({
+    type: 'move',
+    targetIds: ['a'],
+    source: 'pointer',
+    payload: { dx: 1, dy: 0 }
+  })
+  assert.equal(moved.status, 'changed')
+  await flushShellCoordinator()
+
+  const actionResults = events.filter((event): event is Extract<DashboardEditorShellEvent, { type: 'action-result' }> =>
+    event.type === 'action-result'
+  )
+  const pointerResult = actionResults.find(event => event.actionType === 'pointer-move' && event.commandResult?.id === moved.id)
+  assert.equal(Boolean(pointerResult), true)
+  assert.equal(pointerResult?.ok, true)
+  assert.equal(pointerResult?.source, 'pointer')
+  assert.equal(pointerResult?.writeResult?.ok, true)
+  assert.equal((pointerResult?.data as { synthesized?: boolean } | undefined)?.synthesized, true)
+  assert.equal((pointerResult?.data as { commandId?: string } | undefined)?.commandId, moved.id)
+  assert.equal(documentChanges.length, 1)
+  assert.equal(documentRef.value.layouts.default.profiles?.desktop.widgets?.a.col, 1)
+  assert.equal(legacyLayouts.length, 1)
+  assert.equal(legacyLayouts[0].find(item => item.i === 'a')?.x, 1)
+
+  const noop = await editor.execute({
+    type: 'move',
+    targetIds: ['a'],
+    source: 'pointer',
+    payload: { dx: 0, dy: 0 }
+  })
+  assert.equal(noop.status, 'noop')
+  await flushShellCoordinator()
+  assert.equal(documentChanges.length, 1)
+  assert.equal(legacyLayouts.length, 1)
+  shell.stop()
+}
+
+async function testShellManagedWriteBackFailureRollsBackEditorAndHistory() {
+  const documentRef = ref(createDocument())
+  const fallback = resolveDashboardResponsiveProfile(documentRef.value, {
+    width: 700,
+    breakpoints: { watch: 0 },
+    breakpoint: 'watch',
+    targetView: 'desktop',
+    mode: 'edit',
+    validation: 'sanitize',
+    allowUnknownProfileItems: true
+  })
+  assert.equal(fallback.ok, true)
+  const runtime = ref(fallback.ok ? fallback.runtime : null as never)
+  const layoutRef = ref<Layout>(runtime.value.layout.map(item => ({ ...item })))
+  const editor = createGridEditorController({
+    layout: layoutRef,
+    defaultMode: 'edit',
+    editorMetaById: ref(runtime.value.editorMetaById),
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
+  })
+  const beforeLayout = layoutGeometry(layoutRef.value)
+  const events: DashboardEditorShellEvent[] = []
+  const documentChanges: string[] = []
+  const shell = useDashboardEditorShell({
+    document: documentRef,
+    runtime,
+    editor,
+    gridElement: ref(createGridElement()),
+    mode: ref('edit'),
+    controlled: false,
+    documentWriteBack: 'shell',
+    createMissingProfileOnEdit: false,
+    onDocumentChange: event => {
+      documentChanges.push(event.actionId)
+    },
+    onEvent: event => events.push(event)
+  })
+  await nextTick()
+
+  const moved = await editor.execute({
+    type: 'move',
+    targetIds: ['a'],
+    source: 'pointer',
+    payload: { dx: 1, dy: 0 }
+  })
+  assert.equal(moved.status, 'changed')
+  await flushShellCoordinator()
+
+  const pointerResult = events
+    .filter((event): event is Extract<DashboardEditorShellEvent, { type: 'action-result' }> => event.type === 'action-result')
+    .find(event => event.actionType === 'pointer-move' && event.commandResult?.id === moved.id)
+  assert.equal(pointerResult?.ok, false)
+  assert.equal(pointerResult?.status, 'blocked')
+  assert.equal(pointerResult?.writeResult?.ok, false)
+  assert.ok(pointerResult?.diagnostics.some(item => item.code === 'shell-profile-write-back-blocked'))
+  assert.deepEqual(layoutGeometry(layoutRef.value), beforeLayout)
+  assert.equal(documentRef.value.layouts.default.widgets.a.col, 0)
+  assert.equal(documentChanges.length, 0)
+
+  const undo = await editor.execute({ type: 'undo', source: 'keyboard' })
+  assert.equal(undo.status, 'blocked')
+  shell.stop()
+}
+
+async function testShellManagedAdapterCommitFailureRollsBackEditorState() {
+  const documentRef = ref(createDocument())
+  const runtime = ref(resolveRuntime(documentRef.value))
+  const layoutRef = ref<Layout>(runtime.value.layout.map(item => ({ ...item })))
+  const editor = createGridEditorController({
+    layout: layoutRef,
+    defaultMode: 'edit',
+    editorMetaById: ref(runtime.value.editorMetaById),
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
+  })
+  const documentChanges: string[] = []
+  const rollbackStages: string[] = []
+  const legacyLayouts: Layout[] = []
+  const shell = useDashboardEditorShell({
+    document: documentRef,
+    runtime,
+    editor,
+    gridElement: ref(createGridElement()),
+    mode: ref('edit'),
+    controlled: false,
+    documentWriteBack: 'shell',
+    createMissingProfileOnEdit: true,
+    legacyHistoryStore: {
+      push: (layout: Layout) => {
+        legacyLayouts.push(layoutGeometry(layout))
+      },
+      replacePresent: () => undefined,
+      undo: () => null,
+      redo: () => null,
+      clear: () => undefined
+    } as never,
+    widgetAdapter: {
+      prepareAddWidget: () => ({
+        id: 'prepared-failing-add',
+        kind: 'widget',
+        newIds: ['adapter-fail']
+      }),
+      commit: () => {
+        throw new Error('adapter commit failed')
+      },
+      rollback: (_prepared, ctx) => {
+        rollbackStages.push(ctx.stage)
+        return { ok: true }
+      }
+    },
+    onDocumentChange: event => {
+      documentChanges.push(event.actionId)
+    }
+  })
+
+  const beforeLayout = layoutGeometry(layoutRef.value)
+  const result = await shell.actions.addWidgetFromTemplate({ w: 2, h: 2 }, { x: 8, y: 0 }, { source: 'toolbar' })
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 'error')
+  assert.deepEqual(rollbackStages, ['commit'])
+  assert.deepEqual(layoutGeometry(layoutRef.value), beforeLayout)
+  assert.equal(layoutRef.value.some(item => item.i === 'adapter-fail'), false)
+  assert.equal(Boolean(documentRef.value.layouts.default.widgets['adapter-fail']), false)
+  assert.equal(documentChanges.length, 0)
+  assert.equal(legacyLayouts.length, 0)
+  const undo = await editor.execute({ type: 'undo', source: 'keyboard' })
+  assert.equal(undo.status, 'blocked')
+  shell.stop()
 }
 
 async function testTargetlessPasteFillsRowsForDashboardSizedCards() {
@@ -997,6 +1230,9 @@ async function main() {
   await testDashboardMenuPasteHereUsesWidgetAdapter()
   await testTargetlessWidgetPasteUsesPlacementPolicy()
   await testShellHistoryAndDeleteWriteBack()
+  await testShellManagedSyntheticPointerCommitWritesDocumentAndEvent()
+  await testShellManagedWriteBackFailureRollsBackEditorAndHistory()
+  await testShellManagedAdapterCommitFailureRollsBackEditorState()
   await testTargetlessPasteFillsRowsForDashboardSizedCards()
   await testShellPlacementStrategiesAndAtomicity()
   await testTransactionCoordinator()

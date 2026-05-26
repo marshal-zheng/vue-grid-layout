@@ -118,8 +118,12 @@ export const emitShellResult = (
     profile,
     position: result.position,
     commandResult: result.commandResult,
+    writeResult: result.writeResult,
     adapter: result.adapter,
     placement: result.placement,
+    proposedDocument: result.proposedDocument,
+    patches: result.patches,
+    data: result.data,
     diagnostics: result.diagnostics
   });
 };

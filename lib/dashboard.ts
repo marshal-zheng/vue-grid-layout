@@ -1,5 +1,10 @@
 import { validateEditorMetaById } from "./editor/metadata";
-import type { GridEditorMetaById } from "./editor/types";
+import { normalizeGridEditorSectionRows } from "./editor/sectionRows";
+import type {
+  GridEditorMetaById,
+  GridEditorResolvedSectionRowState,
+  GridEditorSectionRowState
+} from "./editor/types";
 import {
   resolveGridItemCapability,
   type GridItemPhysicalCapabilityInput,
@@ -22,6 +27,7 @@ export type DashboardJsonObject = { [key: string]: DashboardJsonValue };
 export type DashboardDocumentMeta = DashboardJsonObject;
 
 export type DashboardDiagnosticLevel = "info" | "warning" | "error";
+export type DashboardDocumentWriteBackOwner = "component" | "shell";
 
 export type DashboardDiagnostic = {
   code: string;
@@ -141,7 +147,7 @@ export type ResolvedDashboardGridSettings = DashboardGridSettings & {
 export type DashboardEditorEnvelope = {
   version: number;
   editorMetaById?: GridEditorMetaById;
-  sectionRows?: unknown;
+  sectionRows?: GridEditorSectionRowState;
   updatedAt?: string;
   extensions?: DashboardJsonObject;
   [key: string]: unknown;
@@ -286,6 +292,7 @@ export type WriteDashboardRuntimeOptions = {
   profileId?: string;
   targetView?: "desktop" | "mobile";
   editorMetaById?: GridEditorMetaById;
+  sectionRows?: GridEditorSectionRowState;
   writeItemIds?: string[];
   createMissingItems?: boolean;
   removeMissingItems?: boolean;
@@ -968,6 +975,26 @@ const normalizeGridSettings = (
 const layoutFromWidgetIds = (widgetIds: string[]): Layout =>
   widgetIds.map(id => ({ i: id, x: 0, y: 0, w: 1, h: 1 }));
 
+const sectionRowsFromResolved = (
+  rows: GridEditorResolvedSectionRowState
+): GridEditorSectionRowState => {
+  const membershipIds = new Set(Object.keys(rows.itemMembership));
+  return JSON.parse(JSON.stringify({
+    version: 1,
+    items: Object.keys(rows.items).reduce((acc, id) => {
+      const row = rows.items[id];
+      acc[id] = {
+        ...row,
+        itemIds: row.itemIds ? row.itemIds.filter(itemId => membershipIds.has(itemId)) : undefined,
+        allowedDropZones: row.allowedDropZones ? row.allowedDropZones.slice() : undefined,
+        bounds: row.bounds ? { ...row.bounds } : undefined
+      };
+      return acc;
+    }, {} as GridEditorSectionRowState["items"]),
+    itemMembership: rows.itemMembership
+  })) as GridEditorSectionRowState;
+};
+
 const normalizeEditorEnvelope = (
   input: unknown,
   path: string,
@@ -1018,6 +1045,25 @@ const normalizeEditorEnvelope = (
     });
     if (!metaValidation.ok && mode !== "sanitize") return { ok: false, diagnostics };
     out.editorMetaById = metaValidation.value;
+  }
+  if (typeof raw.sectionRows !== "undefined") {
+    const normalizedRows = normalizeGridEditorSectionRows(
+      raw.sectionRows as GridEditorSectionRowState,
+      layoutFromWidgetIds(widgetIds)
+    );
+    normalizedRows.warnings.forEach(issue => {
+      diagnostics.push(diagnostic(
+        issue.code,
+        "warning",
+        issue.message,
+        {
+          path: `${path}.sectionRows`,
+          details: issue
+        }
+      ));
+    });
+    out.sectionRows = sectionRowsFromResolved(normalizedRows);
+    out.version = Math.max(Number(out.version) || 1, 2);
   }
   diagnostics.push(...normalizeJsonObjectField(raw, out, "extensions", path, mode));
   if (firstError(diagnostics)) return { ok: false, diagnostics };
@@ -1861,6 +1907,69 @@ const filterEditorMetaByIds = (
   return Object.keys(filtered).length > 0 ? filtered : undefined;
 };
 
+const normalizeDashboardSectionRows = (
+  rows: GridEditorSectionRowState | undefined,
+  layout: Layout,
+  diagnostics: DashboardDiagnostic[],
+  context: {
+    path: string;
+    layoutId: string;
+    profileId?: string;
+  }
+): GridEditorSectionRowState | undefined => {
+  if (!rows) return undefined;
+  const normalized = normalizeGridEditorSectionRows(rows, layout);
+  normalized.warnings.forEach(issue => {
+    diagnostics.push(diagnostic(
+      issue.code,
+      "warning",
+      issue.message,
+      {
+        path: context.path,
+        layoutId: context.layoutId,
+        profileId: context.profileId,
+        itemId: issue.itemIds?.[0],
+        details: issue
+      }
+    ));
+  });
+  return sectionRowsFromResolved(normalized);
+};
+
+const removeItemFromSectionRows = (
+  rows: GridEditorSectionRowState | undefined,
+  id: string
+): GridEditorSectionRowState | undefined => {
+  if (!rows) return rows;
+  const next: GridEditorSectionRowState = {
+    version: 1,
+    items: Object.keys(rows.items || {}).reduce((acc, rowId) => {
+      const row = rows.items[rowId];
+      acc[rowId] = {
+        ...row,
+        bounds: row.bounds ? { ...row.bounds } : undefined,
+        itemIds: row.itemIds ? row.itemIds.filter(itemId => itemId !== id) : undefined,
+        allowedDropZones: row.allowedDropZones ? row.allowedDropZones.slice() : undefined
+      };
+      return acc;
+    }, {} as GridEditorSectionRowState["items"]),
+    itemMembership: { ...(rows.itemMembership || {}) }
+  };
+  const itemMembership = next.itemMembership || {};
+  delete itemMembership[id];
+  next.itemMembership = itemMembership;
+  return JSON.parse(JSON.stringify(next)) as GridEditorSectionRowState;
+};
+
+const cleanRemovedEditorSidecarItem = (
+  owner: { editor?: DashboardEditorEnvelope } | undefined,
+  id: string
+) => {
+  if (!owner?.editor) return;
+  if (owner.editor.editorMetaById) delete owner.editor.editorMetaById[id];
+  owner.editor.sectionRows = removeItemFromSectionRows(owner.editor.sectionRows, id);
+};
+
 const ensureEditorEnvelope = (
   owner: { editor?: DashboardEditorEnvelope }
 ): DashboardEditorEnvelope => {
@@ -1873,6 +1982,7 @@ export function writeDashboardRuntimeToDocument(
   runtime: {
     layout: Layout;
     editorMetaById?: GridEditorMetaById;
+    sectionRows?: GridEditorSectionRowState;
     gridSettings?: Partial<DashboardGridSettings>;
   },
   options: WriteDashboardRuntimeOptions = {}
@@ -1938,11 +2048,9 @@ export function writeDashboardRuntimeToDocument(
       delete targetWidgets[id];
       Object.values(layoutDefinition.profiles || {}).forEach(profile => {
         if (profile.widgets) delete profile.widgets[id];
-        if (profile.editor?.editorMetaById) delete profile.editor.editorMetaById[id];
+        cleanRemovedEditorSidecarItem(profile, id);
       });
-      if (layoutDefinition.editor?.editorMetaById) {
-        delete layoutDefinition.editor.editorMetaById[id];
-      }
+      cleanRemovedEditorSidecarItem(layoutDefinition, id);
     });
   }
   for (const runtimeItem of runtime.layout) {
@@ -2025,6 +2133,26 @@ export function writeDashboardRuntimeToDocument(
       layoutFromWidgetIds(Object.keys(layoutDefinition.widgets)),
       diagnostics
     );
+  }
+  const runtimeSectionRows = options.sectionRows || runtime.sectionRows;
+  if (runtimeSectionRows) {
+    const editorOwner = options.profileId
+      ? layoutDefinition.profiles?.[options.profileId]
+      : layoutDefinition;
+    const editorEnvelope = ensureEditorEnvelope(editorOwner as { editor?: DashboardEditorEnvelope });
+    const path = options.profileId
+      ? `layouts.${layoutId}.profiles.${options.profileId}.editor.sectionRows`
+      : `layouts.${layoutId}.editor.sectionRows`;
+    const normalizedRows = normalizeDashboardSectionRows(
+      runtimeSectionRows,
+      runtime.layout,
+      diagnostics,
+      { path, layoutId, profileId: options.profileId }
+    );
+    if (normalizedRows) {
+      editorEnvelope.sectionRows = normalizedRows;
+      editorEnvelope.version = Math.max(Number(editorEnvelope.version) || 1, 2);
+    }
   }
 
   const finalValidation = validateDashboardLayoutDocument(next, { validation: options.validation ?? "strict" });

@@ -209,6 +209,20 @@ export function useDashboardResponsiveProfileModel(
   ));
 
   const onLayoutChange = (layout: Layout) => {
+    if (options.documentWriteBack === "shell") {
+      const previous = state.value;
+      const next: DashboardResponsiveRuntime = {
+        ...previous,
+        layout: cloneLayout(layout)
+      };
+      state.value = next;
+      layoutRef.value = cloneLayout(layout);
+      if (!deepEqual(projectionSignature(previous), projectionSignature(next))) {
+        emit({ type: "projectionChange", runtime: next });
+      }
+      return;
+    }
+
     const written = writeDashboardResponsiveRuntimeToDocument(
       unref(options.document),
       state.value,
@@ -216,7 +230,8 @@ export function useDashboardResponsiveProfileModel(
       {
         createMissingProfileOnEdit: options.createMissingProfileOnEdit,
         validation: options.validation,
-        editorMetaById: editorMetaRef.value
+        editorMetaById: editorMetaRef.value,
+        sectionRows: editorController?.sectionRows.value
       }
     );
     if (written.ok) {
