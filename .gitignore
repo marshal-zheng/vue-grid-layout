@@ -2,7 +2,6 @@
 *.iml
 node_modules/
 build/
-docs/
 .tmp/
 
 # OS

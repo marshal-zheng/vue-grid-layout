@@ -1,0 +1,186 @@
+# Dashboard Editor Shell Integration 完成度评估
+
+评估时间: 2026-05-19
+
+验证命令:
+
+- `npm test` -> passed, exit code 0. 输出中存在既有 Babel lodash deprecation 与 Webpack bundle-size warning，均为非阻塞 warning。
+- `node test/run-dashboard-editor-shell-tests.js` -> passed, exit code 0. 覆盖 tsc、Babel 转译、core test、build、browser smoke。
+- `./node_modules/.bin/tsc --noEmit --pretty false` -> passed, exit code 0.
+
+## Requirements
+
+- R1.AC1 — `covered` — evidence: `lib/dashboard-editor-shell/useDashboardEditorShell.ts` exports headless `useDashboardEditorShell()`; `lib/dashboard-editor-shell/menus.ts` returns descriptors only; no menu/palette/reference UI changes were added to `VueGridLayout`.
+- R1.AC2 — `covered` — evidence: `lib/dashboard-editor-shell/types.ts` models shell inputs around `DashboardLayoutDocument`, `DashboardResponsiveRuntime`, profile model and `GridEditorController`; `useDashboardEditorShell.ts` consumes those boundaries.
+- R1.AC3 — `covered` — evidence: `lib/dashboard-editor-shell/useDashboardEditorShell.ts` routes paste/select/copy/duplicate/remove through editor `execute()`/controller APIs; `test/dashboard-editor-shell-core.test.ts` covers copy/paste/select behavior.
+- R1.AC4 — `covered` — evidence: `useDashboardEditorShell.ts` imports `writeDashboardResponsiveRuntimeToDocument` and `translateDashboardLayout`; paste/add/move-all tests run through dashboard write-back and migration paths.
+- R1.AC5 — `covered` — evidence: shell lives under `lib/dashboard-editor-shell/` and is only newly exported via `lib/cjs.ts`; full `npm test` passed existing persistence/layout/editor/dashboard suites.
+- R1.AC6 — `covered` — evidence: adapter/hook types are in `lib/dashboard-editor-shell/types.ts`; README documents business widget/reference/palette responsibilities as caller-owned.
+- R1.AC7 — `covered` — evidence: tasks 1-16 are checked in `docs/specs/dashboard-editor-shell-integration/tasks.md`; core/browser/type tests and README/example cover the full shell scope.
+- R2.AC1 — `covered` — evidence: `DashboardEditorShellOptions` in `types.ts` includes document/model/runtime/editor/grid/root/mode/profile/adapters/events; type smoke imports the option type.
+- R2.AC2 — `covered` — evidence: shell state in `types.ts` exposes layout/profile/view/grid/height/item id/diagnostic fields; `useDashboardEditorShell.ts` derives them from runtime/model state.
+- R2.AC3 — `covered` — evidence: `useDashboardEditorShell.ts` reads editor selection/mode/dirty/conflict/lastResult/toolbar availability; no independent selection store is introduced.
+- R2.AC4 — `covered` — evidence: `stop()` cleanup in `useDashboardEditorShell.ts` clears keyboard/menu/highlight/subscriptions; browser smoke covers menu cleanup.
+- R2.AC5 — `covered` — evidence: DOM/window access is guarded in `position.ts` and `useDashboardEditorShell.ts`; core test covers degraded/no DOM scroll result.
+- R2.AC6 — `covered` — evidence: degraded state and blocked results are produced by `createBlockedResult()`/diagnostics in `useDashboardEditorShell.ts`; core tests cover missing grid/editor paths; `test/dashboard-core.test.ts` covers missing dashboard document write-back returning `ok: false` instead of throwing.
+- R2.AC7 — `covered` — evidence: controlled-first `emitDocumentChange()` and `applyDocumentChange()` are in `useDashboardEditorShell.ts`; tests cover no autosave/documentChange semantics.
+- R3.AC1 — `covered` — evidence: `getEventGridPosition()` and `resolveShellPosition()` in `position.ts` use DOM geometry, runtime grid settings and `calcXY()`-compatible grid math; core position tests verify coordinates.
+- R3.AC2 — `covered` — evidence: pointer/mouse/contextmenu/touch coordinate extraction is implemented in `position.ts`; browser smoke covers contextmenu event paste.
+- R3.AC3 — `covered` — evidence: fallback resolution in `position.ts` uses active item, selection, menu, pointer, viewport and caller fallback; browser smoke covers keyboard paste fallback.
+- R3.AC4 — `covered` — evidence: `position.ts` clamps invalid bounds and returns blocked diagnostics for missing runtime/grid geometry; core test covers blocked position.
+- R3.AC5 — `covered` — evidence: list insertion context is produced in `position.ts` without writing list-only ordering to `LayoutItem`; core test covers list mapping.
+- R3.AC6 — `covered` — evidence: position helper normalizes subpixel DOM geometry to integer grid positions and uses runtime row/column settings; core position tests use DOM rect/scroll dimensions.
+- R3.AC7 — `covered` — evidence: pure helper implementation in `position.ts` is deterministic for unchanged inputs; core tests assert stable pointer/fallback/list outputs.
+- R4.AC1 — `covered` — evidence: `pasteAtEvent()`/`pasteAtGridPosition()` in `useDashboardEditorShell.ts` execute editor paste with cursor placement; core/browser tests cover pointer paste.
+- R4.AC2 — `covered` — evidence: paste/add paths defer placement to editor/layout engine command execution; command diagnostics are preserved in action results.
+- R4.AC3 — `covered` — evidence: `executeEditorMutation()` writes through `writeDashboardResponsiveRuntimeToDocument()` with profile context; integration coverage is in `test/dashboard-editor-shell-core.test.ts`.
+- R4.AC4 — `covered` — evidence: menu, keyboard, toolbar/API, palette/drop actions all call the same shell action methods in `useDashboardEditorShell.ts` and `menus.ts`.
+- R4.AC5 — `covered` — evidence: clipboard/adapter/validation failures return blocked/error results via transaction coordinator; core tests cover unsupported/blocked reference and confirm cancel.
+- R4.AC6 — `covered` — evidence: action results include `affectedIds`; editor paste command handles multi-item clipboard relative placement; core tests verify affected ids on paste/add.
+- R4.AC7 — `covered` — evidence: list position context and profile write-back are passed through shell mutation pipeline; tests cover list mapping and profile-scoped write-back.
+- R5.AC1 — `covered` — evidence: `selectItem()` calls editor select command/controller in `useDashboardEditorShell.ts`; core test covers selection action.
+- R5.AC2 — `covered` — evidence: `highlightItem()` stores transient `highlightedId` only and README states no document/history persistence; core/browser tests verify transient highlight.
+- R5.AC3 — `covered` — evidence: `resetHighlight()` clears highlight state and timers in `useDashboardEditorShell.ts`.
+- R5.AC4 — `covered` — evidence: `scrollToItem()` searches DOM safely and uses scroll options/adapter; browser smoke covers scroll DOM state.
+- R5.AC5 — `covered` — evidence: hidden/unrendered ids are detected in shell context and return blocked/reveal diagnostics; menu availability also reflects hidden state.
+- R5.AC6 — `covered` — evidence: missing item/grid/DOM paths return diagnostics from `scrollToItem()`; core test covers degraded scroll result.
+- R5.AC7 — `covered` — evidence: action/result/highlight events are emitted from `useDashboardEditorShell.ts`; event types are declared in `types.ts`.
+- R6.AC1 — `covered` — evidence: `buildDashboardContextMenu()` in `menus.ts` includes paste, paste reference, add widget, open palette, move all, settings hook and custom items.
+- R6.AC2 — `covered` — evidence: `buildWidgetContextMenu()` in `menus.ts` includes select, edit hook, copy, copy reference, duplicate, remove, replace reference, scroll/highlight and custom items.
+- R6.AC3 — `covered` — evidence: `DashboardEditorShellMenuDescriptor` in `types.ts` is plain data plus callback; README states render/menu/i18n UI is caller-owned.
+- R6.AC4 — `covered` — evidence: `menus.ts` computes enabled/hidden/reason from editability, readonly, locked/static/hidden, clipboard and adapter availability; core tests cover availability.
+- R6.AC5 — `covered` — evidence: menu callbacks in `menus.ts` call shell actions; no alternate mutation path exists.
+- R6.AC6 — `covered` — evidence: descriptors include `labelKey`, `label`, `icon`, `metadata`, custom items and options; API does not hard-code a rendered language/UI layer.
+- R6.AC7 — `covered` — evidence: `prepareDashboardContextMenu()`/`prepareWidgetContextMenu()` store last menu position; `closeMenu()`/`stop()` clear transient menu state; browser smoke covers cleanup.
+- R7.AC1 — `covered` — evidence: `copyWidget()` invokes editor copy and optional widget adapter `copyWidget`; core tests cover adapter participation.
+- R7.AC2 — `covered` — evidence: `pasteWidget()` reuses pointer paste placement and optional widget adapter prepare/commit path.
+- R7.AC3 — `covered` — evidence: `duplicateWidget()` uses editor duplicate command with optional `prepareDuplicateWidget` and id mapping in transaction context.
+- R7.AC4 — `covered` — evidence: `removeWidget()` invokes confirm hook before editor remove and adapter prepare/remove flow; example and core tests cover confirm cancel.
+- R7.AC5 — `covered` — evidence: confirm cancel/block/error maps to cancelled/blocked result before mutation; core test covers cancelled remove.
+- R7.AC6 — `covered` — evidence: `runDashboardEditorShellTransaction()` and shell action wrapper implement prepare -> mutate -> commit -> rollback; transaction unit test covers stage order and block.
+- R7.AC7 — `covered` — evidence: adapter result/prepared mutation types expose `idMap` and `affectedIds`; id generation is configurable in shell options.
+- R7.AC8 — `covered` — evidence: no-adapter paths still use editor metadata actions and add diagnostics for business payload not handled; core tests cover shell without reference adapter and ordinary copy/paste.
+- R8.AC1 — `covered` — evidence: `DashboardEditorShellReferenceAdapter` includes can/copy/paste/replace/commit/rollback contracts in `types.ts` and `typings/index.d.ts`.
+- R8.AC2 — `covered` — evidence: `copyWidgetReference()` calls reference adapter and does not add reference fields to layout/schema.
+- R8.AC3 — `covered` — evidence: `pasteWidgetReference()` resolves pointer/list target, uses adapter prepare mutation and dashboard/profile write-back; browser smoke covers reference paste.
+- R8.AC4 — `covered` — evidence: `replaceReferenceWithWidgetCopy()` keeps action context, affected ids, geometry/profile context and selection/highlight semantics predictable.
+- R8.AC5 — `covered` — evidence: missing/unavailable reference adapter returns unsupported/disabled reason in actions and menus; core tests cover unsupported reference action.
+- R8.AC6 — `covered` — evidence: adapter error/rejected/invalid result paths are normalized by transaction coordinator with diagnostics and rollback.
+- R8.AC7 — `covered` — evidence: reference action results include source/new item ids, profile, position, adapter stage result and affected ids.
+- R8.AC8 — `covered` — evidence: `sanitizeDiagnostics()`/diagnostic creation avoids opaque payload logging; core test includes payload with secret and verifies diagnostics safety.
+- R9.AC1 — `covered` — evidence: `createEmptyAddState()` in `useDashboardEditorShell.ts` exposes enabled/reason/context/descriptors based on active/render ids and edit mode.
+- R9.AC2 — `covered` — evidence: `openWidgetPalette()` calls optional palette hook/event and returns shell result; README states no palette UI/catalog is built in.
+- R9.AC3 — `covered` — evidence: `addWidgetFromTemplate()` uses widget adapter prepare, position helper and editor/layout placement; browser smoke covers palette add.
+- R9.AC4 — `covered` — evidence: `handleExternalDrop()` receives drop payload/event, resolves candidate position and calls add pipeline; types expose preview/final drop payload fields.
+- R9.AC5 — `covered` — evidence: add/drop pipeline returns blocked/error for placement/write-back/adapter failures before orphaning payload; transaction coordinator handles rollback.
+- R9.AC6 — `covered` — evidence: add success selects and highlights new item and emits affected ids/profile/position diagnostics; core/browser tests cover add behavior.
+- R9.AC7 — `covered` — evidence: menu/empty add availability uses mode, readonly, adapter and guard checks with reasons.
+- R10.AC1 — `covered` — evidence: `moveAllWidgets()` imports and uses `translateDashboardLayout()` in `useDashboardEditorShell.ts`.
+- R10.AC2 — `covered` — evidence: move-all diagnostics include requested/applied delta and existing translate clamp behavior; core coverage asserts move-all result/diagnostics.
+- R10.AC3 — `covered` — evidence: move-all passes repair/clamp policy through dashboard migration/layout engine and reports blocked/unresolved diagnostics.
+- R10.AC4 — `covered` — evidence: move-all uses current runtime/profile context and write-back pipeline, preserving default/profile scope.
+- R10.AC5 — `covered` — evidence: move-all returns affected ids, patches and documentChange event; selection/highlight targets remain item-id based.
+- R10.AC6 — `covered` — evidence: bulk action availability and command execution are routed through editor command/canExecute/beforeCommand boundaries.
+- R10.AC7 — `covered` — evidence: action result shape supports all-or-nothing/skipped ids/reasons and transaction failure prevents partial mutation.
+- R11.AC1 — `covered` — evidence: `bindKeyboard()` in `useDashboardEditorShell.ts` maps configurable shortcuts to copy, paste, reference paste, remove, context menu, palette and move-all.
+- R11.AC2 — `covered` — evidence: keyboard handler skips input/textarea/select/contenteditable and configured ignored selectors.
+- R11.AC3 — `covered` — evidence: keyboard paste uses `resolveTargetPosition()` fallback chain and records position source; browser smoke covers keyboard paste fallback.
+- R11.AC4 — `covered` — evidence: keyboard handler calls shell actions only; those route through editor/write-back transaction paths.
+- R11.AC5 — `covered` — evidence: blocked/cancelled/error results call optional message hook and return structured action results.
+- R11.AC6 — `covered` — evidence: `bindKeyboard()` returns cleanup; `stop()` invokes cleanup handles; browser smoke binds then cleans keyboard listener.
+- R11.AC7 — `covered` — evidence: shortcuts are declared in shell menu/keyboard options and descriptors use the same shortcut configuration in `menus.ts`.
+- R12.AC1 — `covered` — evidence: `DashboardEditorShellEvent` covers action-start/action-result/documentChange/highlight/menu/cleanup; `emitEvent()` is used by all actions.
+- R12.AC2 — `covered` — evidence: action results/events include editor command result/id where commands are executed.
+- R12.AC3 — `covered` — evidence: `DashboardEditorShellAdapterStageResult` and transaction result expose prepare/mutate/commit/rollback statuses.
+- R12.AC4 — `covered` — evidence: `DashboardEditorShellBlockedReason` enumerates readonly/capability/locked/hidden/missing/clipboard/adapter/validation/write-back/collision/bounds/confirm/guard reasons; actions attach recoverable diagnostics; dashboard responsive missing-document write-back returns `invalid-document` plus `projection-validation-failed`.
+- R12.AC5 — `covered` — evidence: diagnostics include action/profile/source/path metadata and are normalized in stable order; diagnostics stability is tested in core test.
+- R12.AC6 — `covered` — evidence: diagnostics sanitize adapter payloads to status/ids/error code rather than opaque payload content; core test verifies secret payload is not surfaced.
+- R12.AC7 — `covered` — evidence: `runDashboardEditorShellTransaction()` is public and used internally for adapter/editor/write-back coordination; transaction unit test covers rollback/block.
+- R12.AC8 — `covered` — evidence: `emitDocumentChange()` sets `persist: false`; README documents no autosave; tests cover controlled-first documentChange.
+- R13.AC1 — `covered` — evidence: `lib/dashboard-editor-shell/index.ts` exports composable, position/menu/transaction helpers and types; `typings/index.d.ts` declares all public shell types.
+- R13.AC2 — `covered` — evidence: `lib/cjs.ts` exports `dashboardEditorShell` namespace and top-level helpers without removing existing exports.
+- R13.AC3 — `covered` — evidence: `test/dashboard-editor-shell-types.test.ts` imports options/state/result/menu/adapters/events and compiles under runner.
+- R13.AC4 — `covered` — evidence: DOM/event/adapter fields are nullable/optional in `typings/index.d.ts`; degraded results are returned for missing DOM/runtime.
+- R13.AC5 — `covered` — evidence: API uses project naming (`DashboardEditorShell*`, profile/runtime/editor adapter concepts) and maps product concepts through adapters, not Angular/Gridster names.
+- R13.AC6 — `covered` — evidence: action result types include editor command result, dashboard document change event, layout patches and adapter stage results.
+- R14.AC1 — `covered` — evidence: `example/25-dashboard-editor-shell.js` demonstrates descriptors, pointer paste, select/highlight/scroll, empty add, palette, widget copy/paste, reference mock, replace, confirm remove and move-all.
+- R14.AC2 — `covered` — evidence: example-only UI state/styles live in `example/25-dashboard-editor-shell.js`; shell public API is descriptor/action based.
+- R14.AC3 — `covered` — evidence: README section "Dashboard Editor Shell Integration" documents relationship with grid/dashboard/editor/profile/migration/adapters.
+- R14.AC4 — `covered` — evidence: `test/dashboard-editor-shell-core.test.ts` covers position, menu availability, paste payload, highlight, scroll degraded, adapters and diagnostics.
+- R14.AC5 — `covered` — evidence: `test/dashboard-editor-shell-browser.test.js` covers contextmenu, pointer paste, empty add, DOM highlight/scroll, keyboard fallback, cleanup and view/edit gating.
+- R14.AC6 — `covered` — evidence: dashboard shell tests cover profile-scoped paste/add/remove/move-all write-back, list mapping, missing/degraded blocking and no partial document overwrite.
+- R14.AC7 — `covered` — evidence: CJS checks in `test/dashboard-editor-shell-core.test.ts` and TS import smoke in `test/dashboard-editor-shell-types.test.ts` cover namespace/types/export compatibility.
+- R14.AC8 — `covered` — evidence: `npm test` passed full persistence, layout-engine, editor, dashboard, shell, browser, typing/export and build/test commands after the missing-document write-back regression fix.
+
+## Design
+
+- Architecture boundary: headless shell between caller UI and existing grid/editor/dashboard responsive systems — `covered` — evidence: implementation is isolated under `lib/dashboard-editor-shell/`; README documents no UI/persistence coupling.
+- Reuse point: `DashboardResponsiveRuntime` state as shell runtime source — `covered` — evidence: `useDashboardEditorShell.ts` derives layout/profile/view/height/item ids from runtime/model.
+- Reuse point: `DashboardResponsiveProfileModel` state/editor/write-back boundary — `covered` — evidence: options accept model/runtime and write-back uses dashboard responsive APIs.
+- Reuse point: model `documentChange` ownership — `covered` — evidence: `emitDocumentChange()` and controlled-first logic in `useDashboardEditorShell.ts`.
+- Reuse point: `GridEditorController` command/selection/dirty boundary — `covered` — evidence: shell actions call editor `execute()`/controller APIs; state mirrors editor status.
+- Reuse point: editor paste/duplicate placement strategy — `covered` — evidence: shell sends cursor/fallback placement through editor paste/duplicate actions.
+- Reuse point: `calcXY()`/drop grid math — `covered` — evidence: `position.ts` uses grid settings and pixel-to-grid conversion; external drop calls same position helper.
+- Reuse point: `translateDashboardLayout()` for bulk move — `covered` — evidence: `moveAllWidgets()` imports and calls dashboard migration translate API.
+- Module `types.ts` — `covered` — evidence: `lib/dashboard-editor-shell/types.ts` contains options/state/action/result/event/diagnostic/menu/adapter/transaction types.
+- Module `position.ts` — `covered` — evidence: `getEventGridPosition()` and `resolveShellPosition()` implemented with grid/list helper coverage.
+- Module `transactions.ts` — `covered` — evidence: `runDashboardEditorShellTransaction()` implements prepare/mutate/commit/rollback and is exported/tested.
+- Module `menus.ts` — `covered` — evidence: dashboard/widget descriptor builders implemented and tested.
+- Module `useDashboardEditorShell.ts` — `covered` — evidence: main composable manages state, actions, keyboard, transient menu/highlight/scroll and cleanup.
+- Module `index.ts` — `covered` — evidence: aggregate exports in `lib/dashboard-editor-shell/index.ts`.
+- Public surface `lib/cjs.ts` and `typings/index.d.ts` — `covered` — evidence: CJS namespace/helpers and TypeScript declarations added; type/CJS tests pass.
+- Example module — `covered` — evidence: `example/25-dashboard-editor-shell.js` added and README demo list updated.
+- Thin grid/dashboard component boundary — `covered` — evidence: shell module does not add business menu/palette/reference UI to base grid components; full tests remain passing.
+- Single editor command channel — `covered` — evidence: shell mutations call editor command pipeline and do not create a second clipboard/selection state machine.
+- Dashboard/profile write-back through model/runtime APIs — `covered` — evidence: `writeDashboardResponsiveRuntimeToDocument()` is used for proposed document updates.
+- Opaque business payloads — `covered` — evidence: widget/reference adapters are opaque and diagnostics sanitize payload details.
+- No autosave — `covered` — evidence: `persist: false` document change events and README no-autosave documentation.
+- Shell composable: derive runtime context — `covered` — evidence: `state.runtime`, layout/profile/view/grid fields are updated from runtime/model.
+- Shell composable: mirror editor state only — `covered` — evidence: selection/dirty/conflict/lastResult come from editor state.
+- Shell composable: manage transient state — `covered` — evidence: last pointer/menu position, menu, highlight, empty add, diagnostics and keyboard cleanup are handled in `useDashboardEditorShell.ts`.
+- Shell composable: uniform result/event — `covered` — evidence: `createDashboardEditorShellResult()` and event emit path produce one action result shape.
+- Shell composable: cleanup on stop — `covered` — evidence: `stop()` clears handles, timers, menu and emits cleanup event.
+- Shell composable: SSR/degraded behavior — `covered` — evidence: guarded DOM access and blocked/degraded diagnostics; core tests cover no DOM.
+- Position priority 1 pointer event — `covered` — evidence: `position.ts` extracts pointer/mouse/touch coordinates.
+- Position priority 2 active/selection bounds — `covered` — evidence: fallback list in `resolveShellPosition()` includes active/selection.
+- Position priority 3 last menu position — `covered` — evidence: menu preparation stores last menu position and resolver consumes it.
+- Position priority 4 last pointer position — `covered` — evidence: pointer state is stored and used as fallback.
+- Position priority 5 viewport center — `covered` — evidence: resolver computes center position from grid viewport when no better target exists.
+- Position priority 6 caller fallback — `covered` — evidence: position input/fallback types and resolver support explicit fallback.
+- List insertion design — `covered` — evidence: `position.ts` returns `listIndex`/`beforeId`/`afterId` context without mutating layout item fields.
+- Dashboard menu descriptor design — `covered` — evidence: `buildDashboardContextMenu()` includes required dashboard actions and custom items.
+- Widget menu descriptor design — `covered` — evidence: `buildWidgetContextMenu()` includes required widget/reference/scroll/highlight actions and custom items.
+- Menu availability/reason design — `covered` — evidence: `menus.ts` computes enabled/hidden/reason from mode, readonly, item state, clipboard and adapter availability.
+- Transaction step prepare — `covered` — evidence: adapter prepare callbacks are invoked before mutation in `runDashboardEditorShellTransaction()`.
+- Transaction step mutate — `covered` — evidence: editor command/dashboard write-back stage is the transaction `mutate` callback.
+- Transaction step commit — `covered` — evidence: adapter `commit` is called after successful mutation.
+- Transaction step rollback — `covered` — evidence: adapter `rollback` is called on prepare/mutate/commit failure; unit tests cover blocking and rollback.
+- Widget adapter design — `covered` — evidence: widget adapter supports copy/paste/duplicate/remove/add/id mapping and no-adapter diagnostics.
+- Reference adapter design — `covered` — evidence: reference adapter supports can/copy/paste/replace/commit/rollback and opaque payload behavior.
+- Keyboard/focus design — `covered` — evidence: `bindKeyboard()` maps shortcuts to shell actions and skips editable targets.
+- Highlight/scroll design — `covered` — evidence: highlight is transient; scroll uses DOM-safe client path and returns blocked diagnostics when unavailable.
+- API interface shape — `covered` — evidence: `DashboardEditorShellOptions`, `DashboardEditorShellState`, `DashboardEditorShellActions`, menu descriptors and adapters are declared in `types.ts` and `typings/index.d.ts`.
+
+## Tasks
+
+- Task 1 — `covered` — evidence: `lib/dashboard-editor-shell/` contains `types.ts`, `position.ts`, `transactions.ts`, `menus.ts`, `useDashboardEditorShell.ts`, `index.ts`; task checkbox is `[x]`.
+- Task 2 — `covered` — evidence: `useDashboardEditorShell.ts` implements runtime/editor binding, degraded state, controlled-first document ownership and cleanup; task checkbox is `[x]`.
+- Task 3 — `covered` — evidence: `position.ts` implements event/fallback/list position helpers and tests cover pointer/fallback/list/blocked outputs; task checkbox is `[x]`.
+- Task 4 — `covered` — evidence: `transactions.ts` implements coordinator and diagnostic/result helpers; core tests cover transaction order/blocking; task checkbox is `[x]`.
+- Task 5 — `covered` — evidence: `pasteAtEvent()`/`pasteAtGridPosition()` and write-back pipeline are implemented and tested; task checkbox is `[x]`.
+- Task 6 — `covered` — evidence: selection/highlight/reset/scroll actions are implemented and core/browser tests cover transient/degraded behavior; task checkbox is `[x]`.
+- Task 7 — `covered` — evidence: `menus.ts` builds dashboard/widget menu descriptors with availability, reasons, actions and custom items; task checkbox is `[x]`.
+- Task 8 — `covered` — evidence: copy/paste/duplicate/remove widget actions and adapter orchestration are implemented; core tests cover adapter/confirm behavior; task checkbox is `[x]`.
+- Task 9 — `covered` — evidence: reference adapter actions for copy/paste/replace and unsupported/error results are implemented and tested; task checkbox is `[x]`.
+- Task 10 — `covered` — evidence: empty add state, palette hook, template add and external drop action are implemented; browser smoke covers palette/empty add; task checkbox is `[x]`.
+- Task 11 — `covered` — evidence: `moveAllWidgets()` uses dashboard migration translate and returns document/diagnostic results; task checkbox is `[x]`.
+- Task 12 — `covered` — evidence: `bindKeyboard()` and shortcut configuration are implemented with cleanup and editable-target ignore; browser smoke covers keyboard paste fallback; task checkbox is `[x]`.
+- Task 13 — `covered` — evidence: `lib/dashboard-editor-shell/index.ts`, `lib/cjs.ts` and `typings/index.d.ts` export shell API/types; CJS/type tests pass; task checkbox is `[x]`.
+- Task 14 — `covered` — evidence: README shell section and `example/25-dashboard-editor-shell.js` demonstrate/document shell integration boundaries; task checkbox is `[x]`.
+- Task 15 — `covered` — evidence: `test/dashboard-editor-shell-core.test.ts` and `test/run-dashboard-editor-shell-tests.js` cover core/unit requirements and are wired into package scripts; task checkbox is `[x]`.
+- Task 16 — `covered` — evidence: `test/dashboard-editor-shell-browser.test.js`, type smoke and full `npm test` cover browser/integration/export/build regression paths; task checkbox is `[x]`.
+- Task 17 — `covered` — evidence: `lib/dashboard-responsive/resolve.ts` safely clones invalid root payloads; `test/dashboard-core.test.ts` covers `writeDashboardResponsiveRuntimeToDocument(undefined, runtime, layout)` returning diagnostic failure; `npm test` passed; task checkbox is `[x]`.
+
+## Remaining Gaps/Risks
+
+- 无。非阻塞验证输出: Babel lodash deprecation warning 与 Webpack bundle-size warning 仍会在 build/test 中出现，但未导致验证失败，且不属于本规格未覆盖项。
