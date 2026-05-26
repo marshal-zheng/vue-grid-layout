@@ -1171,7 +1171,7 @@ const App = {
       <header class="demo-header">
         <div class="demo-title">
           <h1>Dashboard Settings Migration</h1>
-          <p>Apply grid-setting changes to a saved dashboard document and verify the responsive projection after repair.</p>
+          <p>Runtime migration lab with compatibility / layout-only legacy history. The recommended editor path is the Dashboard Editor Shell demo.</p>
         </div>
         <div class="demo-state" :class="health.className">
           <span class="state-dot"></span>
@@ -1198,6 +1198,7 @@ const App = {
           <button class="command-button" :class="{ selected: mode === 'view' }" @click="setMode('view')">View</button>
         </div>
         <div class="command-group">
+          <span class="command-label">Compatibility history</span>
           <button class="command-button" :disabled="!history || !history.canUndo" @click="undoHistory">Undo</button>
           <button class="command-button" :disabled="!history || !history.canRedo" @click="redoHistory">Redo</button>
         </div>
@@ -1280,12 +1281,13 @@ const App = {
           </section>
 
           <section class="side-section">
-            <h3>Last action</h3>
+            <h3>Last layout-only action</h3>
             <div class="result-box">
               <span class="result-title">{{ lastOperation.label }}</span>
               <span class="result-detail">Status: {{ lastOperation.status }}; patches: {{ lastOperation.patches }}</span>
               <span class="result-detail">Affected: {{ lastOperation.affected }}</span>
               <span class="result-detail">Actionable diagnostics: {{ lastOperation.diagnosticCount }}</span>
+              <span class="result-detail">History: compatibility / layout-only</span>
             </div>
           </section>
 

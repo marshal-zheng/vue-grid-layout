@@ -8,6 +8,7 @@ import {
   type Ref,
   type WatchStopHandle
 } from "vue";
+import { deepEqual } from "fast-equals";
 import { writeDashboardResponsiveRuntimeToDocument } from "../dashboard-responsive";
 import type { DashboardResponsiveRuntime } from "../dashboard-responsive";
 import { translateDashboardLayout } from "../dashboard-migration";
@@ -18,8 +19,11 @@ import type {
   GridEditorCommandResult,
   GridEditorCommandSource,
   GridEditorController,
+  GridEditorEvent,
+  GridEditorHistoryEntry,
   GridEditorHistorySnapshot,
-  GridEditorPlacementSession
+  GridEditorPlacementSession,
+  GridEditorRollbackCheckpoint
 } from "../editor";
 import type { GridEditorPlacementSummary } from "../editor/placement";
 import type { Layout } from "../utils";
@@ -101,6 +105,7 @@ type PendingPlacementShellCommit = {
   itemIds: string[];
   position?: DashboardEditorShellResolvedPosition;
   baseLayout: Layout;
+  rollbackCheckpoint?: GridEditorRollbackCheckpoint;
   contextExtra?: Partial<DashboardEditorShellAdapterContext>;
   data?: unknown;
   prepare?: (ctx: DashboardEditorShellAdapterContext) => Promise<DashboardEditorShellPreparedMutation | DashboardEditorShellAdapterResult | null | undefined> | DashboardEditorShellPreparedMutation | DashboardEditorShellAdapterResult | null | undefined;
@@ -123,6 +128,26 @@ const toEditorSource = (
   if (source === "toolbar") return "toolbar";
   if (source === "pointer") return "pointer";
   return "api";
+};
+
+const fromEditorSource = (
+  source: GridEditorCommandSource | undefined
+): DashboardEditorShellActionSource => {
+  if (source === "context-menu") return "context-menu";
+  if (source === "keyboard") return "keyboard";
+  if (source === "toolbar") return "toolbar";
+  if (source === "pointer") return "pointer";
+  if (source === "drop") return "drop";
+  return "api";
+};
+
+const syntheticActionTypeForCommand = (
+  command: GridEditorCommand
+): DashboardEditorShellActionType | null => {
+  if (command.type === "move") return "pointer-move";
+  if (command.type === "resize") return "pointer-resize";
+  if (command.type === "add" || command.type === "paste") return "external-drop";
+  return null;
 };
 
 const normalizePlacementStrategy = (
@@ -402,8 +427,18 @@ export function useDashboardEditorShell(
   let pendingClipboardPasteIntent: PendingClipboardPasteIntent | null = null;
   const pendingPlacementCommits = new Map<string, PendingPlacementShellCommit>();
   const placementCommitFinalizations = new Map<string, Promise<DashboardEditorShellActionResult | null>>();
+  const processedCommandIds = new Set<string>();
+  const processedCommandRevisions = new Set<string>();
+  const pendingShellCommandIds = new Set<string>();
+  const commandRollbackCheckpoints = new Map<string, GridEditorRollbackCheckpoint>();
 
   const controlled = options.controlled !== false;
+  const shellManagedWriteBack = () => options.documentWriteBack === "shell";
+
+  const commandRevisionKey = (
+    commandId: string,
+    checkpoint?: GridEditorRollbackCheckpoint | null
+  ): string => `${commandId}:${checkpoint?.revision ?? "unknown"}`;
 
   const enqueueMutation = <T>(
     run: () => Promise<T>
@@ -630,6 +665,7 @@ export function useDashboardEditorShell(
         createMissingItems: true,
         removeMissingItems: writeOptions.removeMissingItems,
         editorMetaById: editor?.editorMetaById.value,
+        sectionRows: editor?.sectionRows.value,
         writeItemIds
       }
     );
@@ -846,12 +882,137 @@ export function useDashboardEditorShell(
     return { value: data, placement } as T;
   };
 
+  const actionStatusFromCommandResult = (
+    result: GridEditorCommandResult
+  ): DashboardEditorShellActionStatus =>
+    result.status === "changed" ? "success" :
+      result.status === "cancelled" ? "cancelled" :
+        result.status === "timeout" ? "timeout" :
+          result.status === "error" ? "error" :
+            result.status === "blocked" ? "blocked" : "noop";
+
+  const blockedCommandDiagnostics = (
+    result: GridEditorCommandResult,
+    actionId: string,
+    actionType: DashboardEditorShellActionType,
+    source: DashboardEditorShellActionSource
+  ): DashboardEditorShellDiagnostic[] => {
+    if (result.blocked) {
+      return [createDashboardEditorShellDiagnostic(
+        `shell-command-${result.blocked.reason}`,
+        "warning",
+        result.blocked.message || `Editor command was blocked: ${result.blocked.reason}.`,
+        { actionId, actionType, source, reason: result.blocked.reason, itemIds: result.blocked.itemIds, recoverable: true }
+      )];
+    }
+    if (result.status === "error") {
+      return [createDashboardEditorShellDiagnostic(
+        "shell-command-error",
+        "error",
+        result.error?.message || "Editor command failed.",
+        { actionId, actionType, source, reason: "validation", recoverable: true }
+      )];
+    }
+    return [];
+  };
+
+  const maybeWriteLegacyLayoutMirror = (
+    layout: Layout | null | undefined,
+    status: DashboardEditorShellActionStatus,
+    writeResult?: DashboardWriteResult
+  ) => {
+    if (!shellManagedWriteBack()) return;
+    if (!layout || !options.legacyHistoryStore) return;
+    if (status !== "success") return;
+    if (writeResult?.ok !== true) return;
+    options.legacyHistoryStore.push(layout);
+  };
+
+  const coordinateShellCommandCommit = <T = unknown>(input: {
+    actionId: string;
+    actionType: DashboardEditorShellActionType;
+    source: DashboardEditorShellActionSource;
+    result: GridEditorCommandResult;
+    nextLayout?: Layout | null;
+    writeItemIds?: string[];
+    removeMissingItems?: boolean;
+    hasDocumentMutation?: boolean;
+    rollbackCheckpoint?: GridEditorRollbackCheckpoint | null;
+    rollbackReason?: string;
+    writeLegacyMirror?: boolean;
+    data?: T;
+  }): {
+    status: DashboardEditorShellActionStatus;
+    ok: boolean;
+    writeResult?: DashboardWriteResult;
+    proposedDocument?: DashboardLayoutDocument;
+    affectedIds: string[];
+    patches: GridEditorCommandResult["layoutPatches"];
+    placement: ReturnType<typeof placementSummaryFromCommand>;
+    data?: T;
+    diagnostics: DashboardEditorShellDiagnostic[];
+  } => {
+    const placement = placementSummaryFromCommand(input.result, input.actionId, input.actionType, input.source);
+    const placementDiagnostics = placementDiagnosticsForShell(
+      input.result.diagnostics?.computed?.placement,
+      input.actionId,
+      input.actionType,
+      input.source
+    );
+    const status = actionStatusFromCommandResult(input.result);
+    const hasDocumentMutation = input.hasDocumentMutation ??
+      (input.result.layoutPatches.length > 0 || input.result.metadataPatches.length > 0);
+    const shouldWrite = Boolean(
+      input.nextLayout &&
+      hasDocumentMutation &&
+      (input.result.status === "changed" || input.result.status === "noop")
+    );
+    const write = shouldWrite
+      ? writeBackLayout(input.actionId, input.nextLayout || [], input.writeItemIds || input.result.affectedIds, {
+          removeMissingItems: input.removeMissingItems
+        })
+      : { diagnostics: [] };
+    if (write.writeResult?.ok === false && input.rollbackCheckpoint) {
+      getEditor()?.restoreRollbackCheckpoint(
+        input.rollbackCheckpoint,
+        input.rollbackReason || "shell-write-back-rollback"
+      );
+    }
+    const resolvedStatus = write.writeResult?.ok === false ? "blocked" : status;
+    const ok = (status === "success" || status === "noop") && write.writeResult?.ok !== false;
+    if (ok && input.writeLegacyMirror) {
+      maybeWriteLegacyLayoutMirror(input.nextLayout, status, write.writeResult);
+    }
+    return {
+      status: resolvedStatus,
+      ok,
+      writeResult: write.writeResult,
+      proposedDocument: write.proposedDocument,
+      affectedIds: input.result.affectedIds,
+      patches: input.result.layoutPatches,
+      placement,
+      data: dataWithPlacement(input.data, placement),
+      diagnostics: write.diagnostics
+        .concat(blockedCommandDiagnostics(input.result, input.actionId, input.actionType, input.source))
+        .concat(placementDiagnostics)
+    };
+  };
+
   const layoutFromHistorySnapshot = (
     snapshot: GridEditorHistorySnapshot | undefined
   ): Layout | null => {
     if (!snapshot) return null;
     if (snapshot.kind === "layout") return cloneLayout(snapshot.layout);
     return cloneLayout(snapshot.layouts[snapshot.breakpoint] || []);
+  };
+
+  const historyEntryHasDocumentMutation = (
+    entry: GridEditorHistoryEntry | undefined
+  ): boolean => {
+    if (!entry) return false;
+    return !deepEqual(layoutFromHistorySnapshot(entry.before), layoutFromHistorySnapshot(entry.after)) ||
+      !deepEqual(entry.before.editorMetaById, entry.after.editorMetaById) ||
+      !deepEqual(entry.before.sectionRows, entry.after.sectionRows);
   };
 
   const executeHistoryMutation = async (
@@ -862,47 +1023,43 @@ export function useDashboardEditorShell(
     const source = actionOptions.source || "api";
     const editor = getEditor();
     if (!editor) return blockedActionResult(actionType, source, "missing-editor", [], [], actionId);
+    const rollbackCheckpoint = editor.createRollbackCheckpoint(`shell-${actionType}-write-back`);
+    pendingShellCommandIds.add(actionId);
     const result = await editor.execute({
       id: actionId,
       type: actionType,
       source: toEditorSource(source)
+    }).finally(() => {
+      pendingShellCommandIds.delete(actionId);
     });
     const nextLayout = layoutFromHistorySnapshot(actionType === "undo" ? result.undo?.before : result.undo?.after);
-    const write = result.status === "changed" && nextLayout
-      ? writeBackLayout(actionId, nextLayout, result.affectedIds, { removeMissingItems: true })
-      : { diagnostics: [] };
-    const status: DashboardEditorShellActionStatus =
-      result.status === "changed" ? "success" :
-        result.status === "cancelled" ? "cancelled" :
-          result.status === "timeout" ? "timeout" :
-            result.status === "error" ? "error" :
-              result.status === "blocked" ? "blocked" : "noop";
-    const ok = status === "success" || status === "noop";
-    const diagnostics = write.diagnostics.concat(result.blocked
-      ? [createDashboardEditorShellDiagnostic(
-          `shell-command-${result.blocked.reason}`,
-          "warning",
-          result.blocked.message || `Editor command was blocked: ${result.blocked.reason}.`,
-          { actionId, actionType, source, reason: result.blocked.reason, itemIds: result.blocked.itemIds, recoverable: true }
-        )]
-      : []);
-    if (write.writeResult?.ok === false && nextLayout) {
-      getRuntime() && editor.setExternalLayout(getRuntime()!.layout, "shell-history-write-back-rollback");
-    }
+    const hasDocumentMutation = historyEntryHasDocumentMutation(result.undo);
+    const coordinated = coordinateShellCommandCommit({
+      actionId,
+      actionType,
+      source,
+      result,
+      nextLayout,
+      removeMissingItems: true,
+      hasDocumentMutation,
+      rollbackCheckpoint,
+      rollbackReason: "shell-history-write-back-rollback",
+      data: { historyEntry: result.undo?.id }
+    });
     const shellResult = createDashboardEditorShellResult({
-      ok: ok && write.writeResult?.ok !== false,
-      status: write.writeResult?.ok === false ? "blocked" : status,
+      ok: coordinated.ok,
+      status: coordinated.status,
       actionId,
       actionType,
       source,
       itemIds: result.targetIds,
-      affectedIds: result.affectedIds,
+      affectedIds: coordinated.affectedIds,
       commandResult: result,
-      writeResult: write.writeResult,
-      proposedDocument: write.proposedDocument,
-      patches: result.layoutPatches,
-      diagnostics,
-      data: { historyEntry: result.undo?.id }
+      writeResult: coordinated.writeResult,
+      proposedDocument: coordinated.proposedDocument,
+      patches: coordinated.patches,
+      diagnostics: coordinated.diagnostics,
+      data: coordinated.data
     });
     if (shellResult.ok && shellResult.proposedDocument && shellResult.writeResult?.ok !== false) {
       maybeUpdateInternalDocument(shellResult.proposedDocument);
@@ -931,6 +1088,7 @@ export function useDashboardEditorShell(
     const itemIds = input.itemIds || command.targetIds || [];
     const ctx = actionContext(actionId, actionType, source, itemIds, input.position, input.contextExtra);
     let rollbackLayout: Layout | null = null;
+    let rollbackCheckpoint: GridEditorRollbackCheckpoint | null = null;
     let editorChanged = false;
     const transactionResult = await runDashboardEditorShellTransaction<T>({
       actionId,
@@ -989,10 +1147,14 @@ export function useDashboardEditorShell(
               }
             }
           : command;
+        rollbackCheckpoint = editor.createRollbackCheckpoint(`shell-${actionType}-write-back`);
+        pendingShellCommandIds.add(actionId);
         const result = await editor.execute({
           ...commandForPrepared,
           id: actionId,
           source: toEditorSource(source)
+        }).finally(() => {
+          pendingShellCommandIds.delete(actionId);
         });
         editorChanged = result.status === "changed";
         const placement = placementSummaryFromCommand(result, actionId, actionType, source);
@@ -1016,39 +1178,167 @@ export function useDashboardEditorShell(
             data: dataWithPlacement(input.data, placement)
           };
         }
-        const hasDocumentMutation = result.layoutPatches.length > 0 || result.metadataPatches.length > 0;
         const nextLayout = runtime
           ? applyCommandResultToLayout(runtime, result)
           : [];
-        const write = runtime && hasDocumentMutation && (result.status === "changed" || result.status === "noop")
-          ? writeBackLayout(actionId, nextLayout, result.affectedIds, { removeMissingItems: command.type === "delete" })
-          : { diagnostics: [] };
-        if (write.writeResult?.ok === false && rollbackLayout) {
-          editor.setExternalLayout(rollbackLayout, "shell-write-back-rollback");
-        }
+        const coordinated = coordinateShellCommandCommit({
+          actionId,
+          actionType,
+          source,
+          result,
+          nextLayout: runtime ? nextLayout : null,
+          removeMissingItems: command.type === "delete",
+          rollbackCheckpoint,
+          rollbackReason: "shell-write-back-rollback",
+          data: input.data
+        });
         return {
-          status: result.status === "changed" ? "success" as const : "noop" as const,
+          status: coordinated.status,
           commandResult: result,
-          writeResult: write.writeResult,
-          proposedDocument: write.proposedDocument,
-          affectedIds: result.affectedIds,
-          patches: result.layoutPatches,
-          placement,
-          data: dataWithPlacement(input.data, placement),
-          diagnostics: write.diagnostics.concat(placementDiagnostics)
+          writeResult: coordinated.writeResult,
+          proposedDocument: coordinated.proposedDocument,
+          affectedIds: coordinated.affectedIds,
+          patches: coordinated.patches,
+          placement: coordinated.placement,
+          data: coordinated.data,
+          diagnostics: coordinated.diagnostics
         };
       },
       commit: input.commit,
       rollback: input.rollback
     });
-    if (!transactionResult.ok && editorChanged && rollbackLayout) {
-      getEditor()?.setExternalLayout(rollbackLayout, "shell-transaction-rollback");
+    if (!transactionResult.ok && editorChanged) {
+      if (rollbackCheckpoint) getEditor()?.restoreRollbackCheckpoint(rollbackCheckpoint, "shell-transaction-rollback");
+      else if (rollbackLayout) getEditor()?.setExternalLayout(rollbackLayout, "shell-transaction-rollback");
     }
     if (transactionResult.ok && transactionResult.proposedDocument && transactionResult.writeResult?.ok !== false) {
+      const runtime = getRuntime();
+      if (runtime && transactionResult.commandResult) {
+        maybeWriteLegacyLayoutMirror(
+          applyCommandResultToLayout(runtime, transactionResult.commandResult),
+          transactionResult.status,
+          transactionResult.writeResult
+        );
+      }
       maybeUpdateInternalDocument(transactionResult.proposedDocument);
       emitDocumentChange(actionId, transactionResult.proposedDocument, getRuntime());
     }
     return transactionResult;
+  });
+
+  const finalizeShellManagedCommandCommit = async (
+    command: GridEditorCommand,
+    result: GridEditorCommandResult
+  ): Promise<DashboardEditorShellActionResult | null> => enqueueMutation(async () => {
+    if (!shellManagedWriteBack()) return null;
+    if (processedCommandIds.has(result.id)) return null;
+    if (pendingShellCommandIds.has(result.id)) return null;
+    const actionType = syntheticActionTypeForCommand(command);
+    if (!actionType) return null;
+    if ((result.diagnostics?.computed?.placement as { sessionId?: string } | undefined)?.sessionId) return null;
+
+    const actionId = result.id || createDashboardEditorShellActionId(actionType);
+    const source = fromEditorSource(command.source || result.diagnostics?.source);
+    const runtime = getRuntime();
+    const checkpoint = commandRollbackCheckpoints.get(result.id);
+    const revisionKey = commandRevisionKey(result.id, checkpoint);
+    if (processedCommandRevisions.has(revisionKey)) return null;
+    processedCommandIds.add(result.id);
+    processedCommandRevisions.add(revisionKey);
+    commandRollbackCheckpoints.delete(result.id);
+    const nextLayout = runtime
+      ? applyCommandResultToLayout(runtime, result)
+      : [];
+    const coordinated = coordinateShellCommandCommit({
+      actionId,
+      actionType,
+      source,
+      result,
+      nextLayout: runtime ? nextLayout : null,
+      removeMissingItems: command.type === "delete",
+      rollbackCheckpoint: checkpoint,
+      rollbackReason: "shell-managed-write-back-failed",
+      writeLegacyMirror: true,
+      data: {
+        commandId: result.id,
+        commandType: command.type,
+        historyEntryId: result.undo?.id,
+        synthesized: true
+      }
+    });
+    const shellResult = createDashboardEditorShellResult({
+      ok: coordinated.ok,
+      status: coordinated.status,
+      actionId,
+      actionType,
+      source,
+      itemIds: result.targetIds,
+      affectedIds: coordinated.affectedIds,
+      commandResult: result,
+      writeResult: coordinated.writeResult,
+      proposedDocument: coordinated.proposedDocument,
+      patches: coordinated.patches,
+      placement: coordinated.placement,
+      diagnostics: coordinated.diagnostics,
+      data: coordinated.data
+    });
+    if (shellResult.ok && shellResult.proposedDocument && shellResult.writeResult?.ok !== false) {
+      maybeUpdateInternalDocument(shellResult.proposedDocument);
+      emitDocumentChange(actionId, shellResult.proposedDocument, getRuntime());
+    }
+    emitShellResult(emit, shellResult, profileContext());
+    return shellResult;
+  });
+
+  const finalizeShellManagedCommandTerminal = async (
+    command: GridEditorCommand,
+    result: GridEditorCommandResult
+  ): Promise<DashboardEditorShellActionResult | null> => enqueueMutation(async () => {
+    if (!shellManagedWriteBack()) return null;
+    if (processedCommandIds.has(result.id)) return null;
+    if (pendingShellCommandIds.has(result.id)) return null;
+    const actionType = syntheticActionTypeForCommand(command);
+    if (!actionType) return null;
+    if ((result.diagnostics?.computed?.placement as { sessionId?: string } | undefined)?.sessionId) return null;
+
+    const actionId = result.id || createDashboardEditorShellActionId(actionType);
+    const source = fromEditorSource(command.source || result.diagnostics?.source);
+    const checkpoint = commandRollbackCheckpoints.get(result.id);
+    const revisionKey = commandRevisionKey(result.id, checkpoint);
+    if (processedCommandRevisions.has(revisionKey)) return null;
+    processedCommandIds.add(result.id);
+    processedCommandRevisions.add(revisionKey);
+    commandRollbackCheckpoints.delete(result.id);
+    const coordinated = coordinateShellCommandCommit({
+      actionId,
+      actionType,
+      source,
+      result,
+      nextLayout: null,
+      hasDocumentMutation: false,
+      data: {
+        commandId: result.id,
+        commandType: command.type,
+        historyEntryId: result.undo?.id,
+        synthesized: true
+      }
+    });
+    const shellResult = createDashboardEditorShellResult({
+      ok: coordinated.ok,
+      status: coordinated.status,
+      actionId,
+      actionType,
+      source,
+      itemIds: result.targetIds,
+      affectedIds: coordinated.affectedIds,
+      commandResult: result,
+      patches: coordinated.patches,
+      placement: coordinated.placement,
+      diagnostics: coordinated.diagnostics,
+      data: coordinated.data
+    });
+    emitShellResult(emit, shellResult, profileContext());
+    return shellResult;
   });
 
   const resolveTargetPosition = (
@@ -1275,6 +1565,8 @@ export function useDashboardEditorShell(
     const finalized = enqueueMutation(async () => {
       const editor = getEditor();
       const runtime = getRuntime();
+      const rollbackCheckpoint = commandRollbackCheckpoints.get(result.id) || pending.rollbackCheckpoint;
+      commandRollbackCheckpoints.delete(result.id);
       const placementSummary = placementSummaryFromCommand(result, pending.actionId, pending.actionType, pending.source);
       const placementDiagnostics = placementDiagnosticsForShell(
         result.diagnostics?.computed?.placement,
@@ -1313,35 +1605,53 @@ export function useDashboardEditorShell(
               data: dataWithPlacement(pending.data, placementSummary)
             };
           }
-          const hasDocumentMutation = result.layoutPatches.length > 0 || result.metadataPatches.length > 0;
           const nextLayout = runtime
             ? applyCommandResultToLayout(runtime, result)
             : [];
-          const write = runtime && hasDocumentMutation && (result.status === "changed" || result.status === "noop")
-            ? writeBackLayout(pending.actionId, nextLayout, result.affectedIds, { removeMissingItems: result.type === "delete" })
-            : { diagnostics: [] };
-          if (write.writeResult?.ok === false && editor) {
-            editor.setExternalLayout(pending.baseLayout, "shell-placement-write-back-rollback");
-          }
+          const coordinated = coordinateShellCommandCommit({
+            actionId: pending.actionId,
+            actionType: pending.actionType,
+            source: pending.source,
+            result,
+            nextLayout: runtime ? nextLayout : null,
+            removeMissingItems: result.type === "delete",
+            rollbackCheckpoint,
+            rollbackReason: "shell-placement-write-back-rollback",
+            data: pending.data
+          });
           return {
-            status: result.status === "changed" ? "success" as const : "noop" as const,
+            status: coordinated.status,
             commandResult: result,
-            writeResult: write.writeResult,
-            proposedDocument: write.proposedDocument,
-            affectedIds: result.affectedIds,
-            patches: result.layoutPatches,
-            placement: placementSummary,
-            data: dataWithPlacement(pending.data, placementSummary),
-            diagnostics: write.diagnostics.concat(placementDiagnostics)
+            writeResult: coordinated.writeResult,
+            proposedDocument: coordinated.proposedDocument,
+            affectedIds: coordinated.affectedIds,
+            patches: coordinated.patches,
+            placement: coordinated.placement || placementSummary,
+            data: coordinated.data,
+            diagnostics: coordinated.diagnostics.length
+              ? coordinated.diagnostics
+              : placementDiagnostics
           };
         },
         commit: pending.commit,
         rollback: pending.rollback
       });
       if (!transactionResult.ok && result.status === "changed" && editor) {
-        editor.setExternalLayout(pending.baseLayout, "shell-placement-transaction-rollback");
+        if (rollbackCheckpoint) {
+          editor.restoreRollbackCheckpoint(rollbackCheckpoint, "shell-placement-transaction-rollback");
+        } else {
+          editor.setExternalLayout(pending.baseLayout, "shell-placement-transaction-rollback");
+        }
       }
       if (transactionResult.ok && transactionResult.proposedDocument && transactionResult.writeResult?.ok !== false) {
+        const runtime = getRuntime();
+        if (runtime && transactionResult.commandResult) {
+          maybeWriteLegacyLayoutMirror(
+            applyCommandResultToLayout(runtime, transactionResult.commandResult),
+            transactionResult.status,
+            transactionResult.writeResult
+          );
+        }
         maybeUpdateInternalDocument(transactionResult.proposedDocument);
         emitDocumentChange(pending.actionId, transactionResult.proposedDocument, getRuntime());
       }
@@ -1741,6 +2051,9 @@ export function useDashboardEditorShell(
       const activePending = activeSessionId
         ? pendingPlacementCommits.get(activeSessionId) || null
         : null;
+      if (activePending) {
+        activePending.rollbackCheckpoint = editor.createRollbackCheckpoint("shell-placement-write-back");
+      }
       const result = await editor.commitPlacement({
         source: toEditorSource(source),
         autoCancelOnBlocked: actionOptions.autoCancelOnBlocked
@@ -2320,6 +2633,44 @@ export function useDashboardEditorShell(
     }
   ));
 
+  let editorSubscriptionCleanup: (() => void) | null = null;
+  const handleEditorEvent = (event: GridEditorEvent) => {
+    if (!shellManagedWriteBack()) return;
+    if (event.type === "command-start") {
+      if (pendingShellCommandIds.has(event.command.id || "")) return;
+      if (!syntheticActionTypeForCommand(event.command)) return;
+      const editor = getEditor();
+      if (editor && event.command.id) {
+        commandRollbackCheckpoints.set(
+          event.command.id,
+          editor.createRollbackCheckpoint("shell-managed-command-start")
+        );
+      }
+      return;
+    }
+    if (event.type === "command-blocked" || event.type === "command-error") {
+      if (pendingShellCommandIds.has(event.result.id)) {
+        commandRollbackCheckpoints.delete(event.result.id);
+        return;
+      }
+      void finalizeShellManagedCommandTerminal(event.command, event.result);
+      return;
+    }
+    if (event.type === "command-commit") {
+      if (pendingShellCommandIds.has(event.result.id)) return;
+      void finalizeShellManagedCommandCommit(event.command, event.result);
+    }
+  };
+  stopHandles.push(watch(
+    () => getEditor(),
+    editor => {
+      editorSubscriptionCleanup?.();
+      editorSubscriptionCleanup = null;
+      if (editor) editorSubscriptionCleanup = editor.subscribe(handleEditorEvent);
+    },
+    { immediate: true }
+  ));
+
   let pointerCleanup: (() => void) | null = null;
   stopHandles.push(watch(
     () => getGridElement(),
@@ -2339,6 +2690,8 @@ export function useDashboardEditorShell(
     stopped = true;
     stopHandles.forEach(handle => handle());
     cleanupHandles.splice(0).forEach(handle => handle());
+    editorSubscriptionCleanup?.();
+    editorSubscriptionCleanup = null;
     pointerCleanup?.();
     pointerCleanup = null;
     if (highlightTimer) {

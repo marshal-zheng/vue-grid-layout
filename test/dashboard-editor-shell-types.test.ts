@@ -2,12 +2,15 @@ import {
   getEventGridPosition,
   useDashboardEditorShell,
   type DashboardEditorShellActionResult,
+  type DashboardEditorShellActionType,
   type DashboardEditorShellDocumentChangeEvent,
+  type DashboardEditorShellEvent,
   type DashboardEditorShellKeyboardOptions,
   type DashboardEditorShellMenuDescriptor,
   type DashboardEditorShellOptions,
   type DashboardEditorShellPlacementStrategy,
   type DashboardEditorShellReferenceAdapter,
+  type DashboardEditorShellSyntheticCommitData,
   type DashboardEditorShellWidgetAdapter
 } from '@marsio/vue-grid-layout/dashboard-editor-shell'
 import type { GridEditorPlacementSummary } from '@marsio/vue-grid-layout/editor'
@@ -80,6 +83,34 @@ const options: DashboardEditorShellOptions = {
 
 const shell = useDashboardEditorShell(options)
 const addStrategy: DashboardEditorShellPlacementStrategy = 'insert-top-shift'
+const syntheticAction: DashboardEditorShellActionType = 'pointer-move'
+const syntheticActions: DashboardEditorShellActionType[] = ['pointer-move', 'pointer-resize', 'external-drop']
+const syntheticData: DashboardEditorShellSyntheticCommitData = {
+  commandId: 'typed-command',
+  commandType: 'move',
+  synthesized: true
+}
+const syntheticEvent: DashboardEditorShellEvent = {
+  type: 'action-result',
+  actionId: 'typed-action',
+  actionType: syntheticAction,
+  source: 'pointer',
+  status: 'success',
+  ok: true,
+  itemIds: ['typed-widget'],
+  affectedIds: ['typed-widget'],
+  profile: {
+    layoutId: 'default',
+    requestedBreakpoint: 'desktop',
+    resolvedProfileId: null,
+    targetView: 'desktop',
+    viewFormat: 'grid'
+  },
+  writeResult: undefined,
+  patches: [],
+  data: syntheticData,
+  diagnostics: []
+}
 const result: Promise<DashboardEditorShellActionResult> = shell.actions.addWidgetFromTemplate({ w: 2, h: 2 } as Partial<LayoutItem>, null, { strategy: addStrategy })
 const paletteResult = shell.actions.openWidgetPalette(null, { strategy: 'first-fit', autoAddReturnedTemplate: false })
 const placeResult = shell.actions.placeClipboard(null, { placementMode: 'interactive' })
@@ -95,6 +126,10 @@ void placeResult
 void commitPlacementResult
 void cutResult
 void dropResult
+void syntheticAction
+void syntheticActions
+void syntheticData
+void syntheticEvent
 void placementSummary
 void position
 void getEventGridPosition

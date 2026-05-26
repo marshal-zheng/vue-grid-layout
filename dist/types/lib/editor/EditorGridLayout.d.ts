@@ -65,6 +65,10 @@ export declare const editorGridLayoutProps: {
         type: PropType<string>;
         default: string;
     };
+    draggableCancelInteractiveElements: {
+        type: PropType<boolean>;
+        default: boolean;
+    };
     draggableHandle: {
         type: PropType<string>;
         default: string;

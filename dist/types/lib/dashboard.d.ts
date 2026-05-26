@@ -1,4 +1,4 @@
-import type { GridEditorMetaById } from "./editor/types";
+import type { GridEditorMetaById, GridEditorSectionRowState } from "./editor/types";
 import { type ResolvedGridItemCapability, type GridItemAspectRatioConstraint } from "./item-capabilities";
 import type { Layout, ResizeHandleAxis } from "./utils";
 import type { LayoutValidationMode, MaybePromise } from "./persistence";
@@ -11,6 +11,7 @@ export type DashboardJsonObject = {
 };
 export type DashboardDocumentMeta = DashboardJsonObject;
 export type DashboardDiagnosticLevel = "info" | "warning" | "error";
+export type DashboardDocumentWriteBackOwner = "component" | "shell";
 export type DashboardDiagnostic = {
     code: string;
     level: DashboardDiagnosticLevel;
@@ -121,7 +122,7 @@ export type ResolvedDashboardGridSettings = DashboardGridSettings & {
 export type DashboardEditorEnvelope = {
     version: number;
     editorMetaById?: GridEditorMetaById;
-    sectionRows?: unknown;
+    sectionRows?: GridEditorSectionRowState;
     updatedAt?: string;
     extensions?: DashboardJsonObject;
     [key: string]: unknown;
@@ -242,6 +243,7 @@ export type WriteDashboardRuntimeOptions = {
     profileId?: string;
     targetView?: "desktop" | "mobile";
     editorMetaById?: GridEditorMetaById;
+    sectionRows?: GridEditorSectionRowState;
     writeItemIds?: string[];
     createMissingItems?: boolean;
     removeMissingItems?: boolean;
@@ -350,6 +352,7 @@ export declare function projectDashboardLayoutDocument(document: DashboardLayout
 export declare function writeDashboardRuntimeToDocument(document: DashboardLayoutDocument, runtime: {
     layout: Layout;
     editorMetaById?: GridEditorMetaById;
+    sectionRows?: GridEditorSectionRowState;
     gridSettings?: Partial<DashboardGridSettings>;
 }, options?: WriteDashboardRuntimeOptions): DashboardWriteResult;
 export declare function importThingsBoardDashboardLayout(input: ThingsBoardDashboardLayoutLike, options?: Partial<SerializeDashboardLayoutOptions>): DashboardImportResult;

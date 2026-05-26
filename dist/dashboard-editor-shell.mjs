@@ -1,200 +1,201 @@
-import { f as Rt } from "./resolve-C3SqJijI.mjs";
-import { ref as lt, unref as ue, watch as Fe, getCurrentInstance as Pt, onBeforeUnmount as Mt, readonly as St } from "vue";
-import { t as Et, w as At } from "./dashboard-migration-DSgh_CFb.mjs";
-import { g as Ct } from "./commands-Q0wgqPfi.mjs";
-const U = (e) => typeof e == "number" && Number.isFinite(e), ut = (e, s) => {
+import { f as Xt } from "./resolve-C3SqJijI.mjs";
+import { ref as kt, unref as ge, watch as Fe, getCurrentInstance as Vt, onBeforeUnmount as Yt, readonly as Nt } from "vue";
+import { deepEqual as Ve } from "fast-equals";
+import { t as qt, w as Gt } from "./dashboard-migration-CPRNR9yH.mjs";
+import { g as Ut } from "./commands-C5DwsbEU.mjs";
+const G = (e) => typeof e == "number" && Number.isFinite(e), wt = (e, n) => {
   if (typeof e == "number" && Number.isFinite(e)) return [e, e];
   if (Array.isArray(e)) {
-    const r = typeof e[0] == "number" && Number.isFinite(e[0]) ? e[0] : s[0], d = typeof e[1] == "number" && Number.isFinite(e[1]) ? e[1] : s[1];
+    const r = typeof e[0] == "number" && Number.isFinite(e[0]) ? e[0] : n[0], d = typeof e[1] == "number" && Number.isFinite(e[1]) ? e[1] : n[1];
     return [r, d];
   }
-  return s;
-}, ht = (e, s, r, d = {}) => ({
+  return n;
+}, St = (e, n, r, d = {}) => ({
   code: e,
-  level: s,
+  level: n,
   message: r,
   ...d
-}), mt = (e, s = []) => ({
+}), vt = (e, n = []) => ({
   ok: !0,
   position: e,
-  diagnostics: s
-}), Le = (e, s, r = []) => ({
+  diagnostics: n
+}), Ye = (e, n, r = []) => ({
   ok: !1,
   status: "blocked",
   reason: e,
-  diagnostics: r.concat(ht(
+  diagnostics: r.concat(St(
     `position-${e}`,
     "warning",
-    s,
+    n,
     { reason: e, recoverable: !0 }
   ))
-}), Be = (e, s, r, d) => {
-  if (!e || !U(e.x) || !U(e.y)) return null;
-  const f = Math.max(0, Math.min(Math.floor(e.x), Math.max(0, r - 1))), y = Math.max(0, Number.isFinite(d) ? Math.min(Math.floor(e.y), Math.max(0, d - 1)) : Math.floor(e.y));
+}), Ne = (e, n, r, d) => {
+  if (!e || !G(e.x) || !G(e.y)) return null;
+  const g = Math.max(0, Math.min(Math.floor(e.x), Math.max(0, r - 1))), h = Math.max(0, Number.isFinite(d) ? Math.min(Math.floor(e.y), Math.max(0, d - 1)) : Math.floor(e.y));
   return {
-    x: f,
-    y,
-    source: e.source || s,
+    x: g,
+    y: h,
+    source: e.source || n,
     list: e.list,
     clientX: e.clientX,
     clientY: e.clientY,
     cols: r
   };
-}, Dt = (e, s, r, d) => ({
+}, Qt = (e, n, r, d) => ({
   x: Math.max(0, Math.min(Math.floor(e.x + e.w), Math.max(0, r - 1))),
   y: Math.max(0, Number.isFinite(d) ? Math.min(Math.floor(e.y + e.h), Math.max(0, d - 1)) : Math.floor(e.y + e.h)),
-  source: s,
+  source: n,
   cols: r
-}), Tt = (e, s, r, d) => {
-  const f = e.filter((M) => s.indexOf(M.i) !== -1);
-  if (f.length === 0) return null;
-  const y = Math.min(...f.map((M) => M.x)), I = Math.min(...f.map((M) => M.y)), v = Math.max(...f.map((M) => M.x + M.w)), L = Math.max(...f.map((M) => M.y + M.h));
+}), Jt = (e, n, r, d) => {
+  const g = e.filter((E) => n.indexOf(E.i) !== -1);
+  if (g.length === 0) return null;
+  const h = Math.min(...g.map((E) => E.x)), b = Math.min(...g.map((E) => E.y)), R = Math.max(...g.map((E) => E.x + E.w)), B = Math.max(...g.map((E) => E.y + E.h));
   return {
-    x: Math.max(0, Math.min(Math.floor((y + v) / 2), Math.max(0, r - 1))),
-    y: Math.max(0, Number.isFinite(d) ? Math.min(Math.floor((I + L) / 2), Math.max(0, d - 1)) : Math.floor((I + L) / 2)),
+    x: Math.max(0, Math.min(Math.floor((h + R) / 2), Math.max(0, r - 1))),
+    y: Math.max(0, Number.isFinite(d) ? Math.min(Math.floor((b + B) / 2), Math.max(0, d - 1)) : Math.floor((b + B) / 2)),
     source: "selection",
     cols: r
   };
-}, Wt = (e) => {
-  var f, y;
+}, Zt = (e) => {
+  var g, h;
   if (!e) return null;
-  const s = e;
-  if (U(s.clientX) && U(s.clientY))
-    return { clientX: s.clientX, clientY: s.clientY };
-  const r = e, d = ((f = r.touches) == null ? void 0 : f[0]) || ((y = r.changedTouches) == null ? void 0 : y[0]);
-  return d && U(d.clientX) && U(d.clientY) ? { clientX: d.clientX, clientY: d.clientY } : null;
-}, Ft = (e) => ({
-  left: U(e.scrollLeft) ? e.scrollLeft : 0,
-  top: U(e.scrollTop) ? e.scrollTop : 0
-}), ft = (e, s) => U(s.width) && s.width > 0 ? s.width : U(e.clientWidth) && e.clientWidth > 0 ? e.clientWidth : U(e.offsetWidth) && e.offsetWidth > 0 ? e.offsetWidth : 0, Lt = (e) => {
-  const s = e != null && e.gridSettings ? e.gridSettings.maxRows : void 0;
-  return U(s) && s > 0 ? Math.floor(s) : 1 / 0;
-}, Bt = (e) => {
+  const n = e;
+  if (G(n.clientX) && G(n.clientY))
+    return { clientX: n.clientX, clientY: n.clientY };
+  const r = e, d = ((g = r.touches) == null ? void 0 : g[0]) || ((h = r.changedTouches) == null ? void 0 : h[0]);
+  return d && G(d.clientX) && G(d.clientY) ? { clientX: d.clientX, clientY: d.clientY } : null;
+}, _t = (e) => ({
+  left: G(e.scrollLeft) ? e.scrollLeft : 0,
+  top: G(e.scrollTop) ? e.scrollTop : 0
+}), Rt = (e, n) => G(n.width) && n.width > 0 ? n.width : G(e.clientWidth) && e.clientWidth > 0 ? e.clientWidth : G(e.offsetWidth) && e.offsetWidth > 0 ? e.offsetWidth : 0, Ot = (e) => {
+  const n = e != null && e.gridSettings ? e.gridSettings.maxRows : void 0;
+  return G(n) && n > 0 ? Math.floor(n) : 1 / 0;
+}, eo = (e) => {
   var r;
-  const s = (r = e == null ? void 0 : e.gridSettings) == null ? void 0 : r.columns;
-  return U(s) && s > 0 ? Math.floor(s) : 12;
-}, $e = (e) => {
+  const n = (r = e == null ? void 0 : e.gridSettings) == null ? void 0 : r.columns;
+  return G(n) && n > 0 ? Math.floor(n) : 12;
+}, qe = (e) => {
   var d;
-  const s = e == null ? void 0 : e.heightRuntime;
-  if (s && U(s.rowHeight) && s.rowHeight > 0)
-    return s.rowHeight;
+  const n = e == null ? void 0 : e.heightRuntime;
+  if (n && G(n.rowHeight) && n.rowHeight > 0)
+    return n.rowHeight;
   const r = (d = e == null ? void 0 : e.gridSettings) == null ? void 0 : d.rowHeight;
-  return U(r) && r > 0 ? r : 150;
-}, $t = (e, s) => {
-  var f, y;
-  const r = e.slice().sort((I, v) => I.y - v.y || I.x - v.x || I.i.localeCompare(v.i)), d = Math.max(0, Math.min(Math.floor(s), r.length));
+  return G(r) && r > 0 ? r : 150;
+}, to = (e, n) => {
+  var g, h;
+  const r = e.slice().sort((b, R) => b.y - R.y || b.x - R.x || b.i.localeCompare(R.i)), d = Math.max(0, Math.min(Math.floor(n), r.length));
   return {
     listIndex: d,
-    beforeId: (f = r[d]) == null ? void 0 : f.i,
-    afterId: d > 0 ? (y = r[d - 1]) == null ? void 0 : y.i : void 0
+    beforeId: (g = r[d]) == null ? void 0 : g.i,
+    afterId: d > 0 ? (h = r[d - 1]) == null ? void 0 : h.i : void 0
   };
-}, Ht = (e, s) => {
+}, oo = (e, n) => {
   var r, d;
   return {
     ...e,
     x: 0,
     y: Math.max(0, (d = (r = e.list) == null ? void 0 : r.listIndex) != null ? d : e.y),
     source: e.source === "event" ? "list" : e.source,
-    list: e.list || $t(s, e.y)
+    list: e.list || to(n, e.y)
   };
-}, Ke = (e) => {
-  var se, A, w, D, oe, h;
-  const s = e.runtime || null, r = e.layout || (s == null ? void 0 : s.layout) || [], d = Bt(s), f = Lt(s), y = [], I = e.itemSize || { w: 1, h: 1 }, v = (R) => ((s == null ? void 0 : s.viewFormat) || "grid") === "list" ? mt(Ht(R, r), y) : mt(R, y), L = Wt(e.event);
-  if (L) {
-    const R = e.gridElement || null;
-    if (!R || typeof R.getBoundingClientRect != "function")
-      return Le(
+}, Je = (e) => {
+  var oe, _, re, ae, ne, I;
+  const n = e.runtime || null, r = e.layout || (n == null ? void 0 : n.layout) || [], d = eo(n), g = Ot(n), h = [], b = e.itemSize || { w: 1, h: 1 }, R = (j) => ((n == null ? void 0 : n.viewFormat) || "grid") === "list" ? vt(oo(j, r), h) : vt(j, h), B = Zt(e.event);
+  if (B) {
+    const j = e.gridElement || null;
+    if (!j || typeof j.getBoundingClientRect != "function")
+      return Ye(
         "missing-grid-element",
         "Grid element is required to resolve event coordinates.",
-        y
+        h
       );
-    const X = R.getBoundingClientRect(), O = ft(R, X);
-    if (!Number.isFinite(O) || O <= 0)
-      return Le("missing-grid-element", "Grid element has no measurable width.", y);
-    const ne = Ft(R), T = L.clientX - X.left + ne.left, j = L.clientY - X.top + ne.top, J = {
-      margin: ut((se = s == null ? void 0 : s.gridSettings) == null ? void 0 : se.margin, [10, 10]),
-      containerPadding: ut((A = s == null ? void 0 : s.gridSettings) == null ? void 0 : A.containerPadding, [0, 0]),
-      containerWidth: O,
+    const M = j.getBoundingClientRect(), k = Rt(j, M);
+    if (!Number.isFinite(k) || k <= 0)
+      return Ye("missing-grid-element", "Grid element has no measurable width.", h);
+    const S = _t(j), T = B.clientX - M.left + S.left, X = B.clientY - M.top + S.top, C = {
+      margin: wt((oe = n == null ? void 0 : n.gridSettings) == null ? void 0 : oe.margin, [10, 10]),
+      containerPadding: wt((_ = n == null ? void 0 : n.gridSettings) == null ? void 0 : _.containerPadding, [0, 0]),
+      containerWidth: k,
       cols: d,
-      rowHeight: $e(s),
-      maxRows: f,
-      renderPrecision: (w = s == null ? void 0 : s.gridSettings) == null ? void 0 : w.renderPrecision
-    }, N = Rt(J, j, T, I.w, I.h);
-    return !U(N.x) || !U(N.y) || N.x < 0 || N.y < 0 ? Le("invalid-input", "Event coordinates produced an invalid grid position.", y) : v({
-      x: N.x,
-      y: N.y,
+      rowHeight: qe(n),
+      maxRows: g,
+      renderPrecision: (re = n == null ? void 0 : n.gridSettings) == null ? void 0 : re.renderPrecision
+    }, te = Xt(C, X, T, b.w, b.h);
+    return !G(te.x) || !G(te.y) || te.x < 0 || te.y < 0 ? Ye("invalid-input", "Event coordinates produced an invalid grid position.", h) : R({
+      x: te.x,
+      y: te.y,
       source: "event",
-      clientX: L.clientX,
-      clientY: L.clientY,
+      clientX: B.clientX,
+      clientY: B.clientY,
       left: T,
-      top: j,
+      top: X,
       cols: d,
-      rowHeight: J.rowHeight
+      rowHeight: C.rowHeight
     });
   }
-  const M = e.activeItemId || ((D = e.selection) == null ? void 0 : D.activeId), E = M ? r.find((R) => R.i === M) : null;
-  if (E) return v(Dt(E, "active-item", d, f));
-  if ((h = (oe = e.selection) == null ? void 0 : oe.selectedIds) != null && h.length) {
-    const R = Tt(r, e.selection.selectedIds, d, f);
-    if (R) return v(R);
+  const E = e.activeItemId || ((ae = e.selection) == null ? void 0 : ae.activeId), A = E ? r.find((j) => j.i === E) : null;
+  if (A) return R(Qt(A, "active-item", d, g));
+  if ((I = (ne = e.selection) == null ? void 0 : ne.selectedIds) != null && I.length) {
+    const j = Jt(r, e.selection.selectedIds, d, g);
+    if (j) return R(j);
   }
-  const B = Be(e.lastMenuPosition, "last-menu", d, f);
-  if (B) return v(B);
-  const _ = Be(e.lastPointerPosition, "last-pointer", d, f);
-  if (_) return v(_);
+  const F = Ne(e.lastMenuPosition, "last-menu", d, g);
+  if (F) return R(F);
+  const J = Ne(e.lastPointerPosition, "last-pointer", d, g);
+  if (J) return R(J);
   const z = e.gridElement || null;
   if (z && typeof z.getBoundingClientRect == "function") {
-    const R = z.getBoundingClientRect();
-    if (ft(z, R) > 0) {
-      const O = $e(s), ne = Number.isFinite(f) ? f : Math.max(1, Math.ceil((z.clientHeight || O) / O));
-      return v({
+    const j = z.getBoundingClientRect();
+    if (Rt(z, j) > 0) {
+      const k = qe(n), S = Number.isFinite(g) ? g : Math.max(1, Math.ceil((z.clientHeight || k) / k));
+      return R({
         x: Math.max(0, Math.floor(d / 2)),
-        y: Math.max(0, Math.floor(ne / 2)),
+        y: Math.max(0, Math.floor(S / 2)),
         source: "viewport-center",
         cols: d,
-        rowHeight: O
+        rowHeight: k
       });
     }
   }
-  const ae = Be(e.fallback || null, "fallback", d, f);
-  return ae ? v(ae) : (y.push(ht(
+  const q = Ne(e.fallback || null, "fallback", d, g);
+  return q ? R(q) : (h.push(St(
     "position-fallback-origin",
     "info",
     "No pointer, selection, menu, pointer, viewport or caller fallback was available; using origin.",
     { details: { positionSource: "none" }, recoverable: !0 }
-  )), v({ x: 0, y: 0, source: "none", cols: d, rowHeight: $e(s) }));
-}, jt = (e) => Ke(e);
-let gt = 0;
-const H = (e) => (gt += 1, `dashboard-shell-${e}-${Date.now().toString(36)}-${gt.toString(36)}`), Kt = (e) => ({
+  )), R({ x: 0, y: 0, source: "none", cols: d, rowHeight: qe(n) }));
+}, ao = (e) => Je(e);
+let xt = 0;
+const K = (e) => (xt += 1, `dashboard-shell-${e}-${Date.now().toString(36)}-${xt.toString(36)}`), so = (e) => ({
   layoutId: (e == null ? void 0 : e.layoutId) || null,
   requestedBreakpoint: (e == null ? void 0 : e.requestedBreakpoint) || null,
   resolvedProfileId: (e == null ? void 0 : e.resolvedProfileId) || null,
   targetView: (e == null ? void 0 : e.targetView) || null,
   viewFormat: (e == null ? void 0 : e.viewFormat) || null
-}), Y = (e, s, r, d = {}) => {
-  const f = {
+}), V = (e, n, r, d = {}) => {
+  const g = {
     code: e,
-    level: s,
+    level: n,
     message: r
   };
-  return Object.keys(d).sort().forEach((I) => {
-    const v = d[I];
-    typeof v != "undefined" && (f[I] = v);
-  }), f;
-}, Xe = (e, s = {}) => {
+  return Object.keys(d).sort().forEach((b) => {
+    const R = d[b];
+    typeof R != "undefined" && (g[b] = R);
+  }), g;
+}, Ze = (e, n = {}) => {
   const r = e instanceof Error ? e.message : String(e || "Unknown error");
-  return Y(
+  return V(
     "shell-error",
     "error",
     r,
     {
       reason: "validation",
       recoverable: !0,
-      ...s
+      ...n
     }
   );
-}, q = (e) => {
-  var s, r, d;
+}, Y = (e) => {
+  var n, r, d;
   return {
     ok: e.ok,
     status: e.status,
@@ -202,7 +203,7 @@ const H = (e) => (gt += 1, `dashboard-shell-${e}-${Date.now().toString(36)}-${gt
     actionType: e.actionType,
     source: e.source,
     itemIds: e.itemIds || [],
-    affectedIds: e.affectedIds || ((s = e.commandResult) == null ? void 0 : s.affectedIds) || e.itemIds || [],
+    affectedIds: e.affectedIds || ((n = e.commandResult) == null ? void 0 : n.affectedIds) || e.itemIds || [],
     position: e.position,
     commandResult: e.commandResult,
     writeResult: e.writeResult,
@@ -211,72 +212,76 @@ const H = (e) => (gt += 1, `dashboard-shell-${e}-${Date.now().toString(36)}-${gt
     proposedDocument: e.proposedDocument,
     idMap: e.idMap || ((r = e.adapter) == null ? void 0 : r.idMap),
     patches: e.patches || ((d = e.commandResult) == null ? void 0 : d.layoutPatches),
-    diagnostics: Ie(e.diagnostics || []),
+    diagnostics: we(e.diagnostics || []),
     data: e.data
   };
-}, G = (e, s, r) => {
+}, N = (e, n, r) => {
   e == null || e({
     type: "action-result",
-    actionId: s.actionId,
-    actionType: s.actionType,
-    source: s.source,
-    status: s.status,
-    ok: s.ok,
-    itemIds: s.itemIds,
-    affectedIds: s.affectedIds,
+    actionId: n.actionId,
+    actionType: n.actionType,
+    source: n.source,
+    status: n.status,
+    ok: n.ok,
+    itemIds: n.itemIds,
+    affectedIds: n.affectedIds,
     profile: r,
-    position: s.position,
-    commandResult: s.commandResult,
-    adapter: s.adapter,
-    placement: s.placement,
-    diagnostics: s.diagnostics
+    position: n.position,
+    commandResult: n.commandResult,
+    writeResult: n.writeResult,
+    adapter: n.adapter,
+    placement: n.placement,
+    proposedDocument: n.proposedDocument,
+    patches: n.patches,
+    data: n.data,
+    diagnostics: n.diagnostics
   });
-}, Ie = (e) => e.filter(Boolean).map((s) => {
+}, we = (e) => e.filter(Boolean).map((n) => {
   const r = {
-    code: s.code,
-    level: s.level,
-    message: s.message
+    code: n.code,
+    level: n.level,
+    message: n.message
   };
-  return Object.keys(s).filter((d) => d !== "code" && d !== "level" && d !== "message").sort().forEach((d) => {
-    const f = s[d];
-    typeof f != "undefined" && (r[d] = Ve(f));
+  return Object.keys(n).filter((d) => d !== "code" && d !== "level" && d !== "message").sort().forEach((d) => {
+    const g = n[d];
+    typeof g != "undefined" && (r[d] = _e(g));
   }), r;
 }).sort(
-  (s, r) => `${s.actionId || ""}:${s.code}:${s.path || ""}:${s.itemId || ""}`.localeCompare(`${r.actionId || ""}:${r.code}:${r.path || ""}:${r.itemId || ""}`)
-), Ve = (e) => {
+  (n, r) => `${n.actionId || ""}:${n.code}:${n.path || ""}:${n.itemId || ""}`.localeCompare(`${r.actionId || ""}:${r.code}:${r.path || ""}:${r.itemId || ""}`)
+), _e = (e) => {
   if (e == null || typeof e == "string" || typeof e == "number" || typeof e == "boolean") return e;
-  if (Array.isArray(e)) return e.map(Ve);
+  if (Array.isArray(e)) return e.map(_e);
   if (e instanceof Error) return { name: e.name, message: e.message };
   if (typeof e == "object") {
-    const s = {};
+    const n = {};
     return Object.keys(e).sort().forEach((r) => {
-      r === "opaque" || r === "payload" || r === "businessPayload" || (s[r] = Ve(e[r]));
-    }), s;
+      r === "opaque" || r === "payload" || r === "businessPayload" || (n[r] = _e(e[r]));
+    }), n;
   }
   return String(e);
-}, Ce = (e, s, r) => ({
+}, He = (e, n, r) => ({
   stage: e,
-  ok: (s == null ? void 0 : s.ok) !== !1,
-  status: s == null ? void 0 : s.status,
-  reason: s == null ? void 0 : s.reason,
+  ok: (n == null ? void 0 : n.ok) !== !1,
+  status: n == null ? void 0 : n.status,
+  reason: n == null ? void 0 : n.reason,
   preparedId: r == null ? void 0 : r.id,
-  sourceIds: (s == null ? void 0 : s.sourceIds) || (r == null ? void 0 : r.sourceIds),
-  newIds: (s == null ? void 0 : s.newIds) || (r == null ? void 0 : r.newIds),
-  idMap: (s == null ? void 0 : s.idMap) || (r == null ? void 0 : r.idMap),
-  metadata: (s == null ? void 0 : s.metadata) || (r == null ? void 0 : r.metadata),
-  diagnostics: Ie((s == null ? void 0 : s.diagnostics) || (r == null ? void 0 : r.diagnostics) || []),
-  error: s != null && s.error ? { code: s.error.code, message: s.error.message } : void 0
-}), Xt = (e) => !!(e && typeof e == "object" && "ok" in e && !("kind" in e)), Vt = (e) => !!(e && typeof e == "object" && "kind" in e), Se = async (e, s, r, d, f) => {
+  sourceIds: (n == null ? void 0 : n.sourceIds) || (r == null ? void 0 : r.sourceIds),
+  newIds: (n == null ? void 0 : n.newIds) || (r == null ? void 0 : r.newIds),
+  idMap: (n == null ? void 0 : n.idMap) || (r == null ? void 0 : r.idMap),
+  metadata: (n == null ? void 0 : n.metadata) || (r == null ? void 0 : r.metadata),
+  diagnostics: we((n == null ? void 0 : n.diagnostics) || (r == null ? void 0 : r.diagnostics) || []),
+  error: n != null && n.error ? { code: n.error.code, message: n.error.message } : void 0
+}), no = (e) => !!(e && typeof e == "object" && "ok" in e && !("kind" in e)), co = (e) => !!(e && typeof e == "object" && "kind" in e), Le = async (e, n, r, d, g) => {
   if (e.rollback)
     try {
-      const y = await e.rollback(s, {
+      const h = await e.rollback(n, {
         ...e.context,
         stage: r,
         error: d
       });
-      return f.push(...(y == null ? void 0 : y.diagnostics) || []), Ce("rollback", y, s);
-    } catch (y) {
-      return f.push(Xe(y, {
+      return g.push(...(h == null ? void 0 : h.diagnostics) || []), He("rollback", h, n);
+    } catch (h) {
+      return g.push(Ze(h, {
         actionId: e.actionId,
         actionType: e.actionType,
         source: e.source,
@@ -286,87 +291,87 @@ const H = (e) => (gt += 1, `dashboard-shell-${e}-${Date.now().toString(36)}-${gt
         ok: !1,
         status: "error",
         reason: "adapter-rejected",
-        preparedId: s.id,
+        preparedId: n.id,
         error: {
-          message: y instanceof Error ? y.message : String(y)
+          message: h instanceof Error ? h.message : String(h)
         }
       };
     }
-}, He = async (e) => {
-  var y, I, v, L, M, E, B, _, z, ae, se, A, w, D, oe;
-  const s = e.itemIds || e.context.itemIds || [], r = e.context.diagnostics.slice();
-  (y = e.emit) == null || y.call(e, {
+}, Ge = async (e) => {
+  var h, b, R, B, E, A, F, J, z, q, oe, _, re, ae, ne;
+  const n = e.itemIds || e.context.itemIds || [], r = e.context.diagnostics.slice();
+  (h = e.emit) == null || h.call(e, {
     type: "action-start",
     actionId: e.actionId,
     actionType: e.actionType,
     source: e.source,
-    itemIds: s,
+    itemIds: n,
     profile: e.profile,
     position: e.position,
     diagnostics: r
   });
-  let d = null, f;
+  let d = null, g;
   try {
     if (e.prepare) {
       const T = await e.prepare(e.context);
-      if (Xt(T)) {
-        if (r.push(...T.diagnostics || []), f = Ce("prepare", T), !T.ok) {
-          const j = q({
+      if (no(T)) {
+        if (r.push(...T.diagnostics || []), g = He("prepare", T), !T.ok) {
+          const X = Y({
             ok: !1,
             status: T.status || "blocked",
             actionId: e.actionId,
             actionType: e.actionType,
             source: e.source,
-            itemIds: s,
+            itemIds: n,
             affectedIds: [],
             position: e.position,
-            adapter: f,
+            adapter: g,
             idMap: T.idMap,
             diagnostics: r
           });
-          return G(e.emit, j, e.profile), j;
+          return N(e.emit, X, e.profile), X;
         }
-      } else Vt(T) && (d = T, r.push(...d.diagnostics || []), f = Ce("prepare", { ok: !0, diagnostics: d.diagnostics }, d));
+      } else co(T) && (d = T, r.push(...d.diagnostics || []), g = He("prepare", { ok: !0, diagnostics: d.diagnostics }, d));
     }
-    const h = await e.mutate(d, e.context);
-    if (r.push(...h.diagnostics || []), ((I = h.commandResult) == null ? void 0 : I.status) === "blocked" || ((v = h.commandResult) == null ? void 0 : v.status) === "cancelled" || ((L = h.commandResult) == null ? void 0 : L.status) === "timeout" || ((M = h.commandResult) == null ? void 0 : M.status) === "error" || ((E = h.writeResult) == null ? void 0 : E.ok) === !1 || h.status === "blocked" || h.status === "cancelled" || h.status === "timeout" || h.status === "unsupported" || h.status === "error") {
-      const T = d ? await Se(e, d, "mutate", h, r) : void 0, j = ((B = h.writeResult) == null ? void 0 : B.ok) === !1 ? "blocked" : h.status || (((_ = h.commandResult) == null ? void 0 : _.status) === "cancelled" ? "cancelled" : ((z = h.commandResult) == null ? void 0 : z.status) === "timeout" ? "timeout" : ((ae = h.commandResult) == null ? void 0 : ae.status) === "error" ? "error" : "blocked"), J = q({
+    const I = await e.mutate(d, e.context);
+    if (r.push(...I.diagnostics || []), ((b = I.commandResult) == null ? void 0 : b.status) === "blocked" || ((R = I.commandResult) == null ? void 0 : R.status) === "cancelled" || ((B = I.commandResult) == null ? void 0 : B.status) === "timeout" || ((E = I.commandResult) == null ? void 0 : E.status) === "error" || ((A = I.writeResult) == null ? void 0 : A.ok) === !1 || I.status === "blocked" || I.status === "cancelled" || I.status === "timeout" || I.status === "unsupported" || I.status === "error") {
+      const T = d ? await Le(e, d, "mutate", I, r) : void 0, X = ((F = I.writeResult) == null ? void 0 : F.ok) === !1 ? "blocked" : I.status || (((J = I.commandResult) == null ? void 0 : J.status) === "cancelled" ? "cancelled" : ((z = I.commandResult) == null ? void 0 : z.status) === "timeout" ? "timeout" : ((q = I.commandResult) == null ? void 0 : q.status) === "error" ? "error" : "blocked"), C = Y({
         ok: !1,
-        status: j,
+        status: X,
         actionId: e.actionId,
         actionType: e.actionType,
         source: e.source,
-        itemIds: s,
-        affectedIds: h.affectedIds || ((se = h.commandResult) == null ? void 0 : se.affectedIds) || [],
+        itemIds: n,
+        affectedIds: I.affectedIds || ((oe = I.commandResult) == null ? void 0 : oe.affectedIds) || [],
         position: e.position,
-        commandResult: h.commandResult,
-        writeResult: h.writeResult,
-        proposedDocument: h.proposedDocument,
-        adapter: T || f,
-        placement: h.placement,
+        commandResult: I.commandResult,
+        writeResult: I.writeResult,
+        proposedDocument: I.proposedDocument,
+        adapter: T || g,
+        placement: I.placement,
         idMap: d == null ? void 0 : d.idMap,
-        patches: h.patches,
+        patches: I.patches,
         diagnostics: r,
-        data: h.data
+        data: I.data
       });
-      return G(e.emit, J, e.profile), J;
+      return N(e.emit, C, e.profile), C;
     }
     if (d && e.commit) {
       let T;
       try {
         T = await e.commit(d, {
           ...e.context,
-          commandResult: h.commandResult,
-          writeResult: h.writeResult,
-          proposedDocument: h.proposedDocument
+          commandResult: I.commandResult,
+          writeResult: I.writeResult,
+          proposedDocument: I.proposedDocument
         });
-      } catch (j) {
-        r.push(Xe(j, {
+      } catch (X) {
+        r.push(Ze(X, {
           actionId: e.actionId,
           actionType: e.actionType,
           source: e.source,
           reason: "adapter-rejected"
-        })), f = {
+        })), g = {
           stage: "commit",
           ok: !1,
           status: "error",
@@ -375,136 +380,136 @@ const H = (e) => (gt += 1, `dashboard-shell-${e}-${Date.now().toString(36)}-${gt
           sourceIds: d.sourceIds,
           newIds: d.newIds,
           idMap: d.idMap,
-          diagnostics: Ie(d.diagnostics || []),
+          diagnostics: we(d.diagnostics || []),
           error: {
-            message: j instanceof Error ? j.message : String(j)
+            message: X instanceof Error ? X.message : String(X)
           }
         };
-        const J = await Se(e, d, "commit", j, r), N = q({
+        const C = await Le(e, d, "commit", X, r), te = Y({
           ok: !1,
           status: "error",
           actionId: e.actionId,
           actionType: e.actionType,
           source: e.source,
-          itemIds: s,
-          affectedIds: h.affectedIds || ((A = h.commandResult) == null ? void 0 : A.affectedIds) || [],
+          itemIds: n,
+          affectedIds: I.affectedIds || ((_ = I.commandResult) == null ? void 0 : _.affectedIds) || [],
           position: e.position,
-          commandResult: h.commandResult,
-          writeResult: h.writeResult,
-          proposedDocument: h.proposedDocument,
-          adapter: J || f,
-          placement: h.placement,
+          commandResult: I.commandResult,
+          writeResult: I.writeResult,
+          proposedDocument: I.proposedDocument,
+          adapter: C || g,
+          placement: I.placement,
           idMap: d.idMap,
-          patches: h.patches,
+          patches: I.patches,
           diagnostics: r,
-          data: h.data
+          data: I.data
         });
-        return G(e.emit, N, e.profile), N;
+        return N(e.emit, te, e.profile), te;
       }
-      if (r.push(...(T == null ? void 0 : T.diagnostics) || []), f = Ce("commit", T, d), (T == null ? void 0 : T.ok) === !1) {
-        const j = await Se(e, d, "commit", T, r), J = q({
+      if (r.push(...(T == null ? void 0 : T.diagnostics) || []), g = He("commit", T, d), (T == null ? void 0 : T.ok) === !1) {
+        const X = await Le(e, d, "commit", T, r), C = Y({
           ok: !1,
           status: T.status || "error",
           actionId: e.actionId,
           actionType: e.actionType,
           source: e.source,
-          itemIds: s,
-          affectedIds: h.affectedIds || ((w = h.commandResult) == null ? void 0 : w.affectedIds) || [],
+          itemIds: n,
+          affectedIds: I.affectedIds || ((re = I.commandResult) == null ? void 0 : re.affectedIds) || [],
           position: e.position,
-          commandResult: h.commandResult,
-          writeResult: h.writeResult,
-          proposedDocument: h.proposedDocument,
-          adapter: j || f,
-          placement: h.placement,
+          commandResult: I.commandResult,
+          writeResult: I.writeResult,
+          proposedDocument: I.proposedDocument,
+          adapter: X || g,
+          placement: I.placement,
           idMap: d.idMap,
-          patches: h.patches,
+          patches: I.patches,
           diagnostics: r,
-          data: h.data
+          data: I.data
         });
-        return G(e.emit, J, e.profile), J;
+        return N(e.emit, C, e.profile), C;
       }
     }
-    const X = (D = h.commandResult) == null ? void 0 : D.status, O = h.status || (X === "changed" ? "success" : X === "noop" ? "noop" : X === "cancelled" ? "cancelled" : X === "timeout" ? "timeout" : X === "error" ? "error" : X === "blocked" ? "blocked" : "success"), ne = q({
-      ok: O === "success" || O === "noop",
-      status: O,
+    const M = (ae = I.commandResult) == null ? void 0 : ae.status, k = I.status || (M === "changed" ? "success" : M === "noop" ? "noop" : M === "cancelled" ? "cancelled" : M === "timeout" ? "timeout" : M === "error" ? "error" : M === "blocked" ? "blocked" : "success"), S = Y({
+      ok: k === "success" || k === "noop",
+      status: k,
       actionId: e.actionId,
       actionType: e.actionType,
       source: e.source,
-      itemIds: s,
-      affectedIds: h.affectedIds || ((oe = h.commandResult) == null ? void 0 : oe.affectedIds) || (d == null ? void 0 : d.newIds) || s,
+      itemIds: n,
+      affectedIds: I.affectedIds || ((ne = I.commandResult) == null ? void 0 : ne.affectedIds) || (d == null ? void 0 : d.newIds) || n,
       position: e.position,
-      commandResult: h.commandResult,
-      writeResult: h.writeResult,
-      proposedDocument: h.proposedDocument,
-      adapter: f,
-      placement: h.placement,
+      commandResult: I.commandResult,
+      writeResult: I.writeResult,
+      proposedDocument: I.proposedDocument,
+      adapter: g,
+      placement: I.placement,
       idMap: d == null ? void 0 : d.idMap,
-      patches: h.patches,
+      patches: I.patches,
       diagnostics: r,
-      data: h.data
+      data: I.data
     });
-    return G(e.emit, ne, e.profile), ne;
-  } catch (h) {
-    r.push(Xe(h, {
+    return N(e.emit, S, e.profile), S;
+  } catch (I) {
+    r.push(Ze(I, {
       actionId: e.actionId,
       actionType: e.actionType,
       source: e.source
     }));
-    const R = d ? await Se(e, d, "mutate", h, r) : void 0, X = q({
+    const j = d ? await Le(e, d, "mutate", I, r) : void 0, M = Y({
       ok: !1,
       status: "error",
       actionId: e.actionId,
       actionType: e.actionType,
       source: e.source,
-      itemIds: s,
+      itemIds: n,
       affectedIds: [],
       position: e.position,
-      adapter: R || f,
+      adapter: j || g,
       idMap: d == null ? void 0 : d.idMap,
       diagnostics: r
     });
-    return G(e.emit, X, e.profile), X;
+    return N(e.emit, M, e.profile), M;
   }
-}, Ye = (e) => {
-  var s;
-  return !e.readonly && (e.mode === "edit" || ((s = e.editor) == null ? void 0 : s.mode.value) === "edit");
-}, Z = (e, s) => e ? void 0 : s, Q = (e, s, r) => {
-  var d, f;
+}, Oe = (e) => {
+  var n;
+  return !e.readonly && (e.mode === "edit" || ((n = e.editor) == null ? void 0 : n.mode.value) === "edit");
+}, Z = (e, n) => e ? void 0 : n, Q = (e, n, r) => {
+  var d, g;
   return {
-    label: ((f = (d = r.options) == null ? void 0 : d.labelFactory) == null ? void 0 : f.call(d, e, r.context)) || s,
+    label: ((g = (d = r.options) == null ? void 0 : d.labelFactory) == null ? void 0 : g.call(d, e, r.context)) || n,
     labelKey: `dashboardEditorShell.${e}`
   };
-}, ie = (e, s) => {
+}, ue = (e, n) => {
   var r, d;
-  return (d = (r = s.options) == null ? void 0 : r.shortcuts) == null ? void 0 : d[e];
-}, De = (e, s, r) => {
-  if (!Ye(e.context)) return !1;
+  return (d = (r = n.options) == null ? void 0 : r.shortcuts) == null ? void 0 : d[e];
+}, ze = (e, n, r) => {
+  if (!Oe(e.context)) return !1;
   const d = e.context.editor;
   if (!d) return !1;
-  const f = d.canExecute({
-    type: s,
+  const g = d.canExecute({
+    type: n,
     targetIds: r,
     source: "context-menu"
   });
-  return f.status !== "blocked" && f.status !== "error";
-}, It = (e, s, r) => {
-  var y, I;
-  const d = r === "dashboard" ? (y = e.options) == null ? void 0 : y.customDashboardItems : (I = e.options) == null ? void 0 : I.customWidgetItems, f = typeof d == "function" ? d(e.context) : d || [];
-  return s.concat(f, e.customItems || []);
-}, bt = (e, s) => s ? e : e.filter((r) => !r.hidden), te = (e) => e, Yt = (e) => {
-  var z, ae, se, A;
-  const s = Ye(e.context), r = De(e, "paste"), d = e.referenceAvailable === !0, f = e.paletteAvailable === !0, y = e.explicitPlacementTarget === !0, I = y ? "here" : "auto", v = y ? "cursor" : ((z = e.options) == null ? void 0 : z.defaultPasteStrategy) || ((ae = e.options) == null ? void 0 : ae.defaultAddStrategy), L = y ? "cursor" : (se = e.options) == null ? void 0 : se.defaultReferencePasteStrategy, M = y ? "cursor" : (A = e.options) == null ? void 0 : A.defaultAddStrategy, E = e.readonlyReason || "mode-readonly", B = e.target, _ = [
+  return g.status !== "blocked" && g.status !== "error";
+}, Et = (e, n, r) => {
+  var h, b;
+  const d = r === "dashboard" ? (h = e.options) == null ? void 0 : h.customDashboardItems : (b = e.options) == null ? void 0 : b.customWidgetItems, g = typeof d == "function" ? d(e.context) : d || [];
+  return n.concat(g, e.customItems || []);
+}, Ct = (e, n) => n ? e : e.filter((r) => !r.hidden), ee = (e) => e, ro = (e) => {
+  var z, q, oe, _;
+  const n = Oe(e.context), r = ze(e, "paste"), d = e.referenceAvailable === !0, g = e.paletteAvailable === !0, h = e.explicitPlacementTarget === !0, b = h ? "here" : "auto", R = h ? "cursor" : ((z = e.options) == null ? void 0 : z.defaultPasteStrategy) || ((q = e.options) == null ? void 0 : q.defaultAddStrategy), B = h ? "cursor" : (oe = e.options) == null ? void 0 : oe.defaultReferencePasteStrategy, E = h ? "cursor" : (_ = e.options) == null ? void 0 : _.defaultAddStrategy, A = e.readonlyReason || "mode-readonly", F = e.target, J = [
     {
       id: "paste",
       type: "item",
-      ...Q("paste", y ? "Paste here" : "Paste", e),
+      ...Q("paste", h ? "Paste here" : "Paste", e),
       icon: "clipboard-paste",
-      shortcut: ie("paste", e),
+      shortcut: ue("paste", e),
       enabled: r,
-      reason: Z(r, s ? "clipboard-unavailable" : E),
-      target: B,
-      metadata: { strategy: v, placementIntent: I },
-      action: te(() => e.actions.pasteWidget(e.position || null, { source: "context-menu", strategy: v, placementIntent: I }))
+      reason: Z(r, n ? "clipboard-unavailable" : A),
+      target: F,
+      metadata: { strategy: R, placementIntent: b },
+      action: ee(() => e.actions.pasteWidget(e.position || null, { source: "context-menu", strategy: R, placementIntent: b }))
     },
     {
       id: "place-clipboard",
@@ -512,62 +517,62 @@ const H = (e) => (gt += 1, `dashboard-shell-${e}-${Date.now().toString(36)}-${gt
       ...Q("place-clipboard", "Place from clipboard", e),
       icon: "crosshair",
       enabled: r,
-      reason: Z(r, s ? "clipboard-unavailable" : E),
-      target: B,
-      metadata: { strategy: v, placementIntent: I, placementMode: "interactive" },
-      action: te(() => e.actions.placeClipboard(e.position || null, {
+      reason: Z(r, n ? "clipboard-unavailable" : A),
+      target: F,
+      metadata: { strategy: R, placementIntent: b, placementMode: "interactive" },
+      action: ee(() => e.actions.placeClipboard(e.position || null, {
         source: "context-menu",
-        strategy: v,
-        placementIntent: I,
+        strategy: R,
+        placementIntent: b,
         placementMode: "interactive"
       }))
     },
     {
       id: "paste-reference",
       type: "item",
-      ...Q("paste-reference", y ? "Paste reference here" : "Paste reference", e),
+      ...Q("paste-reference", h ? "Paste reference here" : "Paste reference", e),
       icon: "link",
-      shortcut: ie("paste-reference", e),
-      enabled: s && d,
-      reason: Z(s && d, s ? "adapter-unavailable" : E),
-      target: B,
-      metadata: { strategy: L, placementIntent: I },
-      action: te(() => e.actions.pasteWidgetReference(e.position || null, { source: "context-menu", strategy: L, placementIntent: I }))
+      shortcut: ue("paste-reference", e),
+      enabled: n && d,
+      reason: Z(n && d, n ? "adapter-unavailable" : A),
+      target: F,
+      metadata: { strategy: B, placementIntent: b },
+      action: ee(() => e.actions.pasteWidgetReference(e.position || null, { source: "context-menu", strategy: B, placementIntent: b }))
     },
     {
       id: "add-widget",
       type: "item",
-      ...Q("add-widget", y ? "Add widget here" : "Add widget", e),
+      ...Q("add-widget", h ? "Add widget here" : "Add widget", e),
       icon: "plus",
-      enabled: s,
-      reason: Z(s, E),
-      target: B,
-      metadata: { strategy: M, placementIntent: I },
-      action: te(() => e.actions.addWidgetFromTemplate({ w: 2, h: 2 }, e.position || null, { source: "context-menu", strategy: M, placementIntent: I }))
+      enabled: n,
+      reason: Z(n, A),
+      target: F,
+      metadata: { strategy: E, placementIntent: b },
+      action: ee(() => e.actions.addWidgetFromTemplate({ w: 2, h: 2 }, e.position || null, { source: "context-menu", strategy: E, placementIntent: b }))
     },
     {
       id: "open-palette",
       type: "item",
-      ...Q("open-palette", y ? "Open palette here" : "Open palette", e),
+      ...Q("open-palette", h ? "Open palette here" : "Open palette", e),
       icon: "layout-grid",
-      shortcut: ie("open-palette", e),
-      enabled: s && f,
-      reason: Z(s && f, s ? "adapter-unavailable" : E),
-      target: B,
-      metadata: { strategy: M, placementIntent: I },
-      action: te(() => e.actions.openWidgetPalette(e.position || null, { source: "context-menu", strategy: M, placementIntent: I }))
+      shortcut: ue("open-palette", e),
+      enabled: n && g,
+      reason: Z(n && g, n ? "adapter-unavailable" : A),
+      target: F,
+      metadata: { strategy: E, placementIntent: b },
+      action: ee(() => e.actions.openWidgetPalette(e.position || null, { source: "context-menu", strategy: E, placementIntent: b }))
     },
     {
       id: "move-all-widgets",
       type: "item",
       ...Q("move-all-widgets", "Move all widgets", e),
       icon: "move",
-      shortcut: ie("move-all", e),
-      enabled: s,
-      reason: Z(s, E),
-      target: B,
+      shortcut: ue("move-all", e),
+      enabled: n,
+      reason: Z(n, A),
+      target: F,
       metadata: { dx: 0, dy: 1 },
-      action: te(() => e.actions.moveAllWidgets(0, 1, { source: "context-menu" }))
+      action: ee(() => e.actions.moveAllWidgets(0, 1, { source: "context-menu" }))
     },
     {
       id: "dashboard-settings",
@@ -575,37 +580,37 @@ const H = (e) => (gt += 1, `dashboard-shell-${e}-${Date.now().toString(36)}-${gt
       ...Q("dashboard-settings", "Dashboard settings", e),
       icon: "settings",
       enabled: !0,
-      target: B,
+      target: F,
       metadata: { hook: !0 }
     }
   ];
   return {
     id: e.id,
-    target: B,
+    target: F,
     position: e.position,
-    items: bt(It(e, _, "dashboard"), e.includeHidden),
+    items: Ct(Et(e, J, "dashboard"), e.includeHidden),
     diagnostics: e.diagnostics || []
   };
-}, zt = (e) => {
-  const s = Ye(e.context), r = e.readonlyReason || "mode-readonly", d = [e.itemId], f = e.hiddenItem === !0, y = e.lockedItem === !0, I = !f && !!e.context.editor, v = !f && De(e, "copy", d), L = !f && De(e, "duplicate", d), M = !f && !y && De(e, "delete", d), E = e.referenceAvailable === !0, B = e.target, _ = [
+}, io = (e) => {
+  const n = Oe(e.context), r = e.readonlyReason || "mode-readonly", d = [e.itemId], g = e.hiddenItem === !0, h = e.lockedItem === !0, b = !g && !!e.context.editor, R = !g && ze(e, "copy", d), B = !g && ze(e, "duplicate", d), E = !g && !h && ze(e, "delete", d), A = e.referenceAvailable === !0, F = e.target, J = [
     {
       id: "select",
       type: "item",
       ...Q("select", "Select", e),
       icon: "mouse-pointer-2",
-      enabled: I,
-      reason: Z(I, f ? "hidden" : "missing-editor"),
-      target: B,
-      action: te(() => e.actions.selectItem(e.itemId, { source: "context-menu" }))
+      enabled: b,
+      reason: Z(b, g ? "hidden" : "missing-editor"),
+      target: F,
+      action: ee(() => e.actions.selectItem(e.itemId, { source: "context-menu" }))
     },
     {
       id: "edit-widget",
       type: "item",
       ...Q("edit-widget", "Edit", e),
       icon: "pencil",
-      enabled: s && !y && !f,
-      reason: Z(s && !y && !f, f ? "hidden" : y ? "locked" : r),
-      target: B,
+      enabled: n && !h && !g,
+      reason: Z(n && !h && !g, g ? "hidden" : h ? "locked" : r),
+      target: F,
       metadata: { hook: !0 }
     },
     {
@@ -613,65 +618,65 @@ const H = (e) => (gt += 1, `dashboard-shell-${e}-${Date.now().toString(36)}-${gt
       type: "item",
       ...Q("copy-widget", "Copy widget", e),
       icon: "copy",
-      shortcut: ie("copy-widget", e),
-      enabled: v,
-      reason: Z(v, f ? "hidden" : r),
-      target: B,
-      action: te(() => e.actions.copyWidget(e.itemId, { source: "context-menu" }))
+      shortcut: ue("copy-widget", e),
+      enabled: R,
+      reason: Z(R, g ? "hidden" : r),
+      target: F,
+      action: ee(() => e.actions.copyWidget(e.itemId, { source: "context-menu" }))
     },
     {
       id: "copy-reference",
       type: "item",
       ...Q("copy-reference", "Copy reference", e),
       icon: "link",
-      shortcut: ie("copy-reference", e),
-      enabled: !f && E,
-      reason: Z(!f && E, f ? "hidden" : "adapter-unavailable"),
-      target: B,
-      action: te(() => e.actions.copyWidgetReference(e.itemId, { source: "context-menu" }))
+      shortcut: ue("copy-reference", e),
+      enabled: !g && A,
+      reason: Z(!g && A, g ? "hidden" : "adapter-unavailable"),
+      target: F,
+      action: ee(() => e.actions.copyWidgetReference(e.itemId, { source: "context-menu" }))
     },
     {
       id: "duplicate",
       type: "item",
       ...Q("duplicate", "Duplicate", e),
       icon: "copy-plus",
-      shortcut: ie("duplicate-widget", e),
-      enabled: L,
-      reason: Z(L, f ? "hidden" : r),
-      target: B,
-      action: te(() => e.actions.duplicateWidget(e.itemId, { source: "context-menu" }))
+      shortcut: ue("duplicate-widget", e),
+      enabled: B,
+      reason: Z(B, g ? "hidden" : r),
+      target: F,
+      action: ee(() => e.actions.duplicateWidget(e.itemId, { source: "context-menu" }))
     },
     {
       id: "remove",
       type: "item",
       ...Q("remove", "Remove", e),
       icon: "trash-2",
-      shortcut: ie("remove-widget", e),
+      shortcut: ue("remove-widget", e),
       danger: !0,
-      enabled: M,
-      reason: Z(M, f ? "hidden" : y ? "locked" : r),
-      target: B,
-      action: te(() => e.actions.removeWidget(e.itemId, { source: "context-menu" }))
+      enabled: E,
+      reason: Z(E, g ? "hidden" : h ? "locked" : r),
+      target: F,
+      action: ee(() => e.actions.removeWidget(e.itemId, { source: "context-menu" }))
     },
     {
       id: "replace-reference",
       type: "item",
       ...Q("replace-reference", "Replace reference with copy", e),
       icon: "replace",
-      enabled: s && !f && E,
-      reason: Z(s && !f && E, f ? "hidden" : s ? "adapter-unavailable" : r),
-      target: B,
-      action: te(() => e.actions.replaceReferenceWithWidgetCopy(e.itemId, { source: "context-menu" }))
+      enabled: n && !g && A,
+      reason: Z(n && !g && A, g ? "hidden" : n ? "adapter-unavailable" : r),
+      target: F,
+      action: ee(() => e.actions.replaceReferenceWithWidgetCopy(e.itemId, { source: "context-menu" }))
     },
     {
       id: "scroll-highlight",
       type: "item",
       ...Q("scroll-highlight", "Scroll and highlight", e),
       icon: "scan-search",
-      enabled: !f,
-      reason: Z(!f, "hidden"),
-      target: B,
-      action: te(async () => {
+      enabled: !g,
+      reason: Z(!g, "hidden"),
+      target: F,
+      action: ee(async () => {
         const z = e.actions.highlightItem(e.itemId, { source: "context-menu" });
         return await e.actions.scrollToItem(e.itemId, { source: "context-menu" }), z;
       })
@@ -679,51 +684,51 @@ const H = (e) => (gt += 1, `dashboard-shell-${e}-${Date.now().toString(36)}-${gt
   ];
   return {
     id: e.id,
-    target: B,
+    target: F,
     position: e.position,
-    items: bt(It(e, _, "widget"), e.includeHidden),
+    items: Ct(Et(e, J, "widget"), e.includeHidden),
     diagnostics: e.diagnostics || []
   };
-}, he = (e) => e.map((s) => ({ ...s })), ee = (e) => typeof e == "number" && Number.isFinite(e), Nt = (e) => !!(e && typeof e == "object" && "value" in e), Ee = (e) => Array.isArray(e) ? e.filter(Boolean) : e ? [e] : [], je = (e) => e === "context-menu" ? "context-menu" : e === "keyboard" ? "keyboard" : e === "toolbar" ? "toolbar" : e === "pointer" ? "pointer" : "api", ke = (e, s) => e.strategy || s, qt = (e) => e === "first-fit" || e === "insert-top-shift", Gt = (e) => e ? typeof Event != "undefined" && e instanceof Event ? !0 : typeof e == "object" && ("x" in e || "y" in e) : !1, we = (e, s) => s.placementIntent || (Gt(e) ? "here" : "auto"), ve = (e) => ({
+}, ke = (e) => e.map((n) => ({ ...n })), O = (e) => typeof e == "number" && Number.isFinite(e), lo = (e) => !!(e && typeof e == "object" && "value" in e), Be = (e) => Array.isArray(e) ? e.filter(Boolean) : e ? [e] : [], Ue = (e) => e === "context-menu" ? "context-menu" : e === "keyboard" ? "keyboard" : e === "toolbar" ? "toolbar" : e === "pointer" ? "pointer" : "api", Mt = (e) => e === "context-menu" ? "context-menu" : e === "keyboard" ? "keyboard" : e === "toolbar" ? "toolbar" : e === "pointer" ? "pointer" : e === "drop" ? "drop" : "api", Qe = (e) => e.type === "move" ? "pointer-move" : e.type === "resize" ? "pointer-resize" : e.type === "add" || e.type === "paste" ? "external-drop" : null, Se = (e, n) => e.strategy || n, uo = (e) => e === "first-fit" || e === "insert-top-shift", mo = (e) => e ? typeof Event != "undefined" && e instanceof Event ? !0 : typeof e == "object" && ("x" in e || "y" in e) : !1, Ee = (e, n) => n.placementIntent || (mo(e) ? "here" : "auto"), Ce = (e) => ({
   collisionPolicy: e.collisionPolicy,
   compactType: e.compactType,
   allowOverlap: e.allowOverlap,
   preventCollision: e.preventCollision
-}), Ut = (e) => {
-  var f, y;
+}), fo = (e) => {
+  var g, h;
   if (!e) return !1;
-  const s = e;
-  if (ee(s.clientX) && ee(s.clientY)) return !0;
-  const r = e, d = ((f = r.touches) == null ? void 0 : f[0]) || ((y = r.changedTouches) == null ? void 0 : y[0]);
-  return !!(d && ee(d.clientX) && ee(d.clientY));
-}, Qt = (e, s, r, d, f) => {
-  const y = (e == null ? void 0 : e.newIds) || [];
-  if (!y.length) return [];
-  const I = new Set(s.map((E) => E.i)), v = /* @__PURE__ */ new Set(), L = [], M = [];
-  return y.forEach((E) => {
-    if (typeof E != "string" || E.trim().length === 0) {
-      L.push(String(E));
+  const n = e;
+  if (O(n.clientX) && O(n.clientY)) return !0;
+  const r = e, d = ((g = r.touches) == null ? void 0 : g[0]) || ((h = r.changedTouches) == null ? void 0 : h[0]);
+  return !!(d && O(d.clientX) && O(d.clientY));
+}, go = (e, n, r, d, g) => {
+  const h = (e == null ? void 0 : e.newIds) || [];
+  if (!h.length) return [];
+  const b = new Set(n.map((A) => A.i)), R = /* @__PURE__ */ new Set(), B = [], E = [];
+  return h.forEach((A) => {
+    if (typeof A != "string" || A.trim().length === 0) {
+      B.push(String(A));
       return;
     }
-    (v.has(E) || I.has(E)) && M.push(E), v.add(E);
-  }), !L.length && !M.length ? [] : [Y(
+    (R.has(A) || b.has(A)) && E.push(A), R.add(A);
+  }), !B.length && !E.length ? [] : [V(
     "shell-adapter-invalid-new-ids",
     "error",
     "Adapter prepare returned invalid or duplicate new widget ids.",
     {
       actionId: r,
       actionType: d,
-      source: f,
+      source: g,
       reason: "adapter-rejected",
-      itemIds: M.concat(L),
+      itemIds: E.concat(B),
       details: {
-        duplicateIds: M,
-        invalidIds: L
+        duplicateIds: E,
+        invalidIds: B
       },
       recoverable: !0
     }
   )];
-}, Jt = () => ({
+}, yo = () => ({
   ready: !1,
   degraded: !0,
   runtime: null,
@@ -760,41 +765,41 @@ const H = (e) => (gt += 1, `dashboard-shell-${e}-${Date.now().toString(36)}-${gt
     descriptors: []
   },
   diagnostics: []
-}), yt = (e, s, r, d = []) => Ct({ id: e, type: s }, "blocked", {
+}), Pt = (e, n, r, d = []) => Ut({ id: e, type: n }, "blocked", {
   targetIds: d,
   blocked: {
     reason: r,
     itemIds: d,
     message: `Command was blocked by dashboard editor shell: ${r}.`
   }
-}), pt = (e, s) => {
-  var f, y;
-  const r = (y = (f = s.diagnostics) == null ? void 0 : f.operationResult) == null ? void 0 : y.layout;
-  if (r) return he(r);
-  let d = he(e.layout);
-  return s.layoutPatches.forEach((I) => {
-    if (I.type === "add") {
-      d.push({ ...I.item });
+}), De = (e, n) => {
+  var g, h;
+  const r = (h = (g = n.diagnostics) == null ? void 0 : g.operationResult) == null ? void 0 : h.layout;
+  if (r) return ke(r);
+  let d = ke(e.layout);
+  return n.layoutPatches.forEach((b) => {
+    if (b.type === "add") {
+      d.push({ ...b.item });
       return;
     }
-    if (I.type === "remove") {
-      d = d.filter((v) => v.i !== I.id);
+    if (b.type === "remove") {
+      d = d.filter((R) => R.i !== b.id);
       return;
     }
-    if (I.type === "move") {
-      d = d.map((v) => v.i === I.id ? { ...v, x: I.to.x, y: I.to.y } : v);
+    if (b.type === "move") {
+      d = d.map((R) => R.i === b.id ? { ...R, x: b.to.x, y: b.to.y } : R);
       return;
     }
-    I.type === "resize" && (d = d.map((v) => v.i === I.id ? { ...v, x: I.to.x, y: I.to.y, w: I.to.w, h: I.to.h } : v));
+    b.type === "resize" && (d = d.map((R) => R.i === b.id ? { ...R, x: b.to.x, y: b.to.y, w: b.to.w, h: b.to.h } : R));
   }), d;
-}, Ae = (e) => typeof CSS != "undefined" && typeof CSS.escape == "function" ? CSS.escape(e) : e.replace(/["\\]/g, "\\$&"), Zt = (e) => !!(e && typeof e == "object"), _t = (e, s = {}) => {
-  var f;
+}, $e = (e) => typeof CSS != "undefined" && typeof CSS.escape == "function" ? CSS.escape(e) : e.replace(/["\\]/g, "\\$&"), po = (e) => !!(e && typeof e == "object"), ho = (e, n = {}) => {
+  var g;
   if (e.defaultPrevented) return !0;
   const r = e.target;
-  if (!Zt(r)) return !1;
-  const d = (f = r.tagName) == null ? void 0 : f.toUpperCase();
-  return d === "INPUT" || d === "TEXTAREA" || d === "SELECT" || r.isContentEditable ? !0 : (s.ignoredTargets || []).some((y) => typeof y == "string" ? typeof r.matches == "function" && r.matches(y) : y(r));
-}, Ot = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigator != "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform) ? "mac" : "standard", eo = [
+  if (!po(r)) return !1;
+  const d = (g = r.tagName) == null ? void 0 : g.toUpperCase();
+  return d === "INPUT" || d === "TEXTAREA" || d === "SELECT" || r.isContentEditable ? !0 : (n.ignoredTargets || []).some((h) => typeof h == "string" ? typeof r.matches == "function" && r.matches(h) : h(r));
+}, Io = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigator != "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform) ? "mac" : "standard", bo = [
   { key: "c", primary: !0, action: "copy-widget", source: "keyboard" },
   { key: "r", primary: !0, action: "copy-reference", source: "keyboard" },
   { key: "v", primary: !0, action: "paste-widget", source: "keyboard" },
@@ -811,66 +816,69 @@ const H = (e) => (gt += 1, `dashboard-shell-${e}-${Date.now().toString(36)}-${gt
   { key: "p", primary: !0, action: "open-palette", source: "keyboard" },
   { key: "F10", shift: !0, action: "prepare-dashboard-menu", source: "keyboard" },
   { key: "m", primary: !0, shift: !0, action: "move-all", source: "keyboard" }
-], to = (e, s, r) => {
-  const d = r === "mac" ? e.metaKey : e.ctrlKey, f = r === "mac" ? e.ctrlKey : e.metaKey, y = s.primary === !0, I = typeof s.ctrl == "boolean" || typeof s.meta == "boolean";
-  if (e.key.toLowerCase() !== s.key.toLowerCase()) return !1;
-  if (I) {
-    if ((s.ctrl || !1) !== e.ctrlKey || (s.meta || !1) !== e.metaKey) return !1;
-  } else if (y !== d || y && f || !y && (e.ctrlKey || e.metaKey)) return !1;
-  return !((s.shift || !1) !== e.shiftKey || (s.alt || !1) !== e.altKey);
-}, oo = (e, s, r, d) => {
-  const f = s.placementOptions || e.placementOptions, y = typeof f == "function" ? f() : f;
+], ko = (e, n, r) => {
+  const d = r === "mac" ? e.metaKey : e.ctrlKey, g = r === "mac" ? e.ctrlKey : e.metaKey, h = n.primary === !0, b = typeof n.ctrl == "boolean" || typeof n.meta == "boolean";
+  if (e.key.toLowerCase() !== n.key.toLowerCase()) return !1;
+  if (b) {
+    if ((n.ctrl || !1) !== e.ctrlKey || (n.meta || !1) !== e.metaKey) return !1;
+  } else if (h !== d || h && g || !h && (e.ctrlKey || e.metaKey)) return !1;
+  return !((n.shift || !1) !== e.shiftKey || (n.alt || !1) !== e.altKey);
+}, wo = (e, n, r, d) => {
+  const g = n.placementOptions || e.placementOptions, h = typeof g == "function" ? g() : g;
   return {
     ...r,
-    ...y || {},
+    ...h || {},
     source: d
   };
 };
-function ro(e = {}) {
-  var tt, ot, at, st;
-  const s = lt(ue(e.document) || null), r = lt(Jt()), d = [], f = [];
-  let y = !1, I = null, v = Promise.resolve(), L = null;
-  const M = /* @__PURE__ */ new Map(), E = /* @__PURE__ */ new Map(), B = e.controlled !== !1, _ = (t) => {
-    const o = v.catch(() => {
+function So(e = {}) {
+  var mt, ft, gt, yt;
+  const n = kt(ge(e.document) || null), r = kt(yo()), d = [], g = [];
+  let h = !1, b = null, R = Promise.resolve(), B = null;
+  const E = /* @__PURE__ */ new Map(), A = /* @__PURE__ */ new Map(), F = /* @__PURE__ */ new Set(), J = /* @__PURE__ */ new Set(), z = /* @__PURE__ */ new Set(), q = /* @__PURE__ */ new Map(), oe = e.controlled !== !1, _ = () => e.documentWriteBack === "shell", re = (t, o) => {
+    var a;
+    return `${t}:${(a = o == null ? void 0 : o.revision) != null ? a : "unknown"}`;
+  }, ae = (t) => {
+    const o = R.catch(() => {
     }).then(t);
-    return v = o.then(() => {
+    return R = o.then(() => {
     }, () => {
     }), o;
-  }, z = () => {
-    L = null;
-  }, ae = (t, o) => {
-    L = {
+  }, ne = () => {
+    B = null;
+  }, I = (t, o) => {
+    B = {
       mode: "interactive",
       reason: "cut-widget",
       sourceActionId: t,
       itemIds: o.slice()
     };
-  }, se = () => {
-    const t = L;
-    return L = null, t;
-  }, A = (t) => {
+  }, j = () => {
+    const t = B;
+    return B = null, t;
+  }, M = (t) => {
     var o;
     (o = e.onEvent) == null || o.call(e, t);
-  }, w = () => {
+  }, k = () => {
     var t;
-    return ((t = e.model) == null ? void 0 : t.state.value) || ue(e.runtime) || null;
-  }, D = () => {
+    return ((t = e.model) == null ? void 0 : t.state.value) || ge(e.runtime) || null;
+  }, S = () => {
     var t;
     return e.editor || ((t = e.model) == null ? void 0 : t.editorController) || null;
-  }, oe = () => ue(e.gridElement) || null, h = () => ue(e.document) || s.value || null, R = () => Kt(w()), X = (t, o) => {
-    const a = w(), n = [];
-    return a || n.push(Y(
+  }, T = () => ge(e.gridElement) || null, X = () => ge(e.document) || n.value || null, C = () => so(k()), te = (t, o) => {
+    const a = k(), s = [];
+    return a || s.push(V(
       "shell-missing-runtime",
       "warning",
       "Dashboard responsive runtime is not available.",
       { actionId: t, actionType: o, reason: "missing-runtime", recoverable: !0 }
-    )), D() || n.push(Y(
+    )), S() || s.push(V(
       "shell-missing-editor",
       "warning",
       "Grid editor controller is not available.",
       { actionId: t, actionType: o, reason: "missing-editor", recoverable: !0 }
     )), ((a == null ? void 0 : a.diagnostics) || []).forEach((c) => {
-      n.push(Y(
+      s.push(V(
         c.code,
         c.level,
         c.message,
@@ -885,16 +893,16 @@ function ro(e = {}) {
           details: c.details
         }
       ));
-    }), n;
-  }, O = (t, o) => {
+    }), s;
+  }, Dt = (t, o) => {
     var l, m;
-    const a = (ue(e.mode) || (t == null ? void 0 : t.mode) || (o == null ? void 0 : o.mode.value)) === "edit", n = ((t == null ? void 0 : t.renderItemIds) || (t == null ? void 0 : t.activeItemIds) || []).length === 0, c = !!(t && a && n), i = {
+    const a = (ge(e.mode) || (t == null ? void 0 : t.mode) || (o == null ? void 0 : o.mode.value)) === "edit", s = ((t == null ? void 0 : t.renderItemIds) || (t == null ? void 0 : t.activeItemIds) || []).length === 0, c = !!(t && a && s), i = {
       layoutId: (t == null ? void 0 : t.layoutId) || null,
       requestedBreakpoint: (t == null ? void 0 : t.requestedBreakpoint) || null,
       resolvedProfileId: (t == null ? void 0 : t.resolvedProfileId) || null,
       targetView: (t == null ? void 0 : t.targetView) || null,
       viewFormat: (t == null ? void 0 : t.viewFormat) || null
-    }, u = c && F ? [
+    }, u = c && L ? [
       {
         id: "open-palette",
         labelKey: "dashboardEditorShell.open-palette",
@@ -903,8 +911,8 @@ function ro(e = {}) {
         target: { type: "dashboard" },
         metadata: { strategy: (l = e.menu) == null ? void 0 : l.defaultAddStrategy },
         action: () => {
-          var g;
-          return F.openWidgetPalette(null, { source: "api", strategy: (g = e.menu) == null ? void 0 : g.defaultAddStrategy });
+          var f;
+          return L.openWidgetPalette(null, { source: "api", strategy: (f = e.menu) == null ? void 0 : f.defaultAddStrategy });
         }
       },
       {
@@ -915,8 +923,8 @@ function ro(e = {}) {
         target: { type: "dashboard" },
         metadata: { strategy: (m = e.menu) == null ? void 0 : m.defaultAddStrategy },
         action: () => {
-          var g;
-          return F.addWidgetFromTemplate({ w: 2, h: 2 }, null, { source: "api", strategy: (g = e.menu) == null ? void 0 : g.defaultAddStrategy });
+          var f;
+          return L.addWidgetFromTemplate({ w: 2, h: 2 }, null, { source: "api", strategy: (f = e.menu) == null ? void 0 : f.defaultAddStrategy });
         }
       }
     ] : [];
@@ -926,12 +934,12 @@ function ro(e = {}) {
       target: i,
       descriptors: u
     };
-  }, ne = () => {
-    const t = w(), o = D(), a = X(), n = !t || !o || !oe();
+  }, et = () => {
+    const t = k(), o = S(), a = te(), s = !t || !o || !T();
     r.value = {
       ...r.value,
       ready: !!(t && o),
-      degraded: n,
+      degraded: s,
       runtime: t,
       layoutId: (t == null ? void 0 : t.layoutId) || null,
       requestedBreakpoint: (t == null ? void 0 : t.requestedBreakpoint) || null,
@@ -943,81 +951,82 @@ function ro(e = {}) {
       activeItemIds: (t == null ? void 0 : t.activeItemIds.slice()) || [],
       renderItemIds: (t == null ? void 0 : t.renderItemIds.slice()) || [],
       hiddenItemIds: (t == null ? void 0 : t.hiddenItemIds.slice()) || [],
-      mode: ue(e.mode) || (t == null ? void 0 : t.mode) || (o == null ? void 0 : o.mode.value) || null,
+      mode: ge(e.mode) || (t == null ? void 0 : t.mode) || (o == null ? void 0 : o.mode.value) || null,
       selection: (o == null ? void 0 : o.selection.value) || null,
       dirty: (o == null ? void 0 : o.dirty.value) || !1,
       conflict: (o == null ? void 0 : o.conflict.value) || null,
       lastResult: (o == null ? void 0 : o.lastResult.value) || null,
       toolbar: (o == null ? void 0 : o.getToolbarState()) || null,
-      emptyAdd: O(t, o),
-      diagnostics: Ie(a)
+      emptyAdd: Dt(t, o),
+      diagnostics: we(a)
     };
-  }, T = (t, o, a) => {
+  }, ve = (t, o, a) => {
     var c;
-    const n = {
+    const s = {
       type: "documentChange",
       actionId: t,
       document: o,
       runtime: a,
-      controlled: B,
+      controlled: oe,
       persist: !1
     };
-    (c = e.onDocumentChange) == null || c.call(e, n), A({ type: "documentChange", event: n });
-  }, j = (t) => {
-    B || (s.value = t, Nt(e.document) && (e.document.value = t));
-  }, J = (t, o, a, n = {}) => {
-    const c = w(), i = h(), u = D(), l = [];
+    (c = e.onDocumentChange) == null || c.call(e, s), M({ type: "documentChange", event: s });
+  }, Re = (t) => {
+    oe || (n.value = t, lo(e.document) && (e.document.value = t));
+  }, At = (t, o, a, s = {}) => {
+    const c = k(), i = X(), u = S(), l = [];
     if (!c || !i)
-      return l.push(Y(
+      return l.push(V(
         "shell-write-back-skipped",
         "info",
         "Dashboard document or runtime is unavailable; action result is returned without proposed document.",
         { actionId: t, reason: c ? "profile-write-back" : "missing-runtime", recoverable: !0 }
       )), { diagnostics: l };
-    const m = At(
+    const m = Gt(
       i,
       c,
       o,
       {
         createMissingProfileOnEdit: e.createMissingProfileOnEdit,
         createMissingItems: !0,
-        removeMissingItems: n.removeMissingItems,
+        removeMissingItems: s.removeMissingItems,
         editorMetaById: u == null ? void 0 : u.editorMetaById.value,
+        sectionRows: u == null ? void 0 : u.sectionRows.value,
         writeItemIds: a
       }
     );
     return l.push(...m.diagnostics.map(
-      (g) => Y(
-        g.code,
-        g.level,
-        g.message,
+      (f) => V(
+        f.code,
+        f.level,
+        f.message,
         {
           actionId: t,
-          itemId: g.itemId,
-          layoutId: g.layoutId || c.layoutId,
-          path: g.path,
-          resolvedProfileId: g.profileId || c.resolvedProfileId,
-          targetView: g.targetView || c.targetView,
-          details: g.details
+          itemId: f.itemId,
+          layoutId: f.layoutId || c.layoutId,
+          path: f.path,
+          resolvedProfileId: f.profileId || c.resolvedProfileId,
+          targetView: f.targetView || c.targetView,
+          details: f.details
         }
       )
-    )), m.ok ? { writeResult: m, proposedDocument: m.document, diagnostics: l } : (l.push(Y(
+    )), m.ok ? { writeResult: m, proposedDocument: m.document, diagnostics: l } : (l.push(V(
       "shell-profile-write-back-blocked",
       "error",
       m.error.message,
       { actionId: t, reason: "profile-write-back", recoverable: !0, path: m.error.path }
     )), { writeResult: m, proposedDocument: m.document, diagnostics: l });
-  }, N = (t, o, a, n, c, i = {}) => ({
+  }, me = (t, o, a, s, c, i = {}) => ({
     actionId: t,
     actionType: o,
     source: a,
-    itemIds: n,
-    runtime: w(),
-    document: h(),
+    itemIds: s,
+    runtime: k(),
+    document: X(),
     position: c,
-    diagnostics: X(t, o),
+    diagnostics: te(t, o),
     ...i
-  }), xe = async (t) => {
+  }), Ae = async (t) => {
     for (const o of e.guards || []) {
       const a = await o(t);
       if (a === !1)
@@ -1025,7 +1034,7 @@ function ro(e = {}) {
           ok: !1,
           status: "blocked",
           reason: "guard-blocked",
-          diagnostics: [Y(
+          diagnostics: [V(
             "shell-guard-blocked",
             "warning",
             "Shell action was blocked by a caller guard.",
@@ -1042,50 +1051,50 @@ function ro(e = {}) {
       if (a && typeof a == "object" && "ok" in a && !a.ok) return a;
     }
     return null;
-  }, C = (t, o, a, n = [], c = [], i = H(t)) => {
-    const u = q({
+  }, W = (t, o, a, s = [], c = [], i = K(t)) => {
+    const u = Y({
       ok: !1,
       status: a === "adapter-unavailable" ? "unsupported" : "blocked",
       actionId: i,
       actionType: t,
       source: o,
-      itemIds: n,
+      itemIds: s,
       affectedIds: [],
-      diagnostics: c.concat(Y(
+      diagnostics: c.concat(V(
         `shell-${a}`,
         a === "missing-runtime" || a === "missing-editor" ? "warning" : "error",
         `Dashboard editor shell action was blocked: ${a}.`,
-        { actionId: i, actionType: t, source: o, reason: a, itemIds: n, ...R() }
+        { actionId: i, actionType: t, source: o, reason: a, itemIds: s, ...C() }
       ))
     });
-    return G(A, u, R()), u;
-  }, be = (t, o, a, n) => ((t == null ? void 0 : t.diagnostics) || []).map((c) => {
+    return N(M, u, C()), u;
+  }, ye = (t, o, a, s) => ((t == null ? void 0 : t.diagnostics) || []).map((c) => {
     const i = c.code.startsWith("grid-editor.placement.") ? `shell-placement-${c.code.slice(22).replace(/\./g, "-")}` : c.code;
-    return Y(
+    return V(
       i,
       c.level,
       c.message,
       {
         actionId: o,
         actionType: a,
-        source: n,
+        source: s,
         reason: c.reason,
         itemIds: c.itemIds,
         details: c.details,
         recoverable: c.level !== "error",
-        ...R()
+        ...C()
       }
     );
-  }), Te = (t, o, a, n) => {
+  }), Te = (t, o, a, s) => {
     var i, u;
     const c = (u = (i = t == null ? void 0 : t.diagnostics) == null ? void 0 : i.computed) == null ? void 0 : u.placement;
     if (c)
       return {
         ...c,
         strategy: c.strategy,
-        diagnostics: Ie(be(c, o, a, n))
+        diagnostics: we(ye(c, o, a, s))
       };
-  }, kt = (t, o, a, n) => {
+  }, Tt = (t, o, a, s) => {
     if (!t) return;
     const c = {
       strategy: t.strategy,
@@ -1100,10 +1109,10 @@ function ro(e = {}) {
     return {
       ...c,
       strategy: c.strategy,
-      diagnostics: Ie(be(c, o, a, n))
+      diagnostics: we(ye(c, o, a, s))
     };
-  }, ze = (t, o, a, n, c = H(t)) => {
-    const i = kt(a, c, t, o), u = q({
+  }, tt = (t, o, a, s, c = K(t)) => {
+    const i = Tt(a, c, t, o), u = Y({
       ok: !0,
       status: "success",
       actionId: c,
@@ -1111,203 +1120,351 @@ function ro(e = {}) {
       source: o,
       itemIds: a.items.map((l) => l.i),
       affectedIds: [],
-      position: n,
+      position: s,
       placement: i,
       diagnostics: (i == null ? void 0 : i.diagnostics) || [],
-      data: me({
+      data: xe({
         placementSessionId: a.id,
         phase: a.phase,
         source: a.source
       }, i)
     });
-    return G(A, u, R()), u;
-  }, me = (t, o) => o ? t && typeof t == "object" && !Array.isArray(t) ? {
+    return N(M, u, C()), u;
+  }, xe = (t, o) => o ? t && typeof t == "object" && !Array.isArray(t) ? {
     ...t,
     placement: o
-  } : { value: t, placement: o } : t, wt = (t) => t ? t.kind === "layout" ? he(t.layout) : he(t.layouts[t.breakpoint] || []) : null, Ne = async (t, o = {}) => _(async () => {
-    var k, S, P, K, W, x, $;
-    const a = H(t), n = o.source || "api", c = D();
-    if (!c) return C(t, n, "missing-editor", [], [], a);
-    const i = await c.execute({
+  } : { value: t, placement: o } : t, Wt = (t) => t.status === "changed" ? "success" : t.status === "cancelled" ? "cancelled" : t.status === "timeout" ? "timeout" : t.status === "error" ? "error" : t.status === "blocked" ? "blocked" : "noop", Ft = (t, o, a, s) => {
+    var c;
+    return t.blocked ? [V(
+      `shell-command-${t.blocked.reason}`,
+      "warning",
+      t.blocked.message || `Editor command was blocked: ${t.blocked.reason}.`,
+      { actionId: o, actionType: a, source: s, reason: t.blocked.reason, itemIds: t.blocked.itemIds, recoverable: !0 }
+    )] : t.status === "error" ? [V(
+      "shell-command-error",
+      "error",
+      ((c = t.error) == null ? void 0 : c.message) || "Editor command failed.",
+      { actionId: o, actionType: a, source: s, reason: "validation", recoverable: !0 }
+    )] : [];
+  }, Ke = (t, o, a) => {
+    _() && (!t || !e.legacyHistoryStore || o === "success" && (a == null ? void 0 : a.ok) === !0 && e.legacyHistoryStore.push(t));
+  }, Me = (t) => {
+    var f, y, p, x, w, v, $;
+    const o = Te(t.result, t.actionId, t.actionType, t.source), a = ye(
+      (y = (f = t.result.diagnostics) == null ? void 0 : f.computed) == null ? void 0 : y.placement,
+      t.actionId,
+      t.actionType,
+      t.source
+    ), s = Wt(t.result), c = (p = t.hasDocumentMutation) != null ? p : t.result.layoutPatches.length > 0 || t.result.metadataPatches.length > 0, u = !!(t.nextLayout && c && (t.result.status === "changed" || t.result.status === "noop")) ? At(t.actionId, t.nextLayout || [], t.writeItemIds || t.result.affectedIds, {
+      removeMissingItems: t.removeMissingItems
+    }) : { diagnostics: [] };
+    ((x = u.writeResult) == null ? void 0 : x.ok) === !1 && t.rollbackCheckpoint && ((w = S()) == null || w.restoreRollbackCheckpoint(
+      t.rollbackCheckpoint,
+      t.rollbackReason || "shell-write-back-rollback"
+    ));
+    const l = ((v = u.writeResult) == null ? void 0 : v.ok) === !1 ? "blocked" : s, m = (s === "success" || s === "noop") && (($ = u.writeResult) == null ? void 0 : $.ok) !== !1;
+    return m && t.writeLegacyMirror && Ke(t.nextLayout, s, u.writeResult), {
+      status: l,
+      ok: m,
+      writeResult: u.writeResult,
+      proposedDocument: u.proposedDocument,
+      affectedIds: t.result.affectedIds,
+      patches: t.result.layoutPatches,
+      placement: o,
+      data: xe(t.data, o),
+      diagnostics: u.diagnostics.concat(Ft(t.result, t.actionId, t.actionType, t.source)).concat(a)
+    };
+  }, je = (t) => t ? t.kind === "layout" ? ke(t.layout) : ke(t.layouts[t.breakpoint] || []) : null, Lt = (t) => t ? !Ve(je(t.before), je(t.after)) || !Ve(t.before.editorMetaById, t.after.editorMetaById) || !Ve(t.before.sectionRows, t.after.sectionRows) : !1, ot = async (t, o = {}) => ae(async () => {
+    var p, x, w, v;
+    const a = K(t), s = o.source || "api", c = S();
+    if (!c) return W(t, s, "missing-editor", [], [], a);
+    const i = c.createRollbackCheckpoint(`shell-${t}-write-back`);
+    z.add(a);
+    const u = await c.execute({
       id: a,
       type: t,
-      source: je(n)
-    }), u = wt(t === "undo" ? (k = i.undo) == null ? void 0 : k.before : (S = i.undo) == null ? void 0 : S.after), l = i.status === "changed" && u ? J(a, u, i.affectedIds, { removeMissingItems: !0 }) : { diagnostics: [] }, m = i.status === "changed" ? "success" : i.status === "cancelled" ? "cancelled" : i.status === "timeout" ? "timeout" : i.status === "error" ? "error" : i.status === "blocked" ? "blocked" : "noop", g = m === "success" || m === "noop", b = l.diagnostics.concat(i.blocked ? [Y(
-      `shell-command-${i.blocked.reason}`,
-      "warning",
-      i.blocked.message || `Editor command was blocked: ${i.blocked.reason}.`,
-      { actionId: a, actionType: t, source: n, reason: i.blocked.reason, itemIds: i.blocked.itemIds, recoverable: !0 }
-    )] : []);
-    ((P = l.writeResult) == null ? void 0 : P.ok) === !1 && u && w() && c.setExternalLayout(w().layout, "shell-history-write-back-rollback");
-    const p = q({
-      ok: g && ((K = l.writeResult) == null ? void 0 : K.ok) !== !1,
-      status: ((W = l.writeResult) == null ? void 0 : W.ok) === !1 ? "blocked" : m,
+      source: Ue(s)
+    }).finally(() => {
+      z.delete(a);
+    }), l = je(t === "undo" ? (p = u.undo) == null ? void 0 : p.before : (x = u.undo) == null ? void 0 : x.after), m = Lt(u.undo), f = Me({
       actionId: a,
       actionType: t,
-      source: n,
-      itemIds: i.targetIds,
-      affectedIds: i.affectedIds,
-      commandResult: i,
-      writeResult: l.writeResult,
-      proposedDocument: l.proposedDocument,
-      patches: i.layoutPatches,
-      diagnostics: b,
-      data: { historyEntry: (x = i.undo) == null ? void 0 : x.id }
+      source: s,
+      result: u,
+      nextLayout: l,
+      removeMissingItems: !0,
+      hasDocumentMutation: m,
+      rollbackCheckpoint: i,
+      rollbackReason: "shell-history-write-back-rollback",
+      data: { historyEntry: (w = u.undo) == null ? void 0 : w.id }
+    }), y = Y({
+      ok: f.ok,
+      status: f.status,
+      actionId: a,
+      actionType: t,
+      source: s,
+      itemIds: u.targetIds,
+      affectedIds: f.affectedIds,
+      commandResult: u,
+      writeResult: f.writeResult,
+      proposedDocument: f.proposedDocument,
+      patches: f.patches,
+      diagnostics: f.diagnostics,
+      data: f.data
     });
-    return p.ok && p.proposedDocument && (($ = p.writeResult) == null ? void 0 : $.ok) !== !1 && (j(p.proposedDocument), T(a, p.proposedDocument, w())), G(A, p, R()), p;
-  }), ce = async (t, o, a = {}) => _(async () => {
-    var b, p;
-    const n = o.id || H(t), c = a.source || "api", i = a.itemIds || o.targetIds || [], u = N(n, t, c, i, a.position, a.contextExtra);
-    let l = null, m = !1;
-    const g = await He({
-      actionId: n,
+    return y.ok && y.proposedDocument && ((v = y.writeResult) == null ? void 0 : v.ok) !== !1 && (Re(y.proposedDocument), ve(a, y.proposedDocument, k())), N(M, y, C()), y;
+  }), se = async (t, o, a = {}) => ae(async () => {
+    var p, x, w;
+    const s = o.id || K(t), c = a.source || "api", i = a.itemIds || o.targetIds || [], u = me(s, t, c, i, a.position, a.contextExtra);
+    let l = null, m = null, f = !1;
+    const y = await Ge({
+      actionId: s,
       actionType: t,
       source: c,
       itemIds: i,
       position: a.position,
       context: u,
-      profile: R(),
-      emit: A,
-      prepare: async (k) => {
+      profile: C(),
+      emit: M,
+      prepare: async (v) => {
         var P;
-        const S = await xe(k);
-        return S || ((P = a.prepare) == null ? void 0 : P.call(a, k)) || null;
+        const $ = await Ae(v);
+        return $ || ((P = a.prepare) == null ? void 0 : P.call(a, v)) || null;
       },
-      mutate: async (k) => {
-        var nt, ct, rt, it, dt;
-        const S = D(), P = w();
-        if (!S)
+      mutate: async (v) => {
+        var pt, ht, It, bt;
+        const $ = S(), P = k();
+        if (!$)
           return {
             status: "blocked",
-            commandResult: yt(n, o.type, "missing-editor", i),
-            diagnostics: [Y(
+            commandResult: Pt(s, o.type, "missing-editor", i),
+            diagnostics: [V(
               "shell-missing-editor",
               "error",
               "Grid editor controller is required for this action.",
-              { actionId: n, actionType: t, source: c, reason: "missing-editor", recoverable: !0 }
+              { actionId: s, actionType: t, source: c, reason: "missing-editor", recoverable: !0 }
             )]
           };
-        l = P ? he(P.layout) : null;
-        const K = Qt(
-          k,
+        l = P ? ke(P.layout) : null;
+        const U = go(
+          v,
           (P == null ? void 0 : P.layout) || [],
-          n,
+          s,
           t,
           c
         );
-        if (K.length > 0)
+        if (U.length > 0)
           return {
             status: "blocked",
-            commandResult: yt(n, o.type, "invalid-input", i),
+            commandResult: Pt(s, o.type, "invalid-input", i),
             affectedIds: [],
-            diagnostics: K
+            diagnostics: U
           };
-        const W = (nt = k == null ? void 0 : k.newIds) != null && nt[0] && o.type === "add" ? {
+        const H = (pt = v == null ? void 0 : v.newIds) != null && pt[0] && o.type === "add" ? {
           ...o,
           payload: {
             ...o.payload || {},
             item: {
-              ...((ct = o.payload) == null ? void 0 : ct.item) || {},
-              i: k.newIds[0]
+              ...((ht = o.payload) == null ? void 0 : ht.item) || {},
+              i: v.newIds[0]
             }
           }
-        } : o, x = await S.execute({
-          ...W,
-          id: n,
-          source: je(c)
+        } : o;
+        m = $.createRollbackCheckpoint(`shell-${t}-write-back`), z.add(s);
+        const D = await $.execute({
+          ...H,
+          id: s,
+          source: Ue(c)
+        }).finally(() => {
+          z.delete(s);
         });
-        m = x.status === "changed";
-        const $ = Te(x, n, t, c), V = be((it = (rt = x.diagnostics) == null ? void 0 : rt.computed) == null ? void 0 : it.placement, n, t, c);
-        if (x.status === "blocked" || x.status === "cancelled" || x.status === "timeout" || x.status === "error")
+        f = D.status === "changed";
+        const Pe = Te(D, s, t, c), de = ye((bt = (It = D.diagnostics) == null ? void 0 : It.computed) == null ? void 0 : bt.placement, s, t, c);
+        if (D.status === "blocked" || D.status === "cancelled" || D.status === "timeout" || D.status === "error")
           return {
-            status: x.status === "cancelled" ? "cancelled" : x.status === "timeout" ? "timeout" : x.status === "error" ? "error" : "blocked",
-            commandResult: x,
-            affectedIds: x.affectedIds,
-            diagnostics: x.blocked ? [Y(
-              `shell-command-${x.blocked.reason}`,
+            status: D.status === "cancelled" ? "cancelled" : D.status === "timeout" ? "timeout" : D.status === "error" ? "error" : "blocked",
+            commandResult: D,
+            affectedIds: D.affectedIds,
+            diagnostics: D.blocked ? [V(
+              `shell-command-${D.blocked.reason}`,
               "warning",
-              x.blocked.message || `Editor command was blocked: ${x.blocked.reason}.`,
-              { actionId: n, actionType: t, source: c, reason: x.blocked.reason, itemIds: x.blocked.itemIds, recoverable: !0 }
-            )].concat(V) : V,
-            placement: $,
-            data: me(a.data, $)
+              D.blocked.message || `Editor command was blocked: ${D.blocked.reason}.`,
+              { actionId: s, actionType: t, source: c, reason: D.blocked.reason, itemIds: D.blocked.itemIds, recoverable: !0 }
+            )].concat(de) : de,
+            placement: Pe,
+            data: xe(a.data, Pe)
           };
-        const Pe = x.layoutPatches.length > 0 || x.metadataPatches.length > 0, le = P ? pt(P, x) : [], Me = P && Pe && (x.status === "changed" || x.status === "noop") ? J(n, le, x.affectedIds, { removeMissingItems: o.type === "delete" }) : { diagnostics: [] };
-        return ((dt = Me.writeResult) == null ? void 0 : dt.ok) === !1 && l && S.setExternalLayout(l, "shell-write-back-rollback"), {
-          status: x.status === "changed" ? "success" : "noop",
-          commandResult: x,
-          writeResult: Me.writeResult,
-          proposedDocument: Me.proposedDocument,
-          affectedIds: x.affectedIds,
-          patches: x.layoutPatches,
-          placement: $,
-          data: me(a.data, $),
-          diagnostics: Me.diagnostics.concat(V)
+        const jt = P ? De(P, D) : [], le = Me({
+          actionId: s,
+          actionType: t,
+          source: c,
+          result: D,
+          nextLayout: P ? jt : null,
+          removeMissingItems: o.type === "delete",
+          rollbackCheckpoint: m,
+          rollbackReason: "shell-write-back-rollback",
+          data: a.data
+        });
+        return {
+          status: le.status,
+          commandResult: D,
+          writeResult: le.writeResult,
+          proposedDocument: le.proposedDocument,
+          affectedIds: le.affectedIds,
+          patches: le.patches,
+          placement: le.placement,
+          data: le.data,
+          diagnostics: le.diagnostics
         };
       },
       commit: a.commit,
       rollback: a.rollback
     });
-    return !g.ok && m && l && ((b = D()) == null || b.setExternalLayout(l, "shell-transaction-rollback")), g.ok && g.proposedDocument && ((p = g.writeResult) == null ? void 0 : p.ok) !== !1 && (j(g.proposedDocument), T(n, g.proposedDocument, w())), g;
-  }), Re = (t, o = {}) => {
-    var a, n, c;
-    return t && typeof Event != "undefined" && t instanceof Event ? de(t, o) : t && typeof t == "object" && ("x" in t || "y" in t) ? Ke({
+    if (!y.ok && f && (m ? (p = S()) == null || p.restoreRollbackCheckpoint(m, "shell-transaction-rollback") : l && ((x = S()) == null || x.setExternalLayout(l, "shell-transaction-rollback"))), y.ok && y.proposedDocument && ((w = y.writeResult) == null ? void 0 : w.ok) !== !1) {
+      const v = k();
+      v && y.commandResult && Ke(
+        De(v, y.commandResult),
+        y.status,
+        y.writeResult
+      ), Re(y.proposedDocument), ve(s, y.proposedDocument, k());
+    }
+    return y;
+  }), Bt = async (t, o) => ae(async () => {
+    var p, x, w, v, $, P;
+    if (!_() || F.has(o.id) || z.has(o.id)) return null;
+    const a = Qe(t);
+    if (!a || (w = (x = (p = o.diagnostics) == null ? void 0 : p.computed) == null ? void 0 : x.placement) != null && w.sessionId) return null;
+    const s = o.id || K(a), c = Mt(t.source || ((v = o.diagnostics) == null ? void 0 : v.source)), i = k(), u = q.get(o.id), l = re(o.id, u);
+    if (J.has(l)) return null;
+    F.add(o.id), J.add(l), q.delete(o.id);
+    const m = i ? De(i, o) : [], f = Me({
+      actionId: s,
+      actionType: a,
+      source: c,
+      result: o,
+      nextLayout: i ? m : null,
+      removeMissingItems: t.type === "delete",
+      rollbackCheckpoint: u,
+      rollbackReason: "shell-managed-write-back-failed",
+      writeLegacyMirror: !0,
+      data: {
+        commandId: o.id,
+        commandType: t.type,
+        historyEntryId: ($ = o.undo) == null ? void 0 : $.id,
+        synthesized: !0
+      }
+    }), y = Y({
+      ok: f.ok,
+      status: f.status,
+      actionId: s,
+      actionType: a,
+      source: c,
+      itemIds: o.targetIds,
+      affectedIds: f.affectedIds,
+      commandResult: o,
+      writeResult: f.writeResult,
+      proposedDocument: f.proposedDocument,
+      patches: f.patches,
+      placement: f.placement,
+      diagnostics: f.diagnostics,
+      data: f.data
+    });
+    return y.ok && y.proposedDocument && ((P = y.writeResult) == null ? void 0 : P.ok) !== !1 && (Re(y.proposedDocument), ve(s, y.proposedDocument, k())), N(M, y, C()), y;
+  }), $t = async (t, o) => ae(async () => {
+    var f, y, p, x, w;
+    if (!_() || F.has(o.id) || z.has(o.id)) return null;
+    const a = Qe(t);
+    if (!a || (p = (y = (f = o.diagnostics) == null ? void 0 : f.computed) == null ? void 0 : y.placement) != null && p.sessionId) return null;
+    const s = o.id || K(a), c = Mt(t.source || ((x = o.diagnostics) == null ? void 0 : x.source)), i = q.get(o.id), u = re(o.id, i);
+    if (J.has(u)) return null;
+    F.add(o.id), J.add(u), q.delete(o.id);
+    const l = Me({
+      actionId: s,
+      actionType: a,
+      source: c,
+      result: o,
+      nextLayout: null,
+      hasDocumentMutation: !1,
+      data: {
+        commandId: o.id,
+        commandType: t.type,
+        historyEntryId: (w = o.undo) == null ? void 0 : w.id,
+        synthesized: !0
+      }
+    }), m = Y({
+      ok: l.ok,
+      status: l.status,
+      actionId: s,
+      actionType: a,
+      source: c,
+      itemIds: o.targetIds,
+      affectedIds: l.affectedIds,
+      commandResult: o,
+      patches: l.patches,
+      placement: l.placement,
+      diagnostics: l.diagnostics,
+      data: l.data
+    });
+    return N(M, m, C()), m;
+  }), We = (t, o = {}) => {
+    var a, s, c;
+    return t && typeof Event != "undefined" && t instanceof Event ? fe(t, o) : t && typeof t == "object" && ("x" in t || "y" in t) ? Je({
       ...o,
-      runtime: w(),
-      layout: (a = w()) == null ? void 0 : a.layout,
+      runtime: k(),
+      layout: (a = k()) == null ? void 0 : a.layout,
       selection: null,
       gridElement: null,
       lastMenuPosition: null,
       lastPointerPosition: null,
       fallback: t
-    }) : Ke({
+    }) : Je({
       ...o,
-      runtime: w(),
-      layout: (n = w()) == null ? void 0 : n.layout,
-      selection: ((c = D()) == null ? void 0 : c.selection.value) || null,
-      gridElement: oe(),
+      runtime: k(),
+      layout: (s = k()) == null ? void 0 : s.layout,
+      selection: ((c = S()) == null ? void 0 : c.selection.value) || null,
+      gridElement: T(),
       lastMenuPosition: r.value.lastMenuPosition,
       lastPointerPosition: r.value.lastPointerPosition,
       fallback: o.fallback || r.value.lastMenuPosition || r.value.lastPointerPosition || void 0
     });
-  }, fe = (t, o, a) => {
-    const n = ke(o, a);
-    if (!qt(n)) return Re(t, o);
+  }, pe = (t, o, a) => {
+    const s = Se(o, a);
+    if (!uo(s)) return We(t, o);
     const c = o;
-    return t ? Re(t, {
+    return t ? We(t, {
       ...o,
       fallback: c.fallback || { x: 0, y: 0, source: "strategy" }
-    }) : Re({ x: 0, y: 0, source: "strategy" }, o);
-  }, qe = () => {
+    }) : We({ x: 0, y: 0, source: "strategy" }, o);
+  }, at = () => {
     var t, o;
     return ((t = e.menu) == null ? void 0 : t.defaultPasteStrategy) || ((o = e.menu) == null ? void 0 : o.defaultAddStrategy) || "cursor";
-  }, de = (t, o = {}) => {
-    var a, n, c;
-    return jt({
+  }, fe = (t, o = {}) => {
+    var a, s, c;
+    return ao({
       ...o,
       event: t,
-      runtime: w(),
-      layout: (a = w()) == null ? void 0 : a.layout,
-      selection: ((n = D()) == null ? void 0 : n.selection.value) || null,
-      gridElement: oe(),
+      runtime: k(),
+      layout: (a = k()) == null ? void 0 : a.layout,
+      selection: ((s = S()) == null ? void 0 : s.selection.value) || null,
+      gridElement: T(),
       lastMenuPosition: r.value.lastMenuPosition,
       lastPointerPosition: r.value.lastPointerPosition,
       fallback: o.fallback || ((c = e.position) == null ? void 0 : c.fallback)
     });
-  }, Ge = async (t, o = {}, a = "paste") => {
+  }, st = async (t, o = {}, a = "paste") => {
     var u, l;
-    const n = w(), c = o.placementIntent || "here", i = {
+    const s = k(), c = o.placementIntent || "here", i = {
       strategy: o.strategy || "cursor",
-      ...ve(o),
+      ...Ce(o),
       cursor: { x: t.x, y: t.y },
-      cols: ((u = n == null ? void 0 : n.gridSettings) == null ? void 0 : u.columns) || t.cols || 12,
-      maxRows: ((l = n == null ? void 0 : n.gridSettings) == null ? void 0 : l.maxRows) || 1 / 0,
+      cols: ((u = s == null ? void 0 : s.gridSettings) == null ? void 0 : u.columns) || t.cols || 12,
+      maxRows: ((l = s == null ? void 0 : s.gridSettings) == null ? void 0 : l.maxRows) || 1 / 0,
       list: t.list,
       source: t.source,
       placementIntent: c,
       placementAnchor: c === "here" ? "top-left" : void 0
     };
-    return ce(a, {
+    return se(a, {
       type: "paste",
       payload: i
     }, {
@@ -1315,59 +1472,59 @@ function ro(e = {}) {
       position: t,
       contextExtra: { placementIntent: c }
     });
-  }, ge = (t) => {
+  }, he = (t) => {
     var o;
     return (o = e.widgetAdapter) != null && o[t] ? (a) => {
-      var n, c;
-      return (c = (n = e.widgetAdapter) == null ? void 0 : n[t]) == null ? void 0 : c.call(n, a);
+      var s, c;
+      return (c = (s = e.widgetAdapter) == null ? void 0 : s[t]) == null ? void 0 : c.call(s, a);
     } : void 0;
-  }, ye = (tt = e.widgetAdapter) != null && tt.commit ? (t, o) => {
-    var a, n;
-    return (n = (a = e.widgetAdapter) == null ? void 0 : a.commit) == null ? void 0 : n.call(a, t, o);
-  } : void 0, pe = (ot = e.widgetAdapter) != null && ot.rollback ? (t, o) => {
-    var a, n;
-    return (n = (a = e.widgetAdapter) == null ? void 0 : a.rollback) == null ? void 0 : n.call(a, t, o);
-  } : void 0, Ue = (t) => {
+  }, Ie = (mt = e.widgetAdapter) != null && mt.commit ? (t, o) => {
+    var a, s;
+    return (s = (a = e.widgetAdapter) == null ? void 0 : a.commit) == null ? void 0 : s.call(a, t, o);
+  } : void 0, be = (ft = e.widgetAdapter) != null && ft.rollback ? (t, o) => {
+    var a, s;
+    return (s = (a = e.widgetAdapter) == null ? void 0 : a.rollback) == null ? void 0 : s.call(a, t, o);
+  } : void 0, nt = (t) => {
     var o;
     return (o = e.referenceAdapter) != null && o[t] ? (a) => {
-      var n, c;
-      return (c = (n = e.referenceAdapter) == null ? void 0 : n[t]) == null ? void 0 : c.call(n, a);
+      var s, c;
+      return (c = (s = e.referenceAdapter) == null ? void 0 : s[t]) == null ? void 0 : c.call(s, a);
     } : void 0;
-  }, Qe = (at = e.referenceAdapter) != null && at.commit ? (t, o) => {
-    var a, n;
-    return (n = (a = e.referenceAdapter) == null ? void 0 : a.commit) == null ? void 0 : n.call(a, t, o);
-  } : void 0, Je = (st = e.referenceAdapter) != null && st.rollback ? (t, o) => {
-    var a, n;
-    return (n = (a = e.referenceAdapter) == null ? void 0 : a.rollback) == null ? void 0 : n.call(a, t, o);
-  } : void 0, Ze = (t) => t === !0 ? null : t === !1 ? { ok: !1, status: "cancelled", reason: "confirm-cancelled" } : "available" in t ? t.available ? null : { ok: !1, status: "cancelled", reason: t.reason || "confirm-cancelled", diagnostics: t.diagnostics } : t.ok ? null : t, _e = (t, o) => {
-    M.set(t.id, {
+  }, ct = (gt = e.referenceAdapter) != null && gt.commit ? (t, o) => {
+    var a, s;
+    return (s = (a = e.referenceAdapter) == null ? void 0 : a.commit) == null ? void 0 : s.call(a, t, o);
+  } : void 0, rt = (yt = e.referenceAdapter) != null && yt.rollback ? (t, o) => {
+    var a, s;
+    return (s = (a = e.referenceAdapter) == null ? void 0 : a.rollback) == null ? void 0 : s.call(a, t, o);
+  } : void 0, it = (t) => t === !0 ? null : t === !1 ? { ok: !1, status: "cancelled", reason: "confirm-cancelled" } : "available" in t ? t.available ? null : { ok: !1, status: "cancelled", reason: t.reason || "confirm-cancelled", diagnostics: t.diagnostics } : t.ok ? null : t, dt = (t, o) => {
+    E.set(t.id, {
       ...o,
       itemIds: t.items.map((a) => a.i),
-      baseLayout: he(t.baseLayout)
+      baseLayout: ke(t.baseLayout)
     });
-  }, Oe = (t) => {
+  }, lt = (t) => {
     var c, i;
     const o = (i = (c = t.diagnostics) == null ? void 0 : c.computed) == null ? void 0 : i.placement, a = o == null ? void 0 : o.sessionId;
     if (!a) return null;
-    const n = M.get(a);
-    return n && o ? { pending: n, placement: o } : null;
-  }, vt = (t, o, a) => {
-    var b, p;
-    const n = (o == null ? void 0 : o.actionType) || "place-clipboard", c = (o == null ? void 0 : o.actionId) || H(n), i = Te(t, c, n, a), u = be(
-      (p = (b = t.diagnostics) == null ? void 0 : b.computed) == null ? void 0 : p.placement,
+    const s = E.get(a);
+    return s && o ? { pending: s, placement: o } : null;
+  }, Ht = (t, o, a) => {
+    var y, p;
+    const s = (o == null ? void 0 : o.actionType) || "place-clipboard", c = (o == null ? void 0 : o.actionId) || K(s), i = Te(t, c, s, a), u = ye(
+      (p = (y = t.diagnostics) == null ? void 0 : y.computed) == null ? void 0 : p.placement,
       c,
-      n,
+      s,
       a
-    ), l = t.status === "changed" ? "success" : t.status === "cancelled" ? "cancelled" : t.status === "timeout" ? "timeout" : t.status === "error" ? "error" : t.status === "blocked" ? "blocked" : "noop", m = t.blocked ? [Y(
+    ), l = t.status === "changed" ? "success" : t.status === "cancelled" ? "cancelled" : t.status === "timeout" ? "timeout" : t.status === "error" ? "error" : t.status === "blocked" ? "blocked" : "noop", m = t.blocked ? [V(
       `shell-command-${t.blocked.reason}`,
       "warning",
       t.blocked.message || `Editor command was blocked: ${t.blocked.reason}.`,
-      { actionId: c, actionType: n, source: a, reason: t.blocked.reason, itemIds: t.blocked.itemIds, recoverable: !0 }
-    )].concat(u) : u, g = q({
+      { actionId: c, actionType: s, source: a, reason: t.blocked.reason, itemIds: t.blocked.itemIds, recoverable: !0 }
+    )].concat(u) : u, f = Y({
       ok: l === "success" || l === "noop",
       status: l,
       actionId: c,
-      actionType: n,
+      actionType: s,
       source: a,
       itemIds: t.targetIds,
       affectedIds: t.affectedIds,
@@ -1375,86 +1532,105 @@ function ro(e = {}) {
       commandResult: t,
       patches: t.layoutPatches,
       placement: i,
-      data: me(o == null ? void 0 : o.data, i),
+      data: xe(o == null ? void 0 : o.data, i),
       diagnostics: m
     });
-    return G(A, g, R()), g;
-  }, et = async (t) => {
+    return N(M, f, C()), f;
+  }, ut = async (t) => {
     var u;
-    const o = Oe(t), a = o == null ? void 0 : o.placement.sessionId;
+    const o = lt(t), a = o == null ? void 0 : o.placement.sessionId;
     if (!o || !a) return null;
-    const n = E.get(t.id);
-    if (n) return n;
+    const s = A.get(t.id);
+    if (s) return s;
     if (t.status === "blocked" && ((u = t.blocked) == null ? void 0 : u.reason) !== "stale-command") return null;
     const { pending: c } = o;
-    M.delete(a);
-    const i = _(async () => {
-      var S, P, K;
-      const l = D(), m = w(), g = Te(t, c.actionId, c.actionType, c.source), b = be(
-        (P = (S = t.diagnostics) == null ? void 0 : S.computed) == null ? void 0 : P.placement,
+    E.delete(a);
+    const i = ae(async () => {
+      var v, $, P;
+      const l = S(), m = k(), f = q.get(t.id) || c.rollbackCheckpoint;
+      q.delete(t.id);
+      const y = Te(t, c.actionId, c.actionType, c.source), p = ye(
+        ($ = (v = t.diagnostics) == null ? void 0 : v.computed) == null ? void 0 : $.placement,
         c.actionId,
         c.actionType,
         c.source
-      ), p = N(
+      ), x = me(
         c.actionId,
         c.actionType,
         c.source,
         c.itemIds,
         c.position,
         c.contextExtra
-      ), k = await He({
+      ), w = await Ge({
         actionId: c.actionId,
         actionType: c.actionType,
         source: c.source,
         itemIds: c.itemIds,
         position: c.position,
-        context: p,
-        profile: R(),
-        emit: A,
+        context: x,
+        profile: C(),
+        emit: M,
         prepare: c.prepare,
         mutate: () => {
-          var V;
           if (t.status === "blocked" || t.status === "cancelled" || t.status === "timeout" || t.status === "error")
             return {
               status: t.status === "cancelled" ? "cancelled" : t.status === "timeout" ? "timeout" : t.status === "error" ? "error" : "blocked",
               commandResult: t,
               affectedIds: t.affectedIds,
-              diagnostics: b,
-              placement: g,
-              data: me(c.data, g)
+              diagnostics: p,
+              placement: y,
+              data: xe(c.data, y)
             };
-          const W = t.layoutPatches.length > 0 || t.metadataPatches.length > 0, x = m ? pt(m, t) : [], $ = m && W && (t.status === "changed" || t.status === "noop") ? J(c.actionId, x, t.affectedIds, { removeMissingItems: t.type === "delete" }) : { diagnostics: [] };
-          return ((V = $.writeResult) == null ? void 0 : V.ok) === !1 && l && l.setExternalLayout(c.baseLayout, "shell-placement-write-back-rollback"), {
-            status: t.status === "changed" ? "success" : "noop",
+          const U = m ? De(m, t) : [], H = Me({
+            actionId: c.actionId,
+            actionType: c.actionType,
+            source: c.source,
+            result: t,
+            nextLayout: m ? U : null,
+            removeMissingItems: t.type === "delete",
+            rollbackCheckpoint: f,
+            rollbackReason: "shell-placement-write-back-rollback",
+            data: c.data
+          });
+          return {
+            status: H.status,
             commandResult: t,
-            writeResult: $.writeResult,
-            proposedDocument: $.proposedDocument,
-            affectedIds: t.affectedIds,
-            patches: t.layoutPatches,
-            placement: g,
-            data: me(c.data, g),
-            diagnostics: $.diagnostics.concat(b)
+            writeResult: H.writeResult,
+            proposedDocument: H.proposedDocument,
+            affectedIds: H.affectedIds,
+            patches: H.patches,
+            placement: H.placement || y,
+            data: H.data,
+            diagnostics: H.diagnostics.length ? H.diagnostics : p
           };
         },
         commit: c.commit,
         rollback: c.rollback
       });
-      return !k.ok && t.status === "changed" && l && l.setExternalLayout(c.baseLayout, "shell-placement-transaction-rollback"), k.ok && k.proposedDocument && ((K = k.writeResult) == null ? void 0 : K.ok) !== !1 && (j(k.proposedDocument), T(c.actionId, k.proposedDocument, w())), k;
+      if (!w.ok && t.status === "changed" && l && (f ? l.restoreRollbackCheckpoint(f, "shell-placement-transaction-rollback") : l.setExternalLayout(c.baseLayout, "shell-placement-transaction-rollback")), w.ok && w.proposedDocument && ((P = w.writeResult) == null ? void 0 : P.ok) !== !1) {
+        const U = k();
+        U && w.commandResult && Ke(
+          De(U, w.commandResult),
+          w.status,
+          w.writeResult
+        ), Re(w.proposedDocument), ve(c.actionId, w.proposedDocument, k());
+      }
+      return w;
     });
-    return E.set(t.id, i), i.finally(() => {
-      E.get(t.id) === i && E.delete(t.id);
+    return A.set(t.id, i), i.finally(() => {
+      A.get(t.id) === i && A.delete(t.id);
     }), i;
-  }, F = {
-    getEventGridPosition: (t, o = {}) => de(t, o),
+  }, L = {
+    getEventGridPosition: (t, o = {}) => fe(t, o),
     pasteAtEvent: async (t, o = {}) => {
-      const a = de(t, o);
-      return a.ok ? (r.value = { ...r.value, lastPointerPosition: a.position }, Ge(a.position, o, "paste")) : C("paste", o.source || "api", a.reason, [], a.diagnostics);
+      const a = fe(t, o);
+      return a.ok ? (r.value = { ...r.value, lastPointerPosition: a.position }, st(a.position, o, "paste")) : W("paste", o.source || "api", a.reason, [], a.diagnostics);
     },
     pasteAtGridPosition: async (t, o = {}) => {
-      const a = Re(t, o);
-      return a.ok ? Ge(a.position, o, "paste") : C("paste", o.source || "api", a.reason, [], a.diagnostics);
+      const a = We(t, o);
+      return a.ok ? st(a.position, o, "paste") : W("paste", o.source || "api", a.reason, [], a.diagnostics);
     },
-    selectItem: async (t, o = {}) => ce("select", {
+    selectItem: async (t, o = {}) => se("select", {
       type: "select",
       targetIds: [t],
       payload: { ids: [t] }
@@ -1463,19 +1639,19 @@ function ro(e = {}) {
       itemIds: [t]
     }),
     highlightItem: (t, o = {}) => {
-      const a = H("highlight"), n = w(), c = r.value.highlightedId;
-      if (!(n != null && n.allItemIds.includes(t)))
-        return C("highlight", o.source || "api", "missing-item", [t], [], a);
-      I && clearTimeout(I), r.value = { ...r.value, highlightedId: t }, A({
+      const a = K("highlight"), s = k(), c = r.value.highlightedId;
+      if (!(s != null && s.allItemIds.includes(t)))
+        return W("highlight", o.source || "api", "missing-item", [t], [], a);
+      b && clearTimeout(b), r.value = { ...r.value, highlightedId: t }, M({
         type: "highlight-change",
         actionId: a,
         itemId: t,
         previous: c,
-        profile: R()
-      }), o.durationMs && o.durationMs > 0 && (I = setTimeout(() => {
-        F.resetHighlight();
+        profile: C()
+      }), o.durationMs && o.durationMs > 0 && (b = setTimeout(() => {
+        L.resetHighlight();
       }, o.durationMs));
-      const i = q({
+      const i = Y({
         ok: !0,
         status: "success",
         actionId: a,
@@ -1485,18 +1661,18 @@ function ro(e = {}) {
         affectedIds: [t],
         diagnostics: []
       });
-      return G(A, i, R()), o.scroll && F.scrollToItem(t, o), i;
+      return N(M, i, C()), o.scroll && L.scrollToItem(t, o), i;
     },
     resetHighlight: () => {
-      const t = H("reset-highlight"), o = r.value.highlightedId;
-      I && (clearTimeout(I), I = null), r.value = { ...r.value, highlightedId: null }, A({
+      const t = K("reset-highlight"), o = r.value.highlightedId;
+      b && (clearTimeout(b), b = null), r.value = { ...r.value, highlightedId: null }, M({
         type: "highlight-change",
         actionId: t,
         itemId: null,
         previous: o,
-        profile: R()
+        profile: C()
       });
-      const a = q({
+      const a = Y({
         ok: !0,
         status: o ? "success" : "noop",
         actionId: t,
@@ -1506,16 +1682,16 @@ function ro(e = {}) {
         affectedIds: o ? [o] : [],
         diagnostics: []
       });
-      return G(A, a, R()), a;
+      return N(M, a, C()), a;
     },
     scrollToItem: async (t, o = {}) => {
-      var b;
-      const a = H("scroll-to-item"), n = w(), c = o.source || "api";
-      if (!(n != null && n.allItemIds.includes(t)))
-        return C("scroll-to-item", c, "missing-item", [t], [], a);
-      if (n.hiddenItemIds.includes(t) || !n.renderItemIds.includes(t)) {
-        const p = C("scroll-to-item", c, "hidden", [t], [], a);
-        return A({
+      var y;
+      const a = K("scroll-to-item"), s = k(), c = o.source || "api";
+      if (!(s != null && s.allItemIds.includes(t)))
+        return W("scroll-to-item", c, "missing-item", [t], [], a);
+      if (s.hiddenItemIds.includes(t) || !s.renderItemIds.includes(t)) {
+        const p = W("scroll-to-item", c, "hidden", [t], [], a);
+        return M({
           type: "action-result",
           actionId: a,
           actionType: "scroll-to-item",
@@ -1524,31 +1700,31 @@ function ro(e = {}) {
           ok: !1,
           itemIds: [t],
           affectedIds: [],
-          profile: R(),
+          profile: C(),
           diagnostics: p.diagnostics
         }), p;
       }
-      const i = oe();
+      const i = T();
       if (!i || typeof i.querySelector != "function")
-        return C("scroll-to-item", c, "missing-grid-element", [t], [], a);
-      const u = typeof o.selector == "function" ? o.selector(t) : o.selector || `[data-grid-id="${Ae(t)}"],[data-grid-item-id="${Ae(t)}"],[data-i="${Ae(t)}"],[data-id="${Ae(t)}"]`, l = i.querySelector(u);
+        return W("scroll-to-item", c, "missing-grid-element", [t], [], a);
+      const u = typeof o.selector == "function" ? o.selector(t) : o.selector || `[data-grid-id="${$e(t)}"],[data-grid-item-id="${$e(t)}"],[data-i="${$e(t)}"],[data-id="${$e(t)}"]`, l = i.querySelector(u);
       if (!l)
-        return C("scroll-to-item", c, "dom-unavailable", [t], [], a);
-      const m = await ((b = e.scrollAdapter) == null ? void 0 : b.call(e, {
+        return W("scroll-to-item", c, "dom-unavailable", [t], [], a);
+      const m = await ((y = e.scrollAdapter) == null ? void 0 : y.call(e, {
         itemId: t,
         itemElement: l,
         gridElement: i,
         options: o,
-        runtime: n
+        runtime: s
       }));
       if (m && !m.available)
-        return C("scroll-to-item", c, m.reason || "dom-unavailable", [t], m.diagnostics || [], a);
+        return W("scroll-to-item", c, m.reason || "dom-unavailable", [t], m.diagnostics || [], a);
       typeof l.scrollIntoView == "function" && l.scrollIntoView({
         behavior: o.behavior || "smooth",
         block: o.block || "nearest",
         inline: o.inline || "nearest"
       });
-      const g = q({
+      const f = Y({
         ok: !0,
         status: "success",
         actionId: a,
@@ -1558,137 +1734,137 @@ function ro(e = {}) {
         affectedIds: [t],
         diagnostics: []
       });
-      return G(A, g, R()), g;
+      return N(M, f, C()), f;
     },
     prepareDashboardContextMenu: (t, o = {}) => {
-      var g, b;
-      const a = de(t || null, { source: o.source || "context-menu" }), n = a.ok ? a.position : void 0, c = Ut(t || null) && (n == null ? void 0 : n.source) === "event";
-      n && (r.value = { ...r.value, lastMenuPosition: n });
-      const i = H("prepare-dashboard-menu"), u = w(), l = D(), m = Yt({
+      var f, y;
+      const a = fe(t || null, { source: o.source || "context-menu" }), s = a.ok ? a.position : void 0, c = fo(t || null) && (s == null ? void 0 : s.source) === "event";
+      s && (r.value = { ...r.value, lastMenuPosition: s });
+      const i = K("prepare-dashboard-menu"), u = k(), l = S(), m = ro({
         id: i,
-        target: { type: "dashboard", position: n },
-        position: n,
+        target: { type: "dashboard", position: s },
+        position: s,
         context: {
-          target: { type: "dashboard", position: n },
+          target: { type: "dashboard", position: s },
           runtime: u,
           mode: r.value.mode,
           readonly: r.value.mode !== "edit",
           editor: l
         },
-        actions: F,
+        actions: L,
         options: e.menu,
         customItems: o.customItems,
         includeHidden: o.includeHidden,
         explicitPlacementTarget: c,
-        referenceAvailable: !!((g = e.referenceAdapter) != null && g.preparePasteReference),
-        paletteAvailable: !!((b = e.palette) != null && b.open),
+        referenceAvailable: !!((f = e.referenceAdapter) != null && f.preparePasteReference),
+        paletteAvailable: !!((y = e.palette) != null && y.open),
         diagnostics: (a.ok, a.diagnostics)
       });
-      return r.value = { ...r.value, menu: m }, A({ type: "menu-change", actionId: i, menu: m, profile: R() }), m;
+      return r.value = { ...r.value, menu: m }, M({ type: "menu-change", actionId: i, menu: m, profile: C() }), m;
     },
     prepareWidgetContextMenu: (t, o, a = {}) => {
       var p;
-      const n = de(t || null, { source: a.source || "context-menu", activeItemId: o }), c = n.ok ? n.position : void 0;
+      const s = fe(t || null, { source: a.source || "context-menu", activeItemId: o }), c = s.ok ? s.position : void 0;
       c && (r.value = { ...r.value, lastMenuPosition: c });
-      const i = H("prepare-widget-menu"), u = w(), l = D(), m = l == null ? void 0 : l.editorMetaById.value[o], g = { type: "widget", itemId: o, position: c }, b = zt({
+      const i = K("prepare-widget-menu"), u = k(), l = S(), m = l == null ? void 0 : l.editorMetaById.value[o], f = { type: "widget", itemId: o, position: c }, y = io({
         id: i,
-        target: g,
+        target: f,
         itemId: o,
         hiddenItem: (u == null ? void 0 : u.hiddenItemIds.includes(o)) || (m == null ? void 0 : m.visible) === !1,
-        lockedItem: (m == null ? void 0 : m.locked) === !0 || ((p = u == null ? void 0 : u.layout.find((k) => k.i === o)) == null ? void 0 : p.static) === !0,
+        lockedItem: (m == null ? void 0 : m.locked) === !0 || ((p = u == null ? void 0 : u.layout.find((x) => x.i === o)) == null ? void 0 : p.static) === !0,
         position: c,
         context: {
-          target: g,
+          target: f,
           runtime: u,
           mode: r.value.mode,
           readonly: r.value.mode !== "edit",
           editor: l
         },
-        actions: F,
+        actions: L,
         options: e.menu,
         customItems: a.customItems,
         includeHidden: a.includeHidden,
         referenceAvailable: !!e.referenceAdapter,
-        diagnostics: (n.ok, n.diagnostics)
+        diagnostics: (s.ok, s.diagnostics)
       });
-      return r.value = { ...r.value, menu: b }, A({ type: "menu-change", actionId: i, menu: b, profile: R() }), b;
+      return r.value = { ...r.value, menu: y }, M({ type: "menu-change", actionId: i, menu: y, profile: C() }), y;
     },
     closeMenu: (t = "close") => {
-      const o = H("close-menu");
-      r.value = { ...r.value, menu: null, lastMenuPosition: null }, A({ type: "menu-change", actionId: o, menu: null, reason: t, profile: R() });
+      const o = K("close-menu");
+      r.value = { ...r.value, menu: null, lastMenuPosition: null }, M({ type: "menu-change", actionId: o, menu: null, reason: t, profile: C() });
     },
     copyWidget: async (t, o = {}) => {
-      var b, p, k;
-      const a = Ee(t), n = a.length ? a : ((b = D()) == null ? void 0 : b.selection.value.selectedIds) || [], c = H("copy-widget"), i = o.source || "api";
-      z();
-      const u = e.widgetAdapter, l = w(), m = N(c, "copy-widget", i, n), g = u != null && u.copyWidget ? await u.copyWidget(m) : u ? void 0 : {
+      var y, p, x;
+      const a = Be(t), s = a.length ? a : ((y = S()) == null ? void 0 : y.selection.value.selectedIds) || [], c = K("copy-widget"), i = o.source || "api";
+      ne();
+      const u = e.widgetAdapter, l = k(), m = me(c, "copy-widget", i, s), f = u != null && u.copyWidget ? await u.copyWidget(m) : u ? void 0 : {
         ok: !0,
-        diagnostics: [Y(
+        diagnostics: [V(
           "shell-widget-payload-unhandled",
           "info",
           "Widget adapter was not provided; copied layout/editor metadata only.",
           { actionId: c, actionType: "copy-widget", source: i, reason: "adapter-unavailable", recoverable: !0 }
         )]
       };
-      return ce("copy-widget", {
+      return se("copy-widget", {
         type: "copy",
-        targetIds: n,
+        targetIds: s,
         payload: {
           cols: (p = l == null ? void 0 : l.gridSettings) == null ? void 0 : p.columns,
-          maxRows: (k = l == null ? void 0 : l.gridSettings) == null ? void 0 : k.maxRows,
+          maxRows: (x = l == null ? void 0 : l.gridSettings) == null ? void 0 : x.maxRows,
           breakpoint: l == null ? void 0 : l.requestedBreakpoint,
           layoutId: l == null ? void 0 : l.layoutId,
           viewFormat: l == null ? void 0 : l.viewFormat
         }
       }, {
         source: i,
-        itemIds: n,
-        data: g,
-        contextExtra: { payload: g },
-        prepare: async (S) => {
-          const P = await xe(S);
-          return P || ((g == null ? void 0 : g.ok) === !1 ? g : null);
+        itemIds: s,
+        data: f,
+        contextExtra: { payload: f },
+        prepare: async (w) => {
+          const v = await Ae(w);
+          return v || ((f == null ? void 0 : f.ok) === !1 ? f : null);
         }
       });
     },
     cutWidget: async (t, o = {}) => {
-      var g;
-      const a = Ee(t), n = a.length ? a : ((g = D()) == null ? void 0 : g.selection.value.selectedIds) || [], c = H("cut-widget"), i = o.source || "api";
-      if (z(), n.length === 0)
-        return C("cut-widget", i, "selection-count", [], [], c);
-      const u = await F.copyWidget(n, { source: i });
+      var f;
+      const a = Be(t), s = a.length ? a : ((f = S()) == null ? void 0 : f.selection.value.selectedIds) || [], c = K("cut-widget"), i = o.source || "api";
+      if (ne(), s.length === 0)
+        return W("cut-widget", i, "selection-count", [], [], c);
+      const u = await L.copyWidget(s, { source: i });
       if (!u.ok) return u;
-      const l = ge("prepareRemoveWidget"), m = await ce("cut-widget", {
+      const l = he("prepareRemoveWidget"), m = await se("cut-widget", {
         id: c,
         type: "delete",
-        targetIds: n
+        targetIds: s
       }, {
         source: i,
-        itemIds: n,
+        itemIds: s,
         data: { clipboardActionId: u.actionId },
-        prepare: async (b) => {
+        prepare: async (y) => {
           if (!o.skipConfirm && e.confirm) {
-            const p = await e.confirm(b), k = Ze(p);
-            if (k) return k;
+            const p = await e.confirm(y), x = it(p);
+            if (x) return x;
           }
-          return (l == null ? void 0 : l(b)) || null;
+          return (l == null ? void 0 : l(y)) || null;
         },
-        commit: ye,
-        rollback: pe
+        commit: Ie,
+        rollback: be
       });
-      return m.ok && ae(c, n), m;
+      return m.ok && I(c, s), m;
     },
     placeClipboard: async (t, o = {}) => {
-      var b, p, k, S, P, K, W;
-      const a = D(), n = o.source || "api", c = H("place-clipboard");
-      if (z(), !a) return C("place-clipboard", n, "missing-editor");
-      const i = we(t, o), u = i === "auto" ? qe() : "cursor", l = ke(o, u), m = fe(t || null, o, u);
-      if (!m.ok) return C("place-clipboard", n, m.reason, [], m.diagnostics);
-      const g = await a.beginPlacement({
+      var y, p, x, w, v, $, P;
+      const a = S(), s = o.source || "api", c = K("place-clipboard");
+      if (ne(), !a) return W("place-clipboard", s, "missing-editor");
+      const i = Ee(t, o), u = i === "auto" ? at() : "cursor", l = Se(o, u), m = pe(t || null, o, u);
+      if (!m.ok) return W("place-clipboard", s, m.reason, [], m.diagnostics);
+      const f = await a.beginPlacement({
         source: "paste",
         commandType: "paste",
         strategy: l,
-        ...ve(o),
+        ...Ce(o),
         placementIntent: i,
         placementAnchor: i === "here" ? "top-left" : void 0,
         cursor: m.position.source !== "none" ? {
@@ -1698,125 +1874,127 @@ function ro(e = {}) {
           clientX: m.position.clientX,
           clientY: m.position.clientY
         } : void 0,
-        cols: ((p = (b = w()) == null ? void 0 : b.gridSettings) == null ? void 0 : p.columns) || m.position.cols || 12,
-        maxRows: ee((S = (k = w()) == null ? void 0 : k.gridSettings) == null ? void 0 : S.maxRows) ? ((P = w()) == null ? void 0 : P.gridSettings).maxRows : 1 / 0,
+        cols: ((p = (y = k()) == null ? void 0 : y.gridSettings) == null ? void 0 : p.columns) || m.position.cols || 12,
+        maxRows: O((w = (x = k()) == null ? void 0 : x.gridSettings) == null ? void 0 : w.maxRows) ? ((v = k()) == null ? void 0 : v.gridSettings).maxRows : 1 / 0,
         origin: "dashboard-editor-shell"
       });
-      return g.session ? (_e(g.session, {
+      return f.session ? (dt(f.session, {
         actionId: c,
         actionType: "place-clipboard",
-        source: n,
+        source: s,
         position: m.position,
-        prepare: ge("preparePasteWidget"),
-        commit: ye,
-        rollback: pe,
+        prepare: he("preparePasteWidget"),
+        commit: Ie,
+        rollback: be,
         contextExtra: { placementIntent: i }
-      }), ze("place-clipboard", n, g.session, m.position, c)) : C(
+      }), tt("place-clipboard", s, f.session, m.position, c)) : W(
         "place-clipboard",
-        n,
-        ((K = g.blocked) == null ? void 0 : K.reason) || "clipboard-unavailable",
-        ((W = g.blocked) == null ? void 0 : W.itemIds) || [],
+        s,
+        (($ = f.blocked) == null ? void 0 : $.reason) || "clipboard-unavailable",
+        ((P = f.blocked) == null ? void 0 : P.itemIds) || [],
         [],
         c
       );
     },
     commitPlacement: async (t = {}) => {
-      var m, g;
-      const o = D(), a = t.source || "api";
-      if (!o) return C("place-clipboard", a, "missing-editor");
-      const n = (m = o.placementSession.value) == null ? void 0 : m.id, c = n && M.get(n) || null, i = await o.commitPlacement({
-        source: je(a),
+      var m, f;
+      const o = S(), a = t.source || "api";
+      if (!o) return W("place-clipboard", a, "missing-editor");
+      const s = (m = o.placementSession.value) == null ? void 0 : m.id, c = s && E.get(s) || null;
+      c && (c.rollbackCheckpoint = o.createRollbackCheckpoint("shell-placement-write-back"));
+      const i = await o.commitPlacement({
+        source: Ue(a),
         autoCancelOnBlocked: t.autoCancelOnBlocked
-      }), u = await et(i);
+      }), u = await ut(i);
       if (u) return u;
-      const l = ((g = Oe(i)) == null ? void 0 : g.pending) || c;
-      return vt(i, l || null, a);
+      const l = ((f = lt(i)) == null ? void 0 : f.pending) || c;
+      return Ht(i, l || null, a);
     },
     pasteWidget: async (t, o = {}) => {
-      var m, g, b, p, k;
-      const a = se();
+      var m, f, y, p, x;
+      const a = j();
       if (o.placementMode === "interactive")
-        return F.placeClipboard(t, o);
+        return L.placeClipboard(t, o);
       if ((a == null ? void 0 : a.mode) === "interactive" && !t)
-        return F.placeClipboard(t, {
+        return L.placeClipboard(t, {
           ...o,
           strategy: o.strategy || "cursor",
           placementIntent: o.placementIntent || "here",
           placementMode: "interactive"
         });
-      const n = we(t, o), c = n === "auto" ? qe() : "cursor", i = ke(o, c), u = fe(t, o, c);
-      if (!u.ok) return C("paste-widget", o.source || "api", u.reason, [], u.diagnostics);
-      const l = ge("preparePasteWidget");
-      return ce("paste-widget", {
+      const s = Ee(t, o), c = s === "auto" ? at() : "cursor", i = Se(o, c), u = pe(t, o, c);
+      if (!u.ok) return W("paste-widget", o.source || "api", u.reason, [], u.diagnostics);
+      const l = he("preparePasteWidget");
+      return se("paste-widget", {
         type: "paste",
         payload: {
           strategy: i,
-          ...ve(o),
+          ...Ce(o),
           cursor: { x: u.position.x, y: u.position.y },
-          cols: ((g = (m = w()) == null ? void 0 : m.gridSettings) == null ? void 0 : g.columns) || u.position.cols || 12,
-          maxRows: ee((p = (b = w()) == null ? void 0 : b.gridSettings) == null ? void 0 : p.maxRows) ? ((k = w()) == null ? void 0 : k.gridSettings).maxRows : 1 / 0,
+          cols: ((f = (m = k()) == null ? void 0 : m.gridSettings) == null ? void 0 : f.columns) || u.position.cols || 12,
+          maxRows: O((p = (y = k()) == null ? void 0 : y.gridSettings) == null ? void 0 : p.maxRows) ? ((x = k()) == null ? void 0 : x.gridSettings).maxRows : 1 / 0,
           list: u.position.list,
           source: u.position.source,
-          placementIntent: n,
-          placementAnchor: n === "here" ? "top-left" : void 0
+          placementIntent: s,
+          placementAnchor: s === "here" ? "top-left" : void 0
         }
       }, {
         source: o.source || "api",
         position: u.position,
-        contextExtra: { placementIntent: n },
+        contextExtra: { placementIntent: s },
         prepare: l,
-        commit: ye,
-        rollback: pe
+        commit: Ie,
+        rollback: be
       });
     },
     duplicateWidget: async (t, o = {}) => {
       var i, u, l;
-      const a = Ee(t), n = a.length ? a : ((i = D()) == null ? void 0 : i.selection.value.selectedIds) || [], c = ge("prepareDuplicateWidget");
-      return ce("duplicate-widget", {
+      const a = Be(t), s = a.length ? a : ((i = S()) == null ? void 0 : i.selection.value.selectedIds) || [], c = he("prepareDuplicateWidget");
+      return se("duplicate-widget", {
         type: "duplicate",
-        targetIds: n,
-        payload: { strategy: "nearest-fit", cols: ((l = (u = w()) == null ? void 0 : u.gridSettings) == null ? void 0 : l.columns) || 12 }
+        targetIds: s,
+        payload: { strategy: "nearest-fit", cols: ((l = (u = k()) == null ? void 0 : u.gridSettings) == null ? void 0 : l.columns) || 12 }
       }, {
         source: o.source || "api",
-        itemIds: n,
+        itemIds: s,
         prepare: c,
-        commit: ye,
-        rollback: pe
+        commit: Ie,
+        rollback: be
       });
     },
     removeWidget: async (t, o = {}) => {
       var u;
-      const a = Ee(t), n = a.length ? a : ((u = D()) == null ? void 0 : u.selection.value.selectedIds) || [], c = o.source || "api", i = ge("prepareRemoveWidget");
-      return ce("remove-widget", {
+      const a = Be(t), s = a.length ? a : ((u = S()) == null ? void 0 : u.selection.value.selectedIds) || [], c = o.source || "api", i = he("prepareRemoveWidget");
+      return se("remove-widget", {
         type: "delete",
-        targetIds: n
+        targetIds: s
       }, {
         source: c,
-        itemIds: n,
+        itemIds: s,
         prepare: async (l) => {
           if (!o.skipConfirm && e.confirm) {
-            const m = await e.confirm(l), g = Ze(m);
-            if (g) return g;
+            const m = await e.confirm(l), f = it(m);
+            if (f) return f;
           }
           return (i == null ? void 0 : i(l)) || null;
         },
-        commit: ye,
-        rollback: pe
+        commit: Ie,
+        rollback: be
       });
     },
     copyWidgetReference: async (t, o = {}) => {
-      const a = H("copy-reference"), n = o.source || "api", c = e.referenceAdapter;
+      const a = K("copy-reference"), s = o.source || "api", c = e.referenceAdapter;
       if (!(c != null && c.copyReference))
-        return C("copy-reference", n, "adapter-unavailable", [t], [], a);
-      const i = N(a, "copy-reference", n, [t]), u = c.canCopyReference ? await c.canCopyReference(i) : { available: !0 };
+        return W("copy-reference", s, "adapter-unavailable", [t], [], a);
+      const i = me(a, "copy-reference", s, [t]), u = c.canCopyReference ? await c.canCopyReference(i) : { available: !0 };
       if (!u.available)
-        return C("copy-reference", n, u.reason || "adapter-unavailable", [t], u.diagnostics || [], a);
-      const l = await c.copyReference(i), m = q({
+        return W("copy-reference", s, u.reason || "adapter-unavailable", [t], u.diagnostics || [], a);
+      const l = await c.copyReference(i), m = Y({
         ok: l.ok,
         status: l.ok ? "success" : l.status || "blocked",
         actionId: a,
         actionType: "copy-reference",
-        source: n,
+        source: s,
         itemIds: [t],
         affectedIds: [t],
         adapter: {
@@ -1833,21 +2011,21 @@ function ro(e = {}) {
         },
         diagnostics: l.diagnostics || []
       });
-      return G(A, m, R()), m;
+      return N(M, m, C()), m;
     },
     pasteWidgetReference: async (t, o = {}) => {
-      var i, u, l, m, g, b, p;
+      var i, u, l, m, f, y, p;
       if (!((i = e.referenceAdapter) != null && i.preparePasteReference))
-        return C("paste-reference", o.source || "api", "adapter-unavailable");
-      const a = we(t, o), n = ke(o, "cursor"), c = fe(t, o, "cursor");
-      return c.ok ? ce("paste-reference", {
+        return W("paste-reference", o.source || "api", "adapter-unavailable");
+      const a = Ee(t, o), s = Se(o, "cursor"), c = pe(t, o, "cursor");
+      return c.ok ? se("paste-reference", {
         type: "add",
         payload: {
           item: { i: `reference-${Date.now().toString(36)}`, x: c.position.x, y: c.position.y, w: ((u = o.itemSize) == null ? void 0 : u.w) || 2, h: ((l = o.itemSize) == null ? void 0 : l.h) || 2 },
-          strategy: n,
+          strategy: s,
           cursor: { x: c.position.x, y: c.position.y },
-          cols: ((g = (m = w()) == null ? void 0 : m.gridSettings) == null ? void 0 : g.columns) || 12,
-          maxRows: ((p = (b = w()) == null ? void 0 : b.gridSettings) == null ? void 0 : p.maxRows) || 1 / 0,
+          cols: ((f = (m = k()) == null ? void 0 : m.gridSettings) == null ? void 0 : f.columns) || 12,
+          maxRows: ((p = (y = k()) == null ? void 0 : y.gridSettings) == null ? void 0 : p.maxRows) || 1 / 0,
           list: c.position.list,
           placementIntent: a,
           placementAnchor: a === "here" ? "top-left" : void 0
@@ -1856,29 +2034,29 @@ function ro(e = {}) {
         source: o.source || "api",
         position: c.position,
         contextExtra: { placementIntent: a },
-        prepare: async (k) => {
-          var P, K;
-          const S = await ((P = Ue("preparePasteReference")) == null ? void 0 : P(k));
-          return S && "kind" in S && ((K = S.newIds) != null && K[0]) && (k.payload = { itemId: S.newIds[0] }), S;
+        prepare: async (x) => {
+          var v, $;
+          const w = await ((v = nt("preparePasteReference")) == null ? void 0 : v(x));
+          return w && "kind" in w && (($ = w.newIds) != null && $[0]) && (x.payload = { itemId: w.newIds[0] }), w;
         },
-        commit: Qe,
-        rollback: Je
-      }) : C("paste-reference", o.source || "api", c.reason, [], c.diagnostics);
+        commit: ct,
+        rollback: rt
+      }) : W("paste-reference", o.source || "api", c.reason, [], c.diagnostics);
     },
     replaceReferenceWithWidgetCopy: async (t, o = {}) => {
       var i;
       if (!((i = e.referenceAdapter) != null && i.prepareReplaceReferenceWithWidgetCopy))
-        return C("replace-reference", o.source || "api", "adapter-unavailable", [t]);
-      const a = o.source || "api", n = H("replace-reference"), c = N(n, "replace-reference", a, [t]);
-      return He({
-        actionId: n,
+        return W("replace-reference", o.source || "api", "adapter-unavailable", [t]);
+      const a = o.source || "api", s = K("replace-reference"), c = me(s, "replace-reference", a, [t]);
+      return Ge({
+        actionId: s,
         actionType: "replace-reference",
         source: a,
         itemIds: [t],
         context: c,
-        profile: R(),
-        emit: A,
-        prepare: Ue("prepareReplaceReferenceWithWidgetCopy"),
+        profile: C(),
+        emit: M,
+        prepare: nt("prepareReplaceReferenceWithWidgetCopy"),
         mutate: (u) => {
           var l, m;
           return {
@@ -1887,58 +2065,58 @@ function ro(e = {}) {
             data: { sourceItemId: t, newItemId: (m = u == null ? void 0 : u.newIds) == null ? void 0 : m[0] }
           };
         },
-        commit: Qe,
-        rollback: Je
+        commit: ct,
+        rollback: rt
       });
     },
     openWidgetPalette: async (t, o = {}) => {
       var p;
-      const a = H("open-palette"), n = o.source || "api";
+      const a = K("open-palette"), s = o.source || "api";
       if (!((p = e.palette) != null && p.open))
-        return C("open-palette", n, "adapter-unavailable", [], [], a);
-      const c = we(t, o), i = fe(t, o, "cursor"), u = N(a, "open-palette", n, [], i.ok ? i.position : void 0, { placementIntent: c }), l = await xe(u);
+        return W("open-palette", s, "adapter-unavailable", [], [], a);
+      const c = Ee(t, o), i = pe(t, o, "cursor"), u = me(a, "open-palette", s, [], i.ok ? i.position : void 0, { placementIntent: c }), l = await Ae(u);
       if (l)
-        return C("open-palette", n, l.reason || "guard-blocked", [], l.diagnostics || [], a);
+        return W("open-palette", s, l.reason || "guard-blocked", [], l.diagnostics || [], a);
       const m = await e.palette.open(u);
       if (m && typeof m == "object" && "ok" in m && !m.ok)
-        return C("open-palette", n, m.reason || "adapter-rejected", [], m.diagnostics || [], a);
-      const g = Array.isArray(m) ? m : m && typeof m == "object" && !("ok" in m) ? [m] : [];
-      if (g.length && o.autoAddReturnedTemplate !== !1)
-        return F.addWidgetFromTemplate(g[0], i.ok ? i.position : null, {
+        return W("open-palette", s, m.reason || "adapter-rejected", [], m.diagnostics || [], a);
+      const f = Array.isArray(m) ? m : m && typeof m == "object" && !("ok" in m) ? [m] : [];
+      if (f.length && o.autoAddReturnedTemplate !== !1)
+        return L.addWidgetFromTemplate(f[0], i.ok ? i.position : null, {
           source: "palette",
           strategy: o.strategy,
           placementIntent: c,
           placementMode: o.placementMode
         });
-      const b = q({
+      const y = Y({
         ok: !0,
         status: "success",
         actionId: a,
         actionType: "open-palette",
-        source: n,
+        source: s,
         itemIds: [],
         affectedIds: [],
         position: i.ok ? i.position : void 0,
         data: m,
         diagnostics: (i.ok, i.diagnostics)
       });
-      return G(A, b, R()), b;
+      return N(M, y, C()), y;
     },
     addWidgetFromTemplate: async (t, o, a = {}) => {
-      var l, m, g, b, p, k, S, P, K, W, x;
-      const n = we(o, a), c = ke(a, "cursor"), i = fe(o, { ...a, itemSize: { w: t.w || 2, h: t.h || 2 } }, "cursor");
-      if (!i.ok) return C("add-widget", a.source || "api", i.reason, [], i.diagnostics);
+      var l, m, f, y, p, x, w, v, $, P, U;
+      const s = Ee(o, a), c = Se(a, "cursor"), i = pe(o, { ...a, itemSize: { w: t.w || 2, h: t.h || 2 } }, "cursor");
+      if (!i.ok) return W("add-widget", a.source || "api", i.reason, [], i.diagnostics);
       if (a.placementMode === "interactive") {
-        const $ = D(), V = a.source || "api", Pe = H("add-widget");
-        if (!$) return C("add-widget", V, "missing-editor");
-        const le = await $.beginPlacement({
+        const H = S(), D = a.source || "api", Pe = K("add-widget");
+        if (!H) return W("add-widget", D, "missing-editor");
+        const de = await H.beginPlacement({
           source: "template",
           commandType: "add",
           items: [{
             ...t,
             i: t.i || t.id,
-            x: ee(t.x) ? t.x : i.position.x,
-            y: ee(t.y) ? t.y : i.position.y,
+            x: O(t.x) ? t.x : i.position.x,
+            y: O(t.y) ? t.y : i.position.y,
             w: t.w || 2,
             h: t.h || 2
           }],
@@ -1949,9 +2127,9 @@ function ro(e = {}) {
             }
           } : void 0,
           strategy: c,
-          ...ve(a),
-          placementIntent: n,
-          placementAnchor: n === "here" ? "top-left" : void 0,
+          ...Ce(a),
+          placementIntent: s,
+          placementAnchor: s === "here" ? "top-left" : void 0,
           cursor: {
             x: i.position.x,
             y: i.position.y,
@@ -1959,84 +2137,84 @@ function ro(e = {}) {
             clientX: i.position.clientX,
             clientY: i.position.clientY
           },
-          cols: ((m = (l = w()) == null ? void 0 : l.gridSettings) == null ? void 0 : m.columns) || i.position.cols || 12,
-          maxRows: ee((b = (g = w()) == null ? void 0 : g.gridSettings) == null ? void 0 : b.maxRows) ? ((p = w()) == null ? void 0 : p.gridSettings).maxRows : 1 / 0,
+          cols: ((m = (l = k()) == null ? void 0 : l.gridSettings) == null ? void 0 : m.columns) || i.position.cols || 12,
+          maxRows: O((y = (f = k()) == null ? void 0 : f.gridSettings) == null ? void 0 : y.maxRows) ? ((p = k()) == null ? void 0 : p.gridSettings).maxRows : 1 / 0,
           origin: "dashboard-editor-shell"
         });
-        return le.session ? (_e(le.session, {
+        return de.session ? (dt(de.session, {
           actionId: Pe,
           actionType: "add-widget",
-          source: V,
+          source: D,
           position: i.position,
-          contextExtra: { placementIntent: n, template: t }
-        }), ze("add-widget", V, le.session, i.position, Pe)) : C("add-widget", V, ((k = le.blocked) == null ? void 0 : k.reason) || "invalid-input", ((S = le.blocked) == null ? void 0 : S.itemIds) || []);
+          contextExtra: { placementIntent: s, template: t }
+        }), tt("add-widget", D, de.session, i.position, Pe)) : W("add-widget", D, ((x = de.blocked) == null ? void 0 : x.reason) || "invalid-input", ((w = de.blocked) == null ? void 0 : w.itemIds) || []);
       }
-      const u = ge("prepareAddWidget");
-      return ce("add-widget", {
+      const u = he("prepareAddWidget");
+      return se("add-widget", {
         type: "add",
         payload: {
           item: {
             ...t,
             i: t.i || t.id,
-            x: ee(t.x) ? t.x : i.position.x,
-            y: ee(t.y) ? t.y : i.position.y,
+            x: O(t.x) ? t.x : i.position.x,
+            y: O(t.y) ? t.y : i.position.y,
             w: t.w || 2,
             h: t.h || 2
           },
           strategy: c,
-          ...ve(a),
+          ...Ce(a),
           cursor: { x: i.position.x, y: i.position.y },
-          cols: ((K = (P = w()) == null ? void 0 : P.gridSettings) == null ? void 0 : K.columns) || 12,
-          maxRows: ((x = (W = w()) == null ? void 0 : W.gridSettings) == null ? void 0 : x.maxRows) || 1 / 0,
+          cols: (($ = (v = k()) == null ? void 0 : v.gridSettings) == null ? void 0 : $.columns) || 12,
+          maxRows: ((U = (P = k()) == null ? void 0 : P.gridSettings) == null ? void 0 : U.maxRows) || 1 / 0,
           list: i.position.list,
-          placementIntent: n,
-          placementAnchor: n === "here" ? "top-left" : void 0
+          placementIntent: s,
+          placementAnchor: s === "here" ? "top-left" : void 0
         }
       }, {
         source: a.source || "api",
         position: i.position,
-        contextExtra: { template: t, payload: t.payload, placementIntent: n },
+        contextExtra: { template: t, payload: t.payload, placementIntent: s },
         prepare: u,
-        commit: ye,
-        rollback: pe
-      }).then(($) => {
-        const V = $.affectedIds[0];
-        return $.ok && V && (F.selectItem(V, { source: a.source || "api" }), F.highlightItem(V, { source: a.source || "api", durationMs: 1200 })), $;
+        commit: Ie,
+        rollback: be
+      }).then((H) => {
+        const D = H.affectedIds[0];
+        return H.ok && D && (L.selectItem(D, { source: a.source || "api" }), L.highlightItem(D, { source: a.source || "api", durationMs: 1200 })), H;
       });
     },
     handleExternalDrop: async (t, o, a = {}) => {
-      const n = de(o, { source: "drop" });
-      if (!n.ok) return C("external-drop", "drop", n.reason, [], n.diagnostics);
+      const s = fe(o, { source: "drop" });
+      if (!s.ok) return W("external-drop", "drop", s.reason, [], s.diagnostics);
       if (t.preview) {
-        const c = q({
+        const c = Y({
           ok: !0,
           status: "success",
-          actionId: H("external-drop"),
+          actionId: K("external-drop"),
           actionType: "external-drop",
           source: "drop",
           itemIds: [],
           affectedIds: [],
-          position: n.position,
+          position: s.position,
           data: { preview: !0, payload: t.metadata },
-          diagnostics: n.diagnostics
+          diagnostics: s.diagnostics
         });
-        return G(A, c, R()), c;
+        return N(M, c, C()), c;
       }
-      return F.addWidgetFromTemplate(t.template || { w: 2, h: 2, payload: t.payload }, n.position, {
+      return L.addWidgetFromTemplate(t.template || { w: 2, h: 2, payload: t.payload }, s.position, {
         source: a.source || "drop",
         strategy: a.strategy
       });
     },
     moveAllWidgets: async (t, o, a = {}) => {
-      var g, b;
-      const n = H("move-all"), c = a.source || "api", i = w(), u = h();
-      if (!i) return C("move-all", c, "missing-runtime", [], [], n);
-      if (!ee(t) || !ee(o))
-        return C("move-all", c, "invalid-input", [], [], n);
-      const l = N(n, "move-all", c, i.activeItemIds), m = await xe(l);
-      if (m) return C("move-all", c, m.reason || "guard-blocked", i.activeItemIds, m.diagnostics || [], n);
+      var f, y;
+      const s = K("move-all"), c = a.source || "api", i = k(), u = X();
+      if (!i) return W("move-all", c, "missing-runtime", [], [], s);
+      if (!O(t) || !O(o))
+        return W("move-all", c, "invalid-input", [], [], s);
+      const l = me(s, "move-all", c, i.activeItemIds), m = await Ae(l);
+      if (m) return W("move-all", c, m.reason || "guard-blocked", i.activeItemIds, m.diagnostics || [], s);
       if (u) {
-        const p = Et(u, {
+        const p = qt(u, {
           layoutId: i.layoutId,
           profileId: i.resolvedProfileId,
           dx: t,
@@ -2044,45 +2222,45 @@ function ro(e = {}) {
           clampNegative: a.clampNegative !== !1,
           policy: a.repair,
           createMissingProfile: e.createMissingProfileOnEdit
-        }), k = p.diagnostics.map(
-          (P) => Y(
-            P.code,
-            P.level,
-            P.message,
+        }), x = p.diagnostics.map(
+          (v) => V(
+            v.code,
+            v.level,
+            v.message,
             {
-              actionId: n,
+              actionId: s,
               actionType: "move-all",
               source: c,
-              itemId: P.itemId,
-              layoutId: P.layoutId || i.layoutId,
-              resolvedProfileId: P.profileId || i.resolvedProfileId,
-              targetView: P.targetView || i.targetView,
-              path: P.path,
-              details: P.details
+              itemId: v.itemId,
+              layoutId: v.layoutId || i.layoutId,
+              resolvedProfileId: v.profileId || i.resolvedProfileId,
+              targetView: v.targetView || i.targetView,
+              path: v.path,
+              details: v.details
             }
           )
         );
-        p.ok && (j(p.document), T(n, p.document, i));
-        const S = q({
+        p.ok && (Re(p.document), ve(s, p.document, i));
+        const w = Y({
           ok: p.ok,
           status: p.ok ? p.operation.status === "noop" ? "noop" : "success" : "blocked",
-          actionId: n,
+          actionId: s,
           actionType: "move-all",
           source: c,
           itemIds: i.activeItemIds,
-          affectedIds: ((g = p.operation) == null ? void 0 : g.affectedIds) || i.activeItemIds,
+          affectedIds: ((f = p.operation) == null ? void 0 : f.affectedIds) || i.activeItemIds,
           writeResult: p.ok ? { ok: !0, document: p.document, diagnostics: p.diagnostics } : { ok: !1, document: p.document, error: p.error, diagnostics: p.diagnostics },
           proposedDocument: p.document,
-          patches: (b = p.operation) == null ? void 0 : b.patches,
+          patches: (y = p.operation) == null ? void 0 : y.patches,
           data: {
             requestedDelta: { dx: t, dy: o },
             operation: p.operation
           },
-          diagnostics: k
+          diagnostics: x
         });
-        return G(A, S, R()), S;
+        return N(M, w, C()), w;
       }
-      return ce("move-all", {
+      return se("move-all", {
         type: "move",
         targetIds: i.activeItemIds,
         payload: { dx: t, dy: o, cols: i.gridSettings.columns }
@@ -2091,77 +2269,77 @@ function ro(e = {}) {
         itemIds: i.activeItemIds
       });
     },
-    undo: async (t = {}) => Ne("undo", t),
-    redo: async (t = {}) => Ne("redo", t),
+    undo: async (t = {}) => ot("undo", t),
+    redo: async (t = {}) => ot("redo", t),
     bindKeyboard: (t) => {
-      const o = e.keyboard && typeof e.keyboard == "object" ? e.keyboard : {}, a = t || o.target || (typeof window != "undefined" ? window : null), n = typeof a == "string" && typeof document != "undefined" ? document.querySelector(a) || window : a;
-      if (!n || typeof n.addEventListener != "function")
+      const o = e.keyboard && typeof e.keyboard == "object" ? e.keyboard : {}, a = t || o.target || (typeof window != "undefined" ? window : null), s = typeof a == "string" && typeof document != "undefined" ? document.querySelector(a) || window : a;
+      if (!s || typeof s.addEventListener != "function")
         return () => {
         };
       const c = (u) => {
-        var K;
+        var $;
         const l = u;
-        if (_t(l, o)) return;
-        const m = Ot(o.platform), b = (o.shortcuts || eo).find((W) => to(l, W, m));
-        if (!b) return;
+        if (ho(l, o)) return;
+        const m = Io(o.platform), y = (o.shortcuts || bo).find((P) => ko(l, P, m));
+        if (!y) return;
         l.preventDefault(), l.stopPropagation(), l.stopImmediatePropagation();
-        const p = b.source || "keyboard", k = ((K = D()) == null ? void 0 : K.selection.value.selectedIds) || [], S = (W = {}) => oo(o, b, W, p);
+        const p = y.source || "keyboard", x = (($ = S()) == null ? void 0 : $.selection.value.selectedIds) || [], w = (P = {}) => wo(o, y, P, p);
         (async () => {
-          var W, x;
-          if (b.action === "copy-widget")
-            return F.copyWidget(k, { source: p });
-          if (b.action === "cut-widget")
-            return F.cutWidget(k, { source: p });
-          if (b.action === "copy-reference")
-            return k[0] ? F.copyWidgetReference(k[0], { source: p }) : C("copy-reference", p, "selection-count");
-          if (b.action === "paste-widget" || b.action === "paste")
-            return F.pasteWidget(null, S());
-          if (b.action === "place-clipboard")
-            return F.placeClipboard(null, S({
+          var P, U;
+          if (y.action === "copy-widget")
+            return L.copyWidget(x, { source: p });
+          if (y.action === "cut-widget")
+            return L.cutWidget(x, { source: p });
+          if (y.action === "copy-reference")
+            return x[0] ? L.copyWidgetReference(x[0], { source: p }) : W("copy-reference", p, "selection-count");
+          if (y.action === "paste-widget" || y.action === "paste")
+            return L.pasteWidget(null, w());
+          if (y.action === "place-clipboard")
+            return L.placeClipboard(null, w({
               strategy: "cursor",
               placementIntent: "here",
               placementMode: "interactive"
             }));
-          if (b.action === "paste-reference")
-            return F.pasteWidgetReference(null, S({
-              strategy: (W = e.menu) == null ? void 0 : W.defaultReferencePasteStrategy
+          if (y.action === "paste-reference")
+            return L.pasteWidgetReference(null, w({
+              strategy: (P = e.menu) == null ? void 0 : P.defaultReferencePasteStrategy
             }));
-          if (b.action === "remove-widget") return F.removeWidget(k, { source: p });
-          if (b.action === "undo") return F.undo({ source: p });
-          if (b.action === "redo") return F.redo({ source: p });
-          if (b.action === "open-palette")
-            return F.openWidgetPalette(null, S({
-              strategy: (x = e.menu) == null ? void 0 : x.defaultAddStrategy
+          if (y.action === "remove-widget") return L.removeWidget(x, { source: p });
+          if (y.action === "undo") return L.undo({ source: p });
+          if (y.action === "redo") return L.redo({ source: p });
+          if (y.action === "open-palette")
+            return L.openWidgetPalette(null, w({
+              strategy: (U = e.menu) == null ? void 0 : U.defaultAddStrategy
             }));
-          if (b.action === "prepare-dashboard-menu")
-            return F.prepareDashboardContextMenu(null, { source: p }), null;
-          if (b.action === "move-all") {
-            const $ = o.moveAllStep || { dx: 0, dy: 1 };
-            return F.moveAllWidgets($.dx, $.dy, { source: p });
+          if (y.action === "prepare-dashboard-menu")
+            return L.prepareDashboardContextMenu(null, { source: p }), null;
+          if (y.action === "move-all") {
+            const H = o.moveAllStep || { dx: 0, dy: 1 };
+            return L.moveAllWidgets(H.dx, H.dy, { source: p });
           }
           return null;
-        })().then((W) => {
-          var x, $, V;
-          W && !W.ok && ((V = e.onMessage) == null || V.call(e, {
-            code: ((x = W.diagnostics[0]) == null ? void 0 : x.code) || W.status,
-            level: W.status === "error" ? "error" : "warning",
-            message: (($ = W.diagnostics[0]) == null ? void 0 : $.message) || `Action ${W.actionType} was not applied.`,
-            itemIds: W.itemIds,
-            recoverable: W.status !== "error"
+        })().then((P) => {
+          var U, H, D;
+          P && !P.ok && ((D = e.onMessage) == null || D.call(e, {
+            code: ((U = P.diagnostics[0]) == null ? void 0 : U.code) || P.status,
+            level: P.status === "error" ? "error" : "warning",
+            message: ((H = P.diagnostics[0]) == null ? void 0 : H.message) || `Action ${P.actionType} was not applied.`,
+            itemIds: P.itemIds,
+            recoverable: P.status !== "error"
           }));
         });
       };
-      n.addEventListener("keydown", c, !0);
-      const i = () => n.removeEventListener("keydown", c, !0);
-      return f.push(i), i;
+      s.addEventListener("keydown", c, !0);
+      const i = () => s.removeEventListener("keydown", c, !0);
+      return g.push(i), i;
     },
-    stop: () => We()
-  }, xt = (t) => {
+    stop: () => Xe()
+  }, zt = (t) => {
     if (!t || typeof t.addEventListener != "function") return () => {
     };
     const o = (a) => {
-      const n = de(a, { source: "pointer" });
-      n.ok && (r.value = { ...r.value, lastPointerPosition: n.position });
+      const s = fe(a, { source: "pointer" });
+      s.ok && (r.value = { ...r.value, lastPointerPosition: s.position });
     };
     return t.addEventListener("pointermove", o), t.addEventListener("mousemove", o), t.addEventListener("contextmenu", o), () => {
       t.removeEventListener("pointermove", o), t.removeEventListener("mousemove", o), t.removeEventListener("contextmenu", o);
@@ -2169,72 +2347,105 @@ function ro(e = {}) {
   };
   d.push(Fe(
     () => {
-      var t, o, a, n;
+      var t, o, a, s;
       return [
-        w(),
-        (t = D()) == null ? void 0 : t.selection.value,
-        (o = D()) == null ? void 0 : o.dirty.value,
-        (a = D()) == null ? void 0 : a.conflict.value,
-        (n = D()) == null ? void 0 : n.lastResult.value,
-        ue(e.mode),
-        oe()
+        k(),
+        (t = S()) == null ? void 0 : t.selection.value,
+        (o = S()) == null ? void 0 : o.dirty.value,
+        (a = S()) == null ? void 0 : a.conflict.value,
+        (s = S()) == null ? void 0 : s.lastResult.value,
+        ge(e.mode),
+        T()
       ];
     },
-    ne,
+    et,
     { deep: !0, immediate: !0 }
   )), d.push(Fe(
     () => {
       var t;
-      return (t = D()) == null ? void 0 : t.lastResult.value;
+      return (t = S()) == null ? void 0 : t.lastResult.value;
     },
     (t) => {
-      t && et(t);
+      t && ut(t);
     }
   ));
-  let re = null;
+  let ce = null;
+  const Kt = (t) => {
+    if (_()) {
+      if (t.type === "command-start") {
+        if (z.has(t.command.id || "") || !Qe(t.command)) return;
+        const o = S();
+        o && t.command.id && q.set(
+          t.command.id,
+          o.createRollbackCheckpoint("shell-managed-command-start")
+        );
+        return;
+      }
+      if (t.type === "command-blocked" || t.type === "command-error") {
+        if (z.has(t.result.id)) {
+          q.delete(t.result.id);
+          return;
+        }
+        $t(t.command, t.result);
+        return;
+      }
+      if (t.type === "command-commit") {
+        if (z.has(t.result.id)) return;
+        Bt(t.command, t.result);
+      }
+    }
+  };
   d.push(Fe(
-    () => oe(),
+    () => S(),
     (t) => {
-      re == null || re(), re = xt(t);
+      ce == null || ce(), ce = null, t && (ce = t.subscribe(Kt));
     },
     { immediate: !0 }
-  )), e.keyboard && e.keyboard.enabled !== !1 && f.push(F.bindKeyboard());
-  const We = () => {
-    if (y) return;
-    y = !0, d.forEach((a) => a()), f.splice(0).forEach((a) => a()), re == null || re(), re = null, I && (clearTimeout(I), I = null);
-    const t = H("cleanup");
+  ));
+  let ie = null;
+  d.push(Fe(
+    () => T(),
+    (t) => {
+      ie == null || ie(), ie = zt(t);
+    },
+    { immediate: !0 }
+  )), e.keyboard && e.keyboard.enabled !== !1 && g.push(L.bindKeyboard());
+  const Xe = () => {
+    if (h) return;
+    h = !0, d.forEach((a) => a()), g.splice(0).forEach((a) => a()), ce == null || ce(), ce = null, ie == null || ie(), ie = null, b && (clearTimeout(b), b = null);
+    const t = K("cleanup");
     r.value = {
       ...r.value,
       menu: null,
       highlightedId: null,
       lastMenuPosition: null
     };
-    const o = [Y(
+    const o = [V(
       "shell-cleanup",
       "info",
       "Dashboard editor shell cleanup completed.",
       { actionId: t, actionType: "cleanup", source: "lifecycle" }
     )];
-    A({ type: "cleanup", actionId: t, diagnostics: o });
+    M({ type: "cleanup", actionId: t, diagnostics: o });
   };
-  return Pt() && Mt(We), ne(), {
-    state: St(r),
-    actions: F,
-    stop: We
+  return Vt() && Yt(Xe), et(), {
+    state: Nt(r),
+    actions: L,
+    stop: Xe
   };
 }
 export {
-  Yt as buildDashboardContextMenu,
-  zt as buildWidgetContextMenu,
-  H as createDashboardEditorShellActionId,
-  Y as createDashboardEditorShellDiagnostic,
-  q as createDashboardEditorShellResult,
-  Xe as diagnosticFromUnknownError,
-  G as emitShellResult,
-  jt as getEventGridPosition,
-  Kt as profileContextFromRuntime,
-  Ke as resolveShellPosition,
-  He as runDashboardEditorShellTransaction,
-  Ie as stableDiagnostics,
-  ro as useDashboardEditorShell
+  ro as buildDashboardContextMenu,
+  io as buildWidgetContextMenu,
+  K as createDashboardEditorShellActionId,
+  V as createDashboardEditorShellDiagnostic,
+  Y as createDashboardEditorShellResult,
+  Ze as diagnosticFromUnknownError,
+  N as emitShellResult,
+  ao as getEventGridPosition,
+  so as profileContextFromRuntime,
+  Je as resolveShellPosition,
+  Ge as runDashboardEditorShellTransaction,
+  we as stableDiagnostics,
+  So as useDashboardEditorShell
 };

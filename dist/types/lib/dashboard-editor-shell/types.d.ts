@@ -1,13 +1,20 @@
 import type { Ref } from "vue";
-import type { DashboardLayoutDocument, DashboardWriteResult } from "../dashboard";
+import type { DashboardDocumentWriteBackOwner, DashboardLayoutDocument, DashboardWriteResult } from "../dashboard";
 import type { DashboardResponsiveMode, DashboardResponsiveProfileModel, DashboardResponsiveRuntime, DashboardTargetView, MaybeRef } from "../dashboard-responsive";
 import type { GridEditorCommand, GridEditorCommandResult, GridEditorCommitPlacementInput, GridEditorConflict, GridEditorBlockedReason, GridEditorController, GridEditorMode, GridEditorSelectionState, GridEditorToolbarState } from "../editor";
 import type { GridEditorPlacementCollisionPolicy, GridEditorPlacementSummary } from "../editor/placement";
 import type { LayoutPatch, LayoutRepairPolicy } from "../layout-engine";
 import type { MaybePromise } from "../persistence";
+import type { GridHistoryStore } from "../history";
 import type { CompactType, Layout, LayoutItem } from "../utils";
 export type DashboardEditorShellActionStatus = "success" | "noop" | "blocked" | "cancelled" | "unsupported" | "timeout" | "error";
-export type DashboardEditorShellActionType = "resolve-position" | "paste" | "select" | "highlight" | "reset-highlight" | "scroll-to-item" | "prepare-dashboard-menu" | "prepare-widget-menu" | "close-menu" | "copy-widget" | "cut-widget" | "place-clipboard" | "paste-widget" | "duplicate-widget" | "remove-widget" | "copy-reference" | "paste-reference" | "replace-reference" | "open-palette" | "add-widget" | "external-drop" | "move-all" | "undo" | "redo" | "keyboard" | "cleanup";
+export type DashboardEditorShellActionType = "pointer-move" | "pointer-resize" | "resolve-position" | "paste" | "select" | "highlight" | "reset-highlight" | "scroll-to-item" | "prepare-dashboard-menu" | "prepare-widget-menu" | "close-menu" | "copy-widget" | "cut-widget" | "place-clipboard" | "paste-widget" | "duplicate-widget" | "remove-widget" | "copy-reference" | "paste-reference" | "replace-reference" | "open-palette" | "add-widget" | "external-drop" | "move-all" | "undo" | "redo" | "keyboard" | "cleanup";
+export type DashboardEditorShellSyntheticCommitData = {
+    commandId: string;
+    commandType: GridEditorCommand["type"];
+    historyEntryId?: string;
+    synthesized: true;
+};
 export type DashboardEditorShellActionSource = "api" | "context-menu" | "keyboard" | "toolbar" | "palette" | "drop" | "pointer" | "lifecycle";
 export type DashboardEditorShellBlockedReason = GridEditorBlockedReason | "mode-readonly" | "capability" | "locked" | "hidden" | "missing-item" | "missing-editor" | "missing-runtime" | "missing-grid-element" | "clipboard-unavailable" | "clipboard-permission" | "clipboard-invalid" | "adapter-unavailable" | "adapter-rejected" | "validation" | "profile-write-back" | "collision" | "bounds" | "maxRows" | "confirm-cancelled" | "guard-blocked" | "unsupported" | "invalid-input" | "dom-unavailable";
 export type DashboardEditorShellDiagnosticLevel = "info" | "warning" | "error";
@@ -320,8 +327,12 @@ export type DashboardEditorShellEvent = {
     profile: DashboardEditorShellProfileContext;
     position?: DashboardEditorShellResolvedPosition;
     commandResult?: GridEditorCommandResult;
+    writeResult?: DashboardWriteResult;
     adapter?: DashboardEditorShellAdapterStageResult;
     placement?: DashboardEditorShellPlacementSummary;
+    proposedDocument?: DashboardLayoutDocument;
+    patches?: LayoutPatch[];
+    data?: unknown;
     diagnostics: DashboardEditorShellDiagnostic[];
 } | {
     type: "documentChange";
@@ -519,6 +530,8 @@ export type DashboardEditorShellOptions = {
     guards?: DashboardEditorShellGuard[];
     scrollAdapter?: DashboardEditorShellScrollAdapter;
     idGenerator?: (baseId: string, existingIds: Set<string>) => string;
+    documentWriteBack?: DashboardDocumentWriteBackOwner;
+    legacyHistoryStore?: GridHistoryStore;
     createMissingProfileOnEdit?: boolean;
     onEvent?: (event: DashboardEditorShellEvent) => void;
     onDocumentChange?: (event: DashboardEditorShellDocumentChangeEvent) => void;

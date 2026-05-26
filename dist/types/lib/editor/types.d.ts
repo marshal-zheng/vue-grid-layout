@@ -818,6 +818,22 @@ export type GridEditorHistoryEntry = {
     affectedIds?: string[];
     historyMode?: GridEditorHistoryMode;
 };
+export type GridEditorHistoryCheckpoint = {
+    readonly id: string;
+    readonly kind: "grid-editor-history-checkpoint";
+    readonly past: readonly GridEditorHistoryEntry[];
+    readonly future: readonly GridEditorHistoryEntry[];
+    readonly canUndo: boolean;
+    readonly canRedo: boolean;
+};
+export type GridEditorRollbackCheckpoint = {
+    readonly id: string;
+    readonly kind: "grid-editor-rollback-checkpoint";
+    readonly snapshot: GridEditorHistorySnapshot;
+    readonly history?: GridEditorHistoryCheckpoint;
+    readonly revision: number;
+    readonly reason?: string;
+};
 export type GridEditorHistoryPushOptions = {
     preserveRedoStack?: boolean;
 };
@@ -840,6 +856,8 @@ export type GridEditorHistoryController = {
     mark: (snapshot: GridEditorHistorySnapshot, revision: number) => GridEditorHistoryMark;
     bailToMark: (mark: GridEditorHistoryMark) => GridEditorHistorySnapshot;
     squashToMark: (mark: GridEditorHistoryMark, entry: GridEditorHistoryEntry, options?: GridEditorHistoryPushOptions) => void;
+    checkpoint: () => GridEditorHistoryCheckpoint;
+    restore: (checkpoint: GridEditorHistoryCheckpoint) => void;
 };
 export type GridEditorPersistenceEnvelope = {
     version: 1 | 2;
@@ -913,6 +931,7 @@ export type UseGridEditorOptions = {
     resizeConstraints?: Record<string, GridItemAspectRatioConstraint>;
     onEvent?: (event: GridEditorEvent) => void;
 };
+export type GridEditorEventListener = (event: GridEditorEvent) => void;
 export type GridEditorProp = Omit<UseGridEditorOptions, "layout" | "layouts" | "breakpoint"> & {
     controller?: GridEditorController;
 };
@@ -927,6 +946,9 @@ export type GridEditorController = {
     conflict: Ref<GridEditorConflict | null>;
     guides: Ref<GridEditorGuideState>;
     lastResult: Ref<GridEditorCommandResult | null>;
+    subscribe: (listener: GridEditorEventListener) => () => void;
+    createRollbackCheckpoint: (reason?: string) => GridEditorRollbackCheckpoint;
+    restoreRollbackCheckpoint: (checkpoint: GridEditorRollbackCheckpoint, reason?: string) => void;
     execute: (command: GridEditorCommand) => Promise<GridEditorCommandResult>;
     canExecute: (command: GridEditorCommand) => GridEditorCommandResult;
     beginPlacement: (input: import("./placementSession").GridEditorBeginPlacementInput) => Promise<import("./placementSession").GridEditorPlacementSessionResult>;

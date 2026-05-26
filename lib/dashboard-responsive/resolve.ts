@@ -5,6 +5,7 @@ import {
   writeDashboardRuntimeToDocument,
   type DashboardDiagnostic,
   type DashboardDocumentError,
+  type DashboardEditorEnvelope,
   type DashboardGridSettings,
   type DashboardItemLayout,
   type DashboardItemLayoutOverride,
@@ -12,7 +13,11 @@ import {
   type DashboardLayoutDocument,
   type ResolvedDashboardGridSettings
 } from "../dashboard";
-import type { GridEditorMetaById } from "../editor";
+import {
+  normalizeGridEditorSectionRows,
+  type GridEditorMetaById,
+  type GridEditorSectionRowState
+} from "../editor";
 import type { Layout, LayoutItem } from "../utils";
 import type {
   CreateDashboardDocumentFromResponsiveLayoutsOptions,
@@ -131,6 +136,80 @@ export function createDashboardResponsiveDiagnostic(
     ...extra
   };
 }
+
+const filterEditorMetaByIds = (
+  meta: GridEditorMetaById | undefined,
+  ids: string[] | undefined
+): GridEditorMetaById | undefined => {
+  if (!meta || !ids) return meta;
+  const set = new Set(ids.filter(Boolean));
+  const filtered: GridEditorMetaById = {};
+  Object.keys(meta).forEach(id => {
+    if (set.has(id)) filtered[id] = meta[id];
+  });
+  return Object.keys(filtered).length > 0 ? filtered : undefined;
+};
+
+const ensureEditorEnvelope = (
+  owner: { editor?: DashboardEditorEnvelope }
+): DashboardEditorEnvelope => {
+  owner.editor = owner.editor || { version: 1 };
+  return owner.editor;
+};
+
+const removeItemFromSectionRows = (
+  rows: GridEditorSectionRowState | undefined,
+  id: string
+): GridEditorSectionRowState | undefined => {
+  if (!rows) return rows;
+  const next: GridEditorSectionRowState = {
+    version: 1,
+    items: Object.keys(rows.items || {}).reduce((acc, rowId) => {
+      const row = rows.items[rowId];
+      acc[rowId] = {
+        ...row,
+        bounds: row.bounds ? { ...row.bounds } : undefined,
+        itemIds: row.itemIds ? row.itemIds.filter(itemId => itemId !== id) : undefined,
+        allowedDropZones: row.allowedDropZones ? row.allowedDropZones.slice() : undefined
+      };
+      return acc;
+    }, {} as GridEditorSectionRowState["items"]),
+    itemMembership: { ...(rows.itemMembership || {}) }
+  };
+  const itemMembership = next.itemMembership || {};
+  delete itemMembership[id];
+  next.itemMembership = itemMembership;
+  return JSON.parse(JSON.stringify(next)) as GridEditorSectionRowState;
+};
+
+const sectionRowsFromResolved = (
+  rows: ReturnType<typeof normalizeGridEditorSectionRows>
+): GridEditorSectionRowState => {
+  const membershipIds = new Set(Object.keys(rows.itemMembership));
+  return JSON.parse(JSON.stringify({
+    version: 1,
+    items: Object.keys(rows.items).reduce((acc, id) => {
+      const row = rows.items[id];
+      acc[id] = {
+        ...row,
+        itemIds: row.itemIds ? row.itemIds.filter(itemId => membershipIds.has(itemId)) : undefined,
+        allowedDropZones: row.allowedDropZones ? row.allowedDropZones.slice() : undefined,
+        bounds: row.bounds ? { ...row.bounds } : undefined
+      };
+      return acc;
+    }, {} as GridEditorSectionRowState["items"]),
+    itemMembership: rows.itemMembership
+  })) as GridEditorSectionRowState;
+};
+
+const cleanRemovedEditorSidecarItem = (
+  owner: { editor?: DashboardEditorEnvelope } | undefined,
+  id: string
+) => {
+  if (!owner?.editor) return;
+  if (owner.editor.editorMetaById) delete owner.editor.editorMetaById[id];
+  owner.editor.sectionRows = removeItemFromSectionRows(owner.editor.sectionRows, id);
+};
 
 export function isDashboardHeightDiagnostic(diagnostic: DashboardDiagnostic): boolean {
   return isPlainRecord(diagnostic.details) &&
@@ -630,6 +709,61 @@ const mergeEditorMeta = (
   return merged;
 };
 
+const writeResponsiveEditorSidecar = (input: {
+  owner: { editor?: DashboardEditorEnvelope } | undefined;
+  layout: Layout;
+  layoutId: string;
+  profileId: string | null;
+  targetView: DashboardTargetView;
+  targetWidgets: Record<string, DashboardItemLayoutOverride>;
+  editorMetaById?: GridEditorMetaById;
+  sectionRows?: GridEditorSectionRowState;
+  writeItemIds?: string[];
+  diagnostics: DashboardDiagnostic[];
+}) => {
+  if (!input.owner) return;
+  const runtimeMeta = filterEditorMetaByIds(input.editorMetaById, input.writeItemIds);
+  const shouldWriteSidecar = Boolean(runtimeMeta) || Boolean(input.sectionRows);
+  if (!shouldWriteSidecar) return;
+
+  const editorEnvelope = ensureEditorEnvelope(input.owner);
+  if (runtimeMeta) {
+    editorEnvelope.editorMetaById = mergeEditorMeta(editorEnvelope.editorMetaById || {}, runtimeMeta);
+    Object.keys(runtimeMeta).forEach(id => {
+      const meta = runtimeMeta[id];
+      const targetItem = input.targetWidgets[id] || {};
+      if (typeof meta.resizable === "boolean") targetItem.resizable = meta.resizable;
+      if (typeof meta.visible === "boolean") {
+        if (input.targetView === "mobile") targetItem.mobileHide = meta.visible === false;
+        else targetItem.desktopHide = meta.visible === false;
+      }
+      input.targetWidgets[id] = targetItem;
+    });
+  }
+
+  if (input.sectionRows) {
+    const normalizedRows = normalizeGridEditorSectionRows(input.sectionRows, input.layout);
+    normalizedRows.warnings.forEach(issue => {
+      input.diagnostics.push(createDashboardResponsiveDiagnostic(
+        issue.code,
+        "warning",
+        issue.message,
+        {
+          layoutId: input.layoutId,
+          profileId: input.profileId || undefined,
+          itemId: issue.itemIds?.[0],
+          path: input.profileId
+            ? `layouts.${input.layoutId}.profiles.${input.profileId}.editor.sectionRows`
+            : `layouts.${input.layoutId}.editor.sectionRows`,
+          details: issue
+        }
+      ));
+    });
+    editorEnvelope.sectionRows = sectionRowsFromResolved(normalizedRows);
+    editorEnvelope.version = Math.max(Number(editorEnvelope.version) || 1, 2);
+  }
+};
+
 const buildGridRuntimeLayout = (
   items: Array<{ id: string; item: DashboardItemLayout }>,
   targetView: DashboardTargetView,
@@ -1123,7 +1257,8 @@ export function writeDashboardResponsiveRuntimeToDocument(
   if (viewFormat === "grid") {
     const written = writeDashboardRuntimeToDocument(document, {
       layout: committedLayout,
-      editorMetaById: options.editorMetaById || runtime.editorMetaById
+      editorMetaById: options.editorMetaById || runtime.editorMetaById,
+      sectionRows: options.sectionRows
     }, {
       layoutId: options.layoutId || runtime.layoutId,
       profileId: resolvedProfileId || undefined,
@@ -1209,11 +1344,9 @@ export function writeDashboardResponsiveRuntimeToDocument(
       delete targetWidgets[id];
       Object.values(layoutDefinition.profiles || {}).forEach(profile => {
         if (profile.widgets) delete profile.widgets[id];
-        if (profile.editor?.editorMetaById) delete profile.editor.editorMetaById[id];
+        cleanRemovedEditorSidecarItem(profile, id);
       });
-      if (layoutDefinition.editor?.editorMetaById) {
-        delete layoutDefinition.editor.editorMetaById[id];
-      }
+      cleanRemovedEditorSidecarItem(layoutDefinition, id);
     });
   }
 
@@ -1236,6 +1369,19 @@ export function writeDashboardResponsiveRuntimeToDocument(
         sizeY: item.h
       };
     }
+  });
+
+  writeResponsiveEditorSidecar({
+    owner: resolvedProfileId ? layoutDefinition.profiles?.[resolvedProfileId] : layoutDefinition,
+    layout: committedLayout,
+    layoutId,
+    profileId: resolvedProfileId,
+    targetView,
+    targetWidgets,
+    editorMetaById: options.editorMetaById || runtime.editorMetaById,
+    sectionRows: options.sectionRows,
+    writeItemIds: options.writeItemIds,
+    diagnostics
   });
 
   const finalValidation = validateDashboardLayoutDocument(next, { validation: options.validation ?? "strict" });

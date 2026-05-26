@@ -2,6 +2,7 @@ import type { Ref } from "vue";
 import type {
   DashboardBreakpointProfile,
   DashboardDiagnostic,
+  DashboardDocumentWriteBackOwner,
   DashboardDocumentError,
   DashboardGridSettings,
   DashboardItemLayout,
@@ -11,7 +12,12 @@ import type {
   DashboardWriteResult,
   ResolvedDashboardGridSettings
 } from "../dashboard";
-import type { GridEditorController, GridEditorMetaById, GridEditorProp } from "../editor";
+import type {
+  GridEditorController,
+  GridEditorMetaById,
+  GridEditorProp,
+  GridEditorSectionRowState
+} from "../editor";
 import type { GridHistoryStore } from "../history";
 import type { GridLayoutEngineProp } from "../layout-engine";
 import type {
@@ -146,6 +152,7 @@ export type WriteDashboardResponsiveRuntimeOptions = {
   mode?: DashboardResponsiveMode;
   viewFormat?: "grid" | "list";
   editorMetaById?: GridEditorMetaById;
+  sectionRows?: GridEditorSectionRowState;
   writeItemIds?: string[];
   createMissingProfileOnEdit?: boolean;
   createMissingItems?: boolean;
@@ -210,6 +217,7 @@ export type UseDashboardResponsiveProfileModelOptions = {
   validation?: LayoutValidationMode;
   layoutEngine?: false | GridLayoutEngineProp;
   editor?: false | GridEditorProp;
+  documentWriteBack?: DashboardDocumentWriteBackOwner;
   createMissingProfileOnEdit?: boolean;
   allowUnknownProfileItems?: boolean;
   onEvent?: (event: DashboardResponsiveProfileEvent) => void;
@@ -244,6 +252,7 @@ export type DashboardResponsiveComponentProps = {
   validation?: LayoutValidationMode;
   allowUnknownProfileItems?: boolean;
   createMissingProfileOnEdit?: boolean;
+  documentWriteBack?: DashboardDocumentWriteBackOwner;
   layoutEngine?: false | GridLayoutEngineProp;
   editor?: false | GridEditorProp;
   historyStore?: GridHistoryStore;
@@ -258,6 +267,7 @@ export type DashboardResponsiveComponentProps = {
 export type {
   DashboardBreakpointProfile,
   DashboardDiagnostic,
+  DashboardDocumentWriteBackOwner,
   DashboardGridSettings,
   DashboardItemLayout,
   DashboardItemLayoutOverride,

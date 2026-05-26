@@ -1,5 +1,6 @@
 import type { Ref } from "vue";
 import type {
+  DashboardDocumentWriteBackOwner,
   DashboardLayoutDocument,
   DashboardWriteResult
 } from "../dashboard";
@@ -28,6 +29,7 @@ import type {
 } from "../editor/placement";
 import type { LayoutPatch, LayoutRepairPolicy } from "../layout-engine";
 import type { MaybePromise } from "../persistence";
+import type { GridHistoryStore } from "../history";
 import type { CompactType, Layout, LayoutItem } from "../utils";
 
 export type DashboardEditorShellActionStatus =
@@ -40,6 +42,8 @@ export type DashboardEditorShellActionStatus =
   | "error";
 
 export type DashboardEditorShellActionType =
+  | "pointer-move"
+  | "pointer-resize"
   | "resolve-position"
   | "paste"
   | "select"
@@ -66,6 +70,13 @@ export type DashboardEditorShellActionType =
   | "redo"
   | "keyboard"
   | "cleanup";
+
+export type DashboardEditorShellSyntheticCommitData = {
+  commandId: string;
+  commandType: GridEditorCommand["type"];
+  historyEntryId?: string;
+  synthesized: true;
+};
 
 export type DashboardEditorShellActionSource =
   | "api"
@@ -459,8 +470,12 @@ export type DashboardEditorShellEvent =
       profile: DashboardEditorShellProfileContext;
       position?: DashboardEditorShellResolvedPosition;
       commandResult?: GridEditorCommandResult;
+      writeResult?: DashboardWriteResult;
       adapter?: DashboardEditorShellAdapterStageResult;
       placement?: DashboardEditorShellPlacementSummary;
+      proposedDocument?: DashboardLayoutDocument;
+      patches?: LayoutPatch[];
+      data?: unknown;
       diagnostics: DashboardEditorShellDiagnostic[];
     }
   | {
@@ -698,6 +713,8 @@ export type DashboardEditorShellOptions = {
   guards?: DashboardEditorShellGuard[];
   scrollAdapter?: DashboardEditorShellScrollAdapter;
   idGenerator?: (baseId: string, existingIds: Set<string>) => string;
+  documentWriteBack?: DashboardDocumentWriteBackOwner;
+  legacyHistoryStore?: GridHistoryStore;
   createMissingProfileOnEdit?: boolean;
   onEvent?: (event: DashboardEditorShellEvent) => void;
   onDocumentChange?: (event: DashboardEditorShellDocumentChangeEvent) => void;

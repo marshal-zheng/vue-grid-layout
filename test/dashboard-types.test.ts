@@ -1,6 +1,7 @@
 import type {
   DashboardBreakpointProfile,
   DashboardDiagnostic,
+  DashboardDocumentWriteBackOwner,
   DashboardGridRuntimeProjection,
   DashboardGridSettings,
   DashboardResponsiveMode,
@@ -23,12 +24,14 @@ import type {
   WriteDashboardResponsiveRuntimeOptions,
   WriteDashboardRuntimeOptions
 } from '@marsio/vue-grid-layout/dashboard'
+import type { DashboardEditorShellOptions } from '@marsio/vue-grid-layout/dashboard-editor-shell'
 import type {
   GridHeightRuntime,
   GridRenderPrecision,
   GridHeightMode,
   ResolveGridHeightRuntimeOptions
 } from '@marsio/vue-grid-layout/core'
+import type { GridEditorSectionRowState } from '@marsio/vue-grid-layout/editor'
 import {
   DashboardResponsiveVueGridLayout,
   DASHBOARD_HEIGHT_DIAGNOSTIC_SOURCE,
@@ -88,7 +91,12 @@ const projectionOptions: ProjectDashboardLayoutOptions = {
 
 const projection: DashboardProjectionResult = projectDashboardLayoutDocument(doc, projectionOptions)
 const writeOptions: WriteDashboardRuntimeOptions = {
-  targetView: 'desktop'
+  targetView: 'desktop',
+  sectionRows: {
+    version: 1,
+    items: {},
+    itemMembership: {}
+  } satisfies GridEditorSectionRowState
 }
 const write: DashboardWriteResult = writeDashboardRuntimeToDocument(doc, {
   layout: [{ i: 'a', x: 0, y: 0, w: 2, h: 2 }]
@@ -166,7 +174,12 @@ const responsiveResult: DashboardResponsiveProfileResult =
 const responsiveRuntime: DashboardResponsiveRuntime | null =
   responsiveResult.ok ? responsiveResult.runtime : null
 const responsiveWriteOptions: WriteDashboardResponsiveRuntimeOptions = {
-  createMissingProfileOnEdit: true
+  createMissingProfileOnEdit: true,
+  sectionRows: {
+    version: 1,
+    items: {},
+    itemMembership: {}
+  }
 }
 const responsiveWrite: DashboardResponsiveWriteResult | null =
   responsiveRuntime
@@ -180,11 +193,17 @@ const migratedResponsive = createDashboardDocumentFromResponsiveLayouts({
 })
 const targetView: DashboardTargetView = 'desktop'
 const responsiveMode: DashboardResponsiveMode = 'view'
+const writeBackOwner: DashboardDocumentWriteBackOwner = 'shell'
 const responsiveComponentProps = {
   document: doc,
   width: 320,
   breakpoints: { mobile: 0 },
+  documentWriteBack: writeBackOwner,
   rowHeight: 0
+}
+const shellOptions: DashboardEditorShellOptions = {
+  document: doc,
+  documentWriteBack: writeBackOwner
 }
 const responsiveEvent: DashboardResponsiveProfileEvent = {
   type: 'projectionChange',
@@ -213,5 +232,6 @@ void migratedResponsive
 void targetView
 void responsiveMode
 void responsiveComponentProps
+void shellOptions
 void responsiveEvent
 void responsiveModelFactory

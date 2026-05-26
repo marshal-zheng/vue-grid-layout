@@ -1,12 +1,12 @@
-import { unref as g, shallowRef as x, ref as O, watch as L, getCurrentInstance as z, onBeforeUnmount as N, defineComponent as U, toRef as p, onMounted as q, createVNode as F, mergeProps as G, isVNode as _, h as T, Fragment as J } from "vue";
-import { p as $, E as K } from "./EditorGridLayout-DpntIoJ0.mjs";
-import { b as Z } from "./createGridLayoutComponent-C3Rj84Rb.mjs";
-import { p as Q } from "./utils-BCVYGne6.mjs";
-import { deepEqual as k } from "fast-equals";
-import { l as M, e as E, d as W, w as X, h as Y } from "./dashboard-migration-DSgh_CFb.mjs";
-import { D as Le, a as ze, c as Ae, b as xe, f as Ne, g as Ue, i as qe, m as Fe, j as Ge, p as _e, r as Te, k as Je, s as $e, t as Ke, v as Ze, n as Qe } from "./dashboard-migration-DSgh_CFb.mjs";
+import { unref as c, shallowRef as A, ref as E, watch as L, getCurrentInstance as z, onBeforeUnmount as N, defineComponent as U, toRef as p, onMounted as q, createVNode as F, mergeProps as G, isVNode as _, h as T, Fragment as W } from "vue";
+import { p as J, E as $ } from "./EditorGridLayout-cRS11Gqh.mjs";
+import { b as K } from "./createGridLayoutComponent-BUqtSi2L.mjs";
+import { p as Z } from "./utils-BCVYGne6.mjs";
+import { deepEqual as P } from "fast-equals";
+import { l as V, e as M, d as Q, w as X, h as Y } from "./dashboard-migration-CPRNR9yH.mjs";
+import { D as ze, a as xe, c as Ae, b as Ne, f as Ue, g as qe, i as Fe, m as Ge, j as _e, p as Te, r as We, k as Je, s as $e, t as Ke, v as Ze, n as Qe } from "./dashboard-migration-CPRNR9yH.mjs";
 import { r as ee } from "./resolve-C3SqJijI.mjs";
-const V = (e) => e.map((a) => ({ ...a })), te = (e) => ({
+const O = (e) => e.map((n) => ({ ...n })), te = (e) => ({
   layout: [],
   gridSettings: {
     columns: 12,
@@ -21,11 +21,11 @@ const V = (e) => e.map((a) => ({ ...a })), te = (e) => ({
   },
   editorMetaById: {},
   layoutId: "default",
-  requestedBreakpoint: g(e.breakpoint) || "default",
+  requestedBreakpoint: c(e.breakpoint) || "default",
   resolvedProfileId: null,
-  targetView: g(e.targetView) || "desktop",
-  targetViewSource: g(e.targetView) ? "explicit" : "default",
-  mode: g(e.mode) || "view",
+  targetView: c(e.targetView) || "desktop",
+  targetViewSource: c(e.targetView) ? "explicit" : "default",
+  mode: c(e.mode) || "view",
   viewFormat: "grid",
   heightOptions: {
     heightMode: "auto",
@@ -38,13 +38,13 @@ const V = (e) => e.map((a) => ({ ...a })), te = (e) => ({
   renderItemIds: [],
   hiddenItemIds: [],
   diagnostics: [
-    E(
+    M(
       "projection-validation-failed",
       "error",
       "Dashboard responsive runtime has not resolved successfully yet."
     )
   ]
-}), C = (e) => ({
+}), v = (e) => ({
   layout: e.layout,
   gridSettings: e.gridSettings,
   editorMetaById: e.editorMetaById,
@@ -57,47 +57,47 @@ const V = (e) => e.map((a) => ({ ...a })), te = (e) => ({
   mode: e.mode,
   heightOptions: e.heightOptions,
   heightRuntime: e.heightRuntime
-}), ie = (e) => e.diagnostics.filter((a) => !Y(a)), oe = (e) => (a) => {
-  var n;
-  (n = e.onEvent) == null || n.call(e, a);
-}, y = (e) => typeof e == "undefined" ? void 0 : g(e);
+}), ie = (e) => e.diagnostics.filter((n) => !Y(n)), oe = (e) => (n) => {
+  var r;
+  (r = e.onEvent) == null || r.call(e, n);
+}, y = (e) => typeof e == "undefined" ? void 0 : c(e);
 function ae(e) {
-  const a = M(g(e.document), {
-    width: g(e.width),
-    breakpoints: g(e.breakpoints),
+  const n = V(c(e.document), {
+    width: c(e.width),
+    breakpoints: c(e.breakpoints),
     breakpoint: y(e.breakpoint) || null,
     targetView: y(e.targetView) || null,
     targetViewRule: e.targetViewRule,
     mode: y(e.mode) || "view",
     validation: e.validation,
     allowUnknownProfileItems: e.allowUnknownProfileItems
-  }), n = x(
-    a.ok ? a.runtime : te(e)
-  ), f = O(V(n.value.layout)), b = O({ ...n.value.editorMetaById }), v = O(n.value.mode), l = oe(e), s = [];
-  let c = !1;
-  a.ok || l({ type: "projectionError", error: a.error, diagnostics: a.diagnostics });
-  const m = e.editor && typeof e.editor == "object" ? e.editor : null, u = m ? m.controller || $({
-    ...m,
+  }), r = A(
+    n.ok ? n.runtime : te(e)
+  ), m = E(O(r.value.layout)), b = E({ ...r.value.editorMetaById }), H = E(r.value.mode), d = oe(e), s = [];
+  let h = !1;
+  n.ok || d({ type: "projectionError", error: n.error, diagnostics: n.diagnostics });
+  const f = e.editor && typeof e.editor == "object" ? e.editor : null, u = f ? f.controller || J({
+    ...f,
     kind: "layout",
-    layout: f,
-    mode: v,
+    layout: m,
+    mode: H,
     editorMetaById: b
-  }) : null, w = (t, o, r) => {
-    n.value = t, f.value = V(t.layout), b.value = { ...t.editorMetaById }, v.value = t.mode, u == null || u.setExternalLayout(t.layout, r), o && o.requestedBreakpoint !== t.requestedBreakpoint && l({
+  }) : null, w = (t, o, a) => {
+    r.value = t, m.value = O(t.layout), b.value = { ...t.editorMetaById }, H.value = t.mode, u == null || u.setExternalLayout(t.layout, a), o && o.requestedBreakpoint !== t.requestedBreakpoint && d({
       type: "breakpointChange",
       requestedBreakpoint: t.requestedBreakpoint,
       previous: o.requestedBreakpoint
-    }), o && o.resolvedProfileId !== t.resolvedProfileId && l({
+    }), o && o.resolvedProfileId !== t.resolvedProfileId && d({
       type: "profileChange",
       resolvedProfileId: t.resolvedProfileId,
       previous: o.resolvedProfileId,
       fallbackApplied: t.fallbackApplied
-    }), (!o || !k(C(o), C(t))) && l({ type: "projectionChange", runtime: t }), (!o || !k(o.diagnostics, t.diagnostics)) && l({ type: "diagnosticsChange", diagnostics: t.diagnostics });
-  }, H = (t = "refresh") => {
-    if (c) return;
-    const o = n.value, r = M(g(e.document), {
-      width: g(e.width),
-      breakpoints: g(e.breakpoints),
+    }), (!o || !P(v(o), v(t))) && d({ type: "projectionChange", runtime: t }), (!o || !P(o.diagnostics, t.diagnostics)) && d({ type: "diagnosticsChange", diagnostics: t.diagnostics });
+  }, S = (t = "refresh") => {
+    if (h) return;
+    const o = r.value, a = V(c(e.document), {
+      width: c(e.width),
+      breakpoints: c(e.breakpoints),
       breakpoint: y(e.breakpoint) || null,
       targetView: y(e.targetView) || null,
       targetViewRule: e.targetViewRule,
@@ -105,70 +105,79 @@ function ae(e) {
       validation: e.validation,
       allowUnknownProfileItems: e.allowUnknownProfileItems
     });
-    if (r.ok) {
-      w(r.runtime, o, t);
+    if (a.ok) {
+      w(a.runtime, o, t);
       return;
     }
-    l({ type: "projectionError", error: r.error, diagnostics: r.diagnostics }), l({ type: "diagnosticsChange", diagnostics: r.diagnostics });
+    d({ type: "projectionError", error: a.error, diagnostics: a.diagnostics }), d({ type: "diagnosticsChange", diagnostics: a.diagnostics });
   };
   s.push(L(
     () => [
-      g(e.document),
-      g(e.width),
-      g(e.breakpoints),
+      c(e.document),
+      c(e.width),
+      c(e.breakpoints),
       y(e.breakpoint),
       y(e.targetView),
       y(e.mode)
     ],
-    () => H("input-change"),
+    () => S("input-change"),
     { deep: !0 }
   ));
-  const P = (t) => {
+  const R = (t) => {
+    if (e.documentWriteBack === "shell") {
+      const a = r.value, g = {
+        ...a,
+        layout: O(t)
+      };
+      r.value = g, m.value = O(t), P(v(a), v(g)) || d({ type: "projectionChange", runtime: g });
+      return;
+    }
     const o = X(
-      g(e.document),
-      n.value,
+      c(e.document),
+      r.value,
       t,
       {
         createMissingProfileOnEdit: e.createMissingProfileOnEdit,
         validation: e.validation,
-        editorMetaById: b.value
+        editorMetaById: b.value,
+        sectionRows: u == null ? void 0 : u.sectionRows.value
       }
     );
-    o.ok ? l({ type: "documentChange", document: o.document, runtime: n.value }) : (l({ type: "projectionError", error: o.error, diagnostics: o.diagnostics }), l({ type: "diagnosticsChange", diagnostics: o.diagnostics }));
-  }, R = (t) => {
-    const o = n.value, r = ie(o), h = {
+    o.ok ? d({ type: "documentChange", document: o.document, runtime: r.value }) : (d({ type: "projectionError", error: o.error, diagnostics: o.diagnostics }), d({ type: "diagnosticsChange", diagnostics: o.diagnostics }));
+  }, D = (t) => {
+    const o = r.value, a = ie(o), g = {
       ...o,
       heightRuntime: t,
-      diagnostics: r.concat(
-        t.diagnostics.map((S) => W(S, o))
+      diagnostics: a.concat(
+        t.diagnostics.map((k) => Q(k, o))
       )
     };
-    n.value = h, k(C(o), C(h)) || l({ type: "projectionChange", runtime: h }), k(o.diagnostics, h.diagnostics) || l({ type: "diagnosticsChange", diagnostics: h.diagnostics });
-  }, D = () => {
-    c || (c = !0, s.forEach((t) => t()), m != null && m.controller || u == null || u.stop());
+    r.value = g, P(v(o), v(g)) || d({ type: "projectionChange", runtime: g }), P(o.diagnostics, g.diagnostics) || d({ type: "diagnosticsChange", diagnostics: g.diagnostics });
+  }, C = () => {
+    h || (h = !0, s.forEach((t) => t()), f != null && f.controller || u == null || u.stop());
   };
-  return z() && N(D), {
-    state: n,
+  return z() && N(C), {
+    state: r,
     editorController: u,
-    getInnerEditorProp: () => u ? { ...m || {}, controller: u } : !1,
-    onLayoutChange: P,
-    onHeightRuntimeChange: R,
-    refresh: H,
-    stop: D
+    getInnerEditorProp: () => u ? { ...f || {}, controller: u } : !1,
+    onLayoutChange: R,
+    onHeightRuntimeChange: D,
+    refresh: S,
+    stop: C
   };
 }
-function re(e) {
+function ne(e) {
   return typeof e == "function" || Object.prototype.toString.call(e) === "[object Object]" && !_(e);
 }
-const j = (e) => {
+const B = (e) => {
   if (Array.isArray(e)) return [e[0], e[1]];
-  const a = typeof e == "number" ? e : 10;
-  return [a, a];
-}, ne = (e, a) => Object.prototype.hasOwnProperty.call(e, a), B = (e, a) => ne(e, "rowHeight") ? e.rowHeight : a, se = ["update:document", "documentChange", "breakpointChange", "profileChange", "projectionChange", "diagnosticsChange", "projectionError", "layoutChange", "dragStart", "drag", "dragStop", "resizeStart", "resize", "resizeStop", "drop", "dropDragOver"], Ve = /* @__PURE__ */ U({
+  const n = typeof e == "number" ? e : 10;
+  return [n, n];
+}, re = (e, n) => Object.prototype.hasOwnProperty.call(e, n), j = (e, n) => re(e, "rowHeight") ? e.rowHeight : n, se = ["update:document", "documentChange", "breakpointChange", "profileChange", "projectionChange", "diagnosticsChange", "projectionError", "layoutChange", "dragStart", "drag", "dragStop", "resizeStart", "resize", "resizeStop", "drop", "dropDragOver"], Be = /* @__PURE__ */ U({
   name: "DashboardResponsiveVueGridLayout",
   inheritAttrs: !1,
   props: {
-    ...Z,
+    ...K,
     document: {
       type: Object,
       required: !0
@@ -215,6 +224,10 @@ const j = (e) => {
       type: Boolean,
       default: !1
     },
+    documentWriteBack: {
+      type: String,
+      default: "component"
+    },
     layoutEngine: {
       type: [Boolean, Object],
       default: void 0
@@ -230,21 +243,21 @@ const j = (e) => {
   },
   emits: se,
   setup(e, {
-    attrs: a,
-    slots: n,
-    emit: f
+    attrs: n,
+    slots: r,
+    emit: m
   }) {
     const b = z();
-    let v = "";
-    const l = () => {
+    let H = "";
+    const d = () => {
       const i = e.editor && typeof e.editor == "object" ? e.editor : null;
-      return e.historyStore ? i ? {
+      return !e.historyStore || e.documentWriteBack === "shell" ? i || !1 : i ? {
         ...i,
         legacyHistoryStore: i.legacyHistoryStore || e.historyStore
       } : {
         legacyHistoryStore: e.historyStore,
         keyboard: !1
-      } : i || !1;
+      };
     }, s = ae({
       document: p(e, "document"),
       width: p(e, "width"),
@@ -255,36 +268,37 @@ const j = (e) => {
       mode: p(e, "mode"),
       validation: e.validation,
       layoutEngine: e.layoutEngine,
-      editor: l(),
+      editor: d(),
+      documentWriteBack: e.documentWriteBack,
       createMissingProfileOnEdit: e.createMissingProfileOnEdit,
       allowUnknownProfileItems: e.allowUnknownProfileItems,
       onEvent: (i) => {
         if (i.type === "documentChange") {
-          f("update:document", i.document), f("documentChange", i.document, i.runtime);
+          m("update:document", i.document), m("documentChange", i.document, i.runtime);
           return;
         }
-        f(i.type, i);
+        m(i.type, i);
       }
-    }), c = (i) => (...t) => f(i, ...t, s.state.value), m = (i) => {
-      s.onLayoutChange(i), f("layoutChange", i, s.state.value);
+    }), h = (i) => (...t) => m(i, ...t, s.state.value), f = (i) => {
+      s.onLayoutChange(i), m("layoutChange", i, s.state.value);
     }, u = (i) => i.replace(/[A-Z]/g, (t) => `-${t.toLowerCase()}`), w = (i) => {
       const t = (b == null ? void 0 : b.vnode.props) || {};
       return Object.prototype.hasOwnProperty.call(t, i) || Object.prototype.hasOwnProperty.call(t, u(i));
-    }, H = (i) => {
+    }, S = (i) => {
       const t = {
         ...i
       };
       return w("heightMode") && (t.heightMode = e.heightMode), w("containerHeight") && (t.containerHeight = e.containerHeight), w("autoMeasureContainerHeight") && (t.autoMeasureContainerHeight = e.autoMeasureContainerHeight), w("minRowHeight") && (t.minRowHeight = e.minRowHeight), w("rowHeight") && (t.rowHeight = e.rowHeight), w("renderPrecision") && (t.renderPrecision = e.renderPrecision), t;
     };
-    let P = "";
-    const R = () => {
-      const i = s.state.value, t = H(i.heightOptions), o = ee({
+    let R = "";
+    const D = () => {
+      const i = s.state.value, t = S(i.heightOptions), o = ee({
         layout: i.layout,
         autoSize: e.autoSize,
         heightMode: t.heightMode,
-        rowHeight: B(t, i.gridSettings.rowHeight),
+        rowHeight: j(t, i.gridSettings.rowHeight),
         minRowHeight: t.minRowHeight,
-        margin: j(i.gridSettings.margin),
+        margin: B(i.gridSettings.margin),
         containerPadding: i.gridSettings.containerPadding || [0, 0],
         containerHeight: t.containerHeight,
         autoMeasureContainerHeight: t.autoMeasureContainerHeight,
@@ -295,74 +309,75 @@ const j = (e) => {
           profileId: i.resolvedProfileId,
           targetView: i.targetView
         }
-      }), r = JSON.stringify(o), h = i.heightRuntime ? JSON.stringify(i.heightRuntime) : "";
-      r === P && r === h || (P = r, s.onHeightRuntimeChange(o));
+      }), a = JSON.stringify(o), g = i.heightRuntime ? JSON.stringify(i.heightRuntime) : "";
+      a === R && a === g || (R = a, s.onHeightRuntimeChange(o));
     };
-    L(() => [s.state.value.layout, s.state.value.gridSettings, s.state.value.heightOptions, e.autoSize, e.heightMode, e.containerHeight, e.autoMeasureContainerHeight, e.minRowHeight, e.rowHeight, e.renderPrecision], R, {
+    L(() => [s.state.value.layout, s.state.value.gridSettings, s.state.value.heightOptions, e.autoSize, e.heightMode, e.containerHeight, e.autoMeasureContainerHeight, e.minRowHeight, e.rowHeight, e.renderPrecision], D, {
       deep: !0
-    }), q(R);
-    const D = () => {
-      const i = s.state.value, t = n.default ? Q(T(J, null, n.default())) : [], o = {}, r = i.diagnostics.slice();
-      t.forEach((d) => {
-        d && d.key != null && (o[String(d.key)] = d);
+    }), q(D);
+    const C = () => {
+      const i = s.state.value, t = r.default ? Z(T(W, null, r.default())) : [], o = {}, a = i.diagnostics.slice();
+      t.forEach((l) => {
+        l && l.key != null && (o[String(l.key)] = l);
       });
-      const h = i.renderItemIds.slice();
-      h.forEach((d) => {
-        o[d] || r.push(E("slot-widget-mismatch", "warning", `No slot child was provided for dashboard widget "${d}".`, {
+      const g = i.renderItemIds.slice();
+      g.forEach((l) => {
+        o[l] || a.push(M("slot-widget-mismatch", "warning", `No slot child was provided for dashboard widget "${l}".`, {
           layoutId: i.layoutId,
           profileId: i.resolvedProfileId || void 0,
-          itemId: d
+          itemId: l
         }));
-      }), Object.keys(o).sort().forEach((d) => {
-        i.allItemIds.indexOf(d) === -1 && r.push(E("slot-widget-mismatch", "warning", `Slot child "${d}" does not match a dashboard widget.`, {
+      }), Object.keys(o).sort().forEach((l) => {
+        i.allItemIds.indexOf(l) === -1 && a.push(M("slot-widget-mismatch", "warning", `Slot child "${l}" does not match a dashboard widget.`, {
           layoutId: i.layoutId,
           profileId: i.resolvedProfileId || void 0,
-          itemId: d
+          itemId: l
         }));
       });
-      const S = JSON.stringify(r);
-      return S !== v && (v = S, f("diagnosticsChange", {
+      const k = JSON.stringify(a);
+      return k !== H && (H = k, m("diagnosticsChange", {
         type: "diagnosticsChange",
-        diagnostics: r
-      })), h.map((d) => o[d]).filter(Boolean);
+        diagnostics: a
+      })), g.map((l) => o[l]).filter(Boolean);
     };
     return () => {
       let i;
       const t = s.state.value, {
         document: o,
-        breakpoints: r,
-        breakpoint: h,
-        targetView: S,
-        targetViewRule: d,
+        breakpoints: a,
+        breakpoint: g,
+        targetView: k,
+        targetViewRule: l,
         mode: de,
         validation: ge,
         allowUnknownProfileItems: le,
         createMissingProfileOnEdit: ce,
-        modelValue: ue,
-        cols: he,
+        documentWriteBack: ue,
+        modelValue: he,
+        cols: me,
         margin: fe,
-        containerPadding: me,
-        rowHeight: ye,
-        heightMode: we,
-        containerHeight: be,
-        autoMeasureContainerHeight: Ie,
-        minRowHeight: pe,
-        renderPrecision: ve,
-        editor: He,
-        historyStore: Se,
+        containerPadding: ye,
+        rowHeight: we,
+        heightMode: be,
+        containerHeight: Ie,
+        autoMeasureContainerHeight: pe,
+        minRowHeight: ve,
+        renderPrecision: He,
+        editor: Se,
+        historyStore: ke,
         layoutEngine: Pe,
-        ...A
-      } = e, I = H(t.heightOptions);
-      return F(K, G(a, A, {
+        ...x
+      } = e, I = S(t.heightOptions);
+      return F($, G(n, x, {
         onHeightRuntimeChange: s.onHeightRuntimeChange,
         "onHeight-runtime-change": s.onHeightRuntimeChange
       }, {
         width: e.width,
         modelValue: t.layout,
         cols: t.gridSettings.columns,
-        margin: j(t.gridSettings.margin),
+        margin: B(t.gridSettings.margin),
         containerPadding: t.gridSettings.containerPadding || [0, 0],
-        rowHeight: B(I, t.gridSettings.rowHeight),
+        rowHeight: j(I, t.gridSettings.rowHeight),
         heightMode: I.heightMode,
         containerHeight: I.containerHeight,
         autoMeasureContainerHeight: I.autoMeasureContainerHeight,
@@ -372,39 +387,39 @@ const j = (e) => {
         editor: s.getInnerEditorProp(),
         itemCapabilities: t.capabilitiesById,
         resizeConstraints: t.resizeConstraintsById,
-        onLayoutChange: m,
-        onDragStart: c("dragStart"),
-        onDrag: c("drag"),
-        onDragStop: c("dragStop"),
-        onResizeStart: c("resizeStart"),
-        onResize: c("resize"),
-        onResizeStop: c("resizeStop"),
-        onDrop: c("drop"),
-        onDropDragOver: c("dropDragOver")
-      }), re(i = D()) ? i : {
+        onLayoutChange: f,
+        onDragStart: h("dragStart"),
+        onDrag: h("drag"),
+        onDragStop: h("dragStop"),
+        onResizeStart: h("resizeStart"),
+        onResize: h("resize"),
+        onResizeStop: h("resizeStop"),
+        onDrop: h("drop"),
+        onDropDragOver: h("dropDragOver")
+      }), ne(i = C()) ? i : {
         default: () => [i]
       });
     };
   }
 });
 export {
-  Le as DASHBOARD_HEIGHT_DIAGNOSTIC_SOURCE,
-  ze as DASHBOARD_SCHEMA_VERSION,
-  Ve as DashboardResponsiveVueGridLayout,
+  ze as DASHBOARD_HEIGHT_DIAGNOSTIC_SOURCE,
+  xe as DASHBOARD_SCHEMA_VERSION,
+  Be as DashboardResponsiveVueGridLayout,
   Ae as cloneDashboardJsonValue,
-  xe as createDashboardDocumentFromResponsiveLayouts,
-  W as createDashboardHeightDiagnostic,
-  E as createDashboardResponsiveDiagnostic,
-  Ne as deserializeDashboardLayoutDocument,
-  Ue as exportThingsBoardDashboardLayout,
-  qe as importThingsBoardDashboardLayout,
+  Ne as createDashboardDocumentFromResponsiveLayouts,
+  Q as createDashboardHeightDiagnostic,
+  M as createDashboardResponsiveDiagnostic,
+  Ue as deserializeDashboardLayoutDocument,
+  qe as exportThingsBoardDashboardLayout,
+  Fe as importThingsBoardDashboardLayout,
   Y as isDashboardHeightDiagnostic,
-  Fe as migrateDashboardLayoutDocument,
-  Ge as migrateDashboardLayoutSettings,
-  _e as projectDashboardLayoutDocument,
-  Te as repairDashboardLayoutCollisions,
+  Ge as migrateDashboardLayoutDocument,
+  _e as migrateDashboardLayoutSettings,
+  Te as projectDashboardLayoutDocument,
+  We as repairDashboardLayoutCollisions,
   Je as resolveDashboardHeightOptions,
-  M as resolveDashboardResponsiveProfile,
+  V as resolveDashboardResponsiveProfile,
   $e as serializeDashboardLayoutDocument,
   Ke as translateDashboardLayout,
   ae as useDashboardResponsiveProfileModel,
