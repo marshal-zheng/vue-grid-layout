@@ -3,7 +3,7 @@ import { type Layout } from "./utils";
 import type { GridEditorProp } from "./editor";
 import type { GridHistoryStore } from "./history";
 import type { GridLayoutEngineProp } from "./layout-engine";
-import type { DashboardLayoutDocument, DashboardResponsiveMode, DashboardTargetView, DashboardTargetViewRule } from "./dashboard-responsive";
+import type { DashboardDocumentWriteBackOwner, DashboardLayoutDocument, DashboardResponsiveMode, DashboardTargetView, DashboardTargetViewRule } from "./dashboard-responsive";
 import type { LayoutValidationMode } from "./persistence";
 declare const DashboardResponsiveVueGridLayout: import("vue").DefineComponent<import("vue").ExtractPropTypes<{
     document: {
@@ -51,6 +51,10 @@ declare const DashboardResponsiveVueGridLayout: import("vue").DefineComponent<im
     createMissingProfileOnEdit: {
         type: BooleanConstructor;
         default: boolean;
+    };
+    documentWriteBack: {
+        type: PropType<DashboardDocumentWriteBackOwner>;
+        default: string;
     };
     layoutEngine: {
         type: PropType<false | GridLayoutEngineProp>;
@@ -105,6 +109,10 @@ declare const DashboardResponsiveVueGridLayout: import("vue").DefineComponent<im
     draggableCancel: {
         type: PropType<string>;
         default: string;
+    };
+    draggableCancelInteractiveElements: {
+        type: PropType<boolean>;
+        default: boolean;
     };
     draggableHandle: {
         type: PropType<string>;
@@ -256,6 +264,10 @@ declare const DashboardResponsiveVueGridLayout: import("vue").DefineComponent<im
         type: BooleanConstructor;
         default: boolean;
     };
+    documentWriteBack: {
+        type: PropType<DashboardDocumentWriteBackOwner>;
+        default: string;
+    };
     layoutEngine: {
         type: PropType<false | GridLayoutEngineProp>;
         default: undefined;
@@ -309,6 +321,10 @@ declare const DashboardResponsiveVueGridLayout: import("vue").DefineComponent<im
     draggableCancel: {
         type: PropType<string>;
         default: string;
+    };
+    draggableCancelInteractiveElements: {
+        type: PropType<boolean>;
+        default: boolean;
     };
     draggableHandle: {
         type: PropType<string>;
@@ -444,6 +460,7 @@ declare const DashboardResponsiveVueGridLayout: import("vue").DefineComponent<im
     };
     dragActivationDistance: import("./interaction-state-machine").GridDragActivationDistance;
     draggableCancel: string;
+    draggableCancelInteractiveElements: boolean;
     draggableHandle: string;
     modelValue: Layout;
     margin: number[];
@@ -460,6 +477,7 @@ declare const DashboardResponsiveVueGridLayout: import("vue").DefineComponent<im
     createMissingProfileOnEdit: boolean;
     targetViewRule: DashboardTargetViewRule;
     allowUnknownProfileItems: boolean;
+    documentWriteBack: DashboardDocumentWriteBackOwner;
     historyStore: GridHistoryStore | undefined;
 }, {}, {}, {}, string, import("vue").ComponentProvideOptions, true, {}, any>;
 export default DashboardResponsiveVueGridLayout;

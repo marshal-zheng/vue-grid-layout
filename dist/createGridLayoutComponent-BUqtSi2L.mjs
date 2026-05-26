@@ -5,8 +5,8 @@ import { DraggableCore as un } from "@marsio/vue-draggable";
 import { Resizable as dn } from "@marsio/vue-resizable";
 import { b as je, f as Vt, d as xt, h as it, c as Ft, e as fn, r as gn } from "./resolve-C3SqJijI.mjs";
 import { deepEqual as et } from "fast-equals";
-import { b as bt, c as Et, a as zt } from "./executor-B5tlX6Jj.mjs";
-import { e as mn, c as yn } from "./core-DBDOf-NY.mjs";
+import { b as bt, c as Et, a as zt } from "./executor-D7yF3Jsp.mjs";
+import { e as mn, c as yn } from "./core-C45AnvB2.mjs";
 import pn from "resize-observer-polyfill";
 const In = {
   type: Array,
@@ -69,6 +69,11 @@ const In = {
   draggableCancel: {
     type: String,
     default: ""
+  },
+  /** Prevent native interactive descendants from starting a drag. */
+  draggableCancelInteractiveElements: {
+    type: Boolean,
+    default: !0
   },
   /** CSS selector for drag handle elements (requires . prefix) */
   draggableHandle: {
@@ -762,7 +767,7 @@ function An({
   let s = 0, i = ot(), u = null;
   const v = () => !!(e.onDragStart || e.onDrag || e.onDragStop), L = () => {
     i = ot(), u = null;
-  }, p = (A, { node: I }, h = !1) => {
+  }, p = (T, { node: I }, h = !1) => {
     var M;
     if (!v()) return;
     const a = je(
@@ -777,33 +782,33 @@ function An({
       d,
       r.w,
       r.h
-    ), D = `item-drag:${r.i}:${++s}`, T = h ? 0 : r.dragActivationDistance, w = rt(i, {
+    ), D = `item-drag:${r.i}:${++s}`, P = h ? 0 : r.dragActivationDistance, w = rt(i, {
       type: "ARM_DRAG",
       interactionId: D,
       itemId: r.i,
-      pointerKind: kn(A),
+      pointerKind: kn(T),
       originPx: { x: d.left, y: d.top },
       originGrid: { x: S, y: c }
-    }, { dragActivationDistance: T });
+    }, { dragActivationDistance: P });
     i = w.state, u = {
       interactionId: D,
       originGrid: { x: S, y: c },
       originPosition: d,
       currentPosition: d,
       node: I,
-      e: A
+      e: T
     }, w.effects.some((te) => te.type === "EMIT_DRAG_START") && (l.dragging = d, (M = e.onDragStart) == null || M.call(e, r.i, S, c, {
-      e: A,
+      e: T,
       node: I,
       newPosition: d
     }));
-  }, m = (A, I) => {
+  }, m = (T, I) => {
     let { top: h, left: a } = I;
     const { isBounded: d, w: S, h: c, containerWidth: D } = r;
     if (!d) return I;
-    const { offsetParent: T } = A;
-    if (!T) return I;
-    const { margin: w, rowHeight: W } = r, M = T.clientHeight - xt(
+    const { offsetParent: P } = T;
+    if (!P) return I;
+    const { margin: w, rowHeight: W } = r, M = P.clientHeight - xt(
       c,
       W,
       w[1],
@@ -812,7 +817,7 @@ function An({
     h = it(h, 0, M);
     const te = Ft(n.value), F = D - xt(S, te, w[0], n.value.renderPrecision);
     return a = it(a, 0, F), { top: h, left: a };
-  }, R = (A, { node: I, deltaX: h, deltaY: a }) => {
+  }, R = (T, { node: I, deltaX: h, deltaY: a }) => {
     var w, W;
     if (!v()) return;
     if (!u && !l.dragging)
@@ -823,7 +828,7 @@ function An({
       top: d.top + a,
       left: d.left + h
     });
-    u && (u.currentPosition = S, u.node = I, u.e = A);
+    u && (u.currentPosition = S, u.node = I, u.e = T);
     const { x: c, y: D } = st(
       n.value,
       S,
@@ -831,32 +836,32 @@ function An({
       r.h
     );
     if (!u) return;
-    const T = rt(i, {
+    const P = rt(i, {
       type: "MOVE_DRAG",
       interactionId: u.interactionId,
       currentPx: { x: S.left, y: S.top },
       grid: { x: c, y: D }
     }, { dragActivationDistance: r.dragActivationDistance });
-    i = T.state;
-    for (const M of T.effects)
+    i = P.state;
+    for (const M of P.effects)
       M.type === "EMIT_DRAG_START" && (l.dragging = u.originPosition, (w = e.onDragStart) == null || w.call(e, r.i, u.originGrid.x, u.originGrid.y, {
         e: u.e,
         node: u.node,
         newPosition: u.originPosition
       })), M.type === "EMIT_DRAG" && (l.dragging = S, (W = e.onDrag) == null || W.call(e, r.i, c, D, {
-        e: A,
+        e: T,
         node: I,
         newPosition: S
       }));
-    T.state.status === "active-drag" && (l.dragging = S);
+    P.state.status === "active-drag" && (l.dragging = S);
   };
   return {
-    moveDroppingItem: (A) => {
+    moveDroppingItem: (T) => {
       const { droppingPosition: I } = r;
       if (!I) return;
       const h = t.value;
       if (!h) return;
-      const a = A || { left: 0, top: 0 }, { dragging: d } = l, S = d && I.left !== a.left || I.top !== a.top;
+      const a = T || { left: 0, top: 0 }, { dragging: d } = l, S = d && I.left !== a.left || I.top !== a.top;
       if (!d)
         p(I.e, {
           node: h,
@@ -874,8 +879,8 @@ function An({
     },
     onDrag: R,
     onDragStart: p,
-    onDragStop: (A, { node: I }) => {
-      var T;
+    onDragStop: (T, { node: I }) => {
+      var P;
       if (!v()) return;
       if (!u && !l.dragging)
         throw new Error("onDragEnd called before onDragStart.");
@@ -894,8 +899,8 @@ function An({
         type: "STOP_DRAG",
         interactionId: D,
         grid: { x: d, y: S }
-      }, { dragActivationDistance: r.dragActivationDistance }).state), l.dragging = null, c && ((T = e.onDragStop) == null || T.call(e, r.i, d, S, {
-        e: A,
+      }, { dragActivationDistance: r.dragActivationDistance }).state), l.dragging = null, c && ((P = e.onDragStop) == null || P.call(e, r.i, d, S, {
+        e: T,
         node: I,
         newPosition: a
       })), L();
@@ -909,7 +914,7 @@ function _n({
   state: r
 }) {
   const l = yt(() => {
-    const { cols: p, minW: m, minH: R, maxW: y, maxH: O } = n, A = t.value, I = je(A, 0, 0, p, 0).width, h = je(A, 0, 0, m, R), a = je(A, 0, 0, y, O);
+    const { cols: p, minW: m, minH: R, maxW: y, maxH: O } = n, T = t.value, I = je(T, 0, 0, p, 0).width, h = je(T, 0, 0, m, R), a = je(T, 0, 0, y, O);
     return {
       minConstraints: [h.width, h.height],
       maxConstraints: [
@@ -917,17 +922,17 @@ function _n({
         Math.min(a.height, 1 / 0)
       ]
     };
-  }), s = (p, { node: m, size: R, handle: y }, O, A) => {
-    const I = e[A];
+  }), s = (p, { node: m, size: R, handle: y }, O, T) => {
+    const I = e[T];
     if (!I) return;
-    const { x: h, y: a, i: d, maxH: S, minH: c, maxW: D, minW: T, containerWidth: w } = n;
+    const { x: h, y: a, i: d, maxH: S, minH: c, maxW: D, minW: P, containerWidth: w } = n;
     let W = R;
     m && (W = tn(
       y,
       O,
       R,
       w
-    ), r.resizing = A === "onResizeStop" ? null : W);
+    ), r.resizing = T === "onResizeStop" ? null : W);
     let { w: M, h: te } = fn(
       t.value,
       W.width,
@@ -936,7 +941,7 @@ function _n({
       a,
       y
     );
-    M = it(M, Math.max(T, 1), D), te = it(te, c, S), I.call(void 0, d, M, te, { e: p, node: m, size: W, handle: y });
+    M = it(M, Math.max(P, 1), D), te = it(te, c, S), I.call(void 0, d, M, te, { e: p, node: m, size: W, handle: y });
   };
   return {
     curryResizeHandler: (p, m) => (R, y) => m(R, y, p),
@@ -1121,6 +1126,10 @@ const qn = "GridItem", kt = /* @__PURE__ */ Mt({
       type: String,
       default: ""
     },
+    cancelInteractiveElements: {
+      type: Boolean,
+      default: !0
+    },
     droppingPosition: {
       type: Object,
       default: null
@@ -1167,6 +1176,7 @@ const qn = "GridItem", kt = /* @__PURE__ */ Mt({
       stopFn: u.onDragStop,
       handle: e.handle,
       cancel: `.vue-resizable-handle${e.cancel ? `,${e.cancel}` : ""}`,
+      cancelInteractiveElements: e.cancelInteractiveElements,
       scale: e.transformScale,
       nodeRef: s,
       enableClickSuppression: !0
@@ -1181,7 +1191,7 @@ const qn = "GridItem", kt = /* @__PURE__ */ Mt({
     const p = (m, R, y) => {
       let O;
       const {
-        transformScale: A,
+        transformScale: T,
         resizeHandles: I,
         resizeHandle: h
       } = e, {
@@ -1200,7 +1210,7 @@ const qn = "GridItem", kt = /* @__PURE__ */ Mt({
         fnResizeStop: v.curryResizeHandler(R, v.onResizeStop),
         fnResizeStart: v.curryResizeHandler(R, v.onResizeStart),
         fnResize: v.curryResizeHandler(R, v.onResize),
-        transformScale: A,
+        transformScale: T,
         resizeHandles: I,
         handle: h
       }, Hn(O = qt(m, {
@@ -1214,13 +1224,13 @@ const qn = "GridItem", kt = /* @__PURE__ */ Mt({
     return Ht(() => {
       u.moveDroppingItem();
     }), () => {
-      var D, T;
+      var D, P;
       const {
         x: m,
         y: R,
         w: y,
         isDraggable: O,
-        isResizable: A,
+        isResizable: T,
         droppingPosition: I,
         useCSSTransforms: h
       } = e, a = je(i.value, m, R, y, e.h, l), d = t.default ? t.default()[0] : null;
@@ -1240,13 +1250,13 @@ const qn = "GridItem", kt = /* @__PURE__ */ Mt({
           useCSSTransforms: h
         }),
         onClick: e.onItemClick,
-        style: On(e.style, (T = d.props) == null ? void 0 : T.style, Gn(a, {
+        style: On(e.style, (P = d.props) == null ? void 0 : P.style, Gn(a, {
           containerWidth: e.containerWidth,
           useCSSTransforms: h,
           usePercentages: e.usePercentages
         }))
       };
-      let c = p(d, a, A);
+      let c = p(d, a, T);
       return c = L(c, O, S), c;
     };
   }
@@ -1397,8 +1407,8 @@ function jn({
         e.cols,
         xe(e),
         e.allowOverlap
-      ), A = (I = L.reconcileSynchronizedLayout) == null ? void 0 : I.call(L, O);
-      return A != null && A.clearActive ? (r.activeDrag = null, (h = L.clearActiveInteraction) == null || h.call(L)) : A && "placeholder" in A && (r.activeDrag = A.placeholder ? Z(A.placeholder) : null), et(O, r.layout) || (r.layout = Z(O)), r.compactType = e.compactType, O;
+      ), T = (I = L.reconcileSynchronizedLayout) == null ? void 0 : I.call(L, O);
+      return T != null && T.clearActive ? (r.activeDrag = null, (h = L.clearActiveInteraction) == null || h.call(L)) : T && "placeholder" in T && (r.activeDrag = T.placeholder ? Z(T.placeholder) : null), et(O, r.layout) || (r.layout = Z(O)), r.compactType = e.compactType, O;
     },
     watchLayoutDependencies: (v = {}) => Xe(
       () => ({
@@ -1419,8 +1429,8 @@ function jn({
           L.cols,
           xe(L),
           L.allowOverlap
-        ), A = (I = v.reconcileSynchronizedLayout) == null ? void 0 : I.call(v, O);
-        A != null && A.clearActive ? (r.activeDrag = null, (h = v.clearActiveInteraction) == null || h.call(v)) : A && "placeholder" in A && (r.activeDrag = A.placeholder ? Z(A.placeholder) : null), s(O, r.layout), r.layout = Z(O), r.compactType = L.compactType;
+        ), T = (I = v.reconcileSynchronizedLayout) == null ? void 0 : I.call(v, O);
+        T != null && T.clearActive ? (r.activeDrag = null, (h = v.clearActiveInteraction) == null || h.call(v)) : T && "placeholder" in T && (r.activeDrag = T.placeholder ? Z(T.placeholder) : null), s(O, r.layout), r.layout = Z(O), r.compactType = L.compactType;
       },
       { deep: !0 }
     ),
@@ -1558,9 +1568,9 @@ function Jn({
   };
   let l, s = bt();
   const i = () => {
-    var T;
+    var P;
     const c = n(), D = c == null ? void 0 : c.executor;
-    return D !== l && ((T = s.dispose) == null || T.call(s), s = bt(D), l = D), s;
+    return D !== l && ((P = s.dispose) == null || P.call(s), s = bt(D), l = D), s;
   };
   let u, v = zt();
   const L = () => {
@@ -1591,35 +1601,35 @@ function Jn({
   }, y = (c, D) => {
     var w, W, M;
     if (!p().compareLegacy || c.phase === "preview" && ((w = D.diagnostics) == null ? void 0 : w.schedulerMode) === "commitOnly") return;
-    const T = yn(c, D);
-    T.matches || (M = (W = p()).onEvent) == null || M.call(W, {
+    const P = yn(c, D);
+    P.matches || (M = (W = p()).onEvent) == null || M.call(W, {
       type: "legacy-mismatch",
       id: c.id,
       message: "VueGridLayout layout engine result differs from legacy path",
       diagnostics: D.diagnostics,
-      details: T.differences
+      details: P.differences
     });
-  }, O = (c, D, T) => {
+  }, O = (c, D, P) => {
     var w, W, M;
-    !T || ((w = D.diagnostics) == null ? void 0 : w.executorKind) !== "worker" || (M = (W = p()).onEvent) == null || M.call(W, {
+    !P || ((w = D.diagnostics) == null ? void 0 : w.executorKind) !== "worker" || (M = (W = p()).onEvent) == null || M.call(W, {
       type: "operation",
       id: D.id,
       operationType: c.operation.type,
       phase: c.phase,
       diagnostics: D.diagnostics
     });
-  }, A = (c) => i().kind === "main-thread" || c.phase === "preview" && (c.operation.type === "move" || c.operation.type === "resize" || c.operation.type === "groupMove") ? !1 : c.phase === "commit" || !!c.heavy || c.operation.type === "dropFit" || c.operation.type === "generateResponsiveLayout" || c.operation.type === "groupMove", I = (c) => A(c) ? i().execute(c) : mn(c), h = (c, D) => {
-    let T = null;
-    const w = A(c);
+  }, T = (c) => i().kind === "main-thread" || c.phase === "preview" && (c.operation.type === "move" || c.operation.type === "resize" || c.operation.type === "groupMove") ? !1 : c.phase === "commit" || !!c.heavy || c.operation.type === "dropFit" || c.operation.type === "generateResponsiveLayout" || c.operation.type === "groupMove", I = (c) => T(c) ? i().execute(c) : mn(c), h = (c, D) => {
+    let P = null;
+    const w = T(c);
     return L().schedule(
       c,
       I,
       (W) => {
         var te;
         const M = m.applyAsyncResult(W);
-        L().recordDuration(((te = M.diagnostics) == null ? void 0 : te.durationMs) || 0), O(c, M, w), y(c, M), D(M), T = M;
+        L().recordDuration(((te = M.diagnostics) == null ? void 0 : te.durationMs) || 0), O(c, M, w), y(c, M), D(M), P = M;
       }
-    ), T;
+    ), P;
   };
   return {
     getLayoutEngineProp: n,
@@ -1629,7 +1639,7 @@ function Jn({
     start: (c) => m.start(c),
     rebase: (c) => m.rebase(c),
     getCommitted: () => m.getCommitted(),
-    preview: (c, D, T, w = !1) => {
+    preview: (c, D, P, w = !1) => {
       var M;
       const W = {
         id: c,
@@ -1637,9 +1647,9 @@ function Jn({
         baseRevision: (M = m.getState().interaction) == null ? void 0 : M.startRevision,
         heavy: w
       };
-      return h(m.preparePreview(W), T);
+      return h(m.preparePreview(W), P);
     },
-    commit: (c, D, T, w = !1) => {
+    commit: (c, D, P, w = !1) => {
       var M;
       const W = {
         id: c,
@@ -1647,7 +1657,7 @@ function Jn({
         baseRevision: (M = m.getState().interaction) == null ? void 0 : M.startRevision,
         heavy: w
       };
-      return h(m.prepareCommit(W), T);
+      return h(m.prepareCommit(W), P);
     },
     dispose: (c = "component disposed") => {
       var D;
@@ -1731,8 +1741,8 @@ function Qn({
     if (!a) return I;
     let d = I;
     for (; d; ) {
-      const S = a.getComputedStyle(d), c = S.overflowY, D = S.overflowX, T = (c === "auto" || c === "scroll") && d.scrollHeight > d.clientHeight + 1, w = (D === "auto" || D === "scroll") && d.scrollWidth > d.clientWidth + 1;
-      if (T || w) return d;
+      const S = a.getComputedStyle(d), c = S.overflowY, D = S.overflowX, P = (c === "auto" || c === "scroll") && d.scrollHeight > d.clientHeight + 1, w = (D === "auto" || D === "scroll") && d.scrollWidth > d.clientWidth + 1;
+      if (P || w) return d;
       d = d.parentElement;
     }
     return a;
@@ -1769,19 +1779,19 @@ function Qn({
         const W = Math.min(1, Math.max(0, w / a.margin));
         return W <= 0 ? 0 : Math.ceil(W * a.speed);
       };
-      let D = 0, T = 0;
+      let D = 0, P = 0;
       if (S instanceof HTMLElement) {
         const w = S.getBoundingClientRect(), W = w.top + a.margin, M = w.bottom - a.margin, te = w.left + a.margin, F = w.right - a.margin;
-        d.y < W ? T = -c(W - d.y) : d.y > M && (T = c(d.y - M)), d.x < te ? D = -c(te - d.x) : d.x > F && (D = c(d.x - F)), T < 0 && S.scrollTop <= 0 && (T = 0), T > 0 && S.scrollTop + S.clientHeight >= S.scrollHeight && (T = 0), D < 0 && S.scrollLeft <= 0 && (D = 0), D > 0 && S.scrollLeft + S.clientWidth >= S.scrollWidth && (D = 0);
+        d.y < W ? P = -c(W - d.y) : d.y > M && (P = c(d.y - M)), d.x < te ? D = -c(te - d.x) : d.x > F && (D = c(d.x - F)), P < 0 && S.scrollTop <= 0 && (P = 0), P > 0 && S.scrollTop + S.clientHeight >= S.scrollHeight && (P = 0), D < 0 && S.scrollLeft <= 0 && (D = 0), D > 0 && S.scrollLeft + S.clientWidth >= S.scrollWidth && (D = 0);
       } else {
         const w = S, W = a.margin, M = w.innerHeight - a.margin, te = a.margin, F = w.innerWidth - a.margin;
-        d.y < W ? T = -c(W - d.y) : d.y > M && (T = c(d.y - M)), d.x < te ? D = -c(te - d.x) : d.x > F && (D = c(d.x - F));
+        d.y < W ? P = -c(W - d.y) : d.y > M && (P = c(d.y - M)), d.x < te ? D = -c(te - d.x) : d.x > F && (D = c(d.x - F));
       }
-      if (D === 0 && T === 0) {
+      if (D === 0 && P === 0) {
         v();
         return;
       }
-      O(S, D, T);
+      O(S, D, P);
     },
     reset: L
   };
@@ -1833,17 +1843,17 @@ function tr({
   syncHistory: L,
   onLayoutMaybeChanged: p
 }) {
-  const m = Te(!1), R = Te(!1), y = Te(null), O = Te(null), A = Te(null), I = Te([]), h = Te(null);
+  const m = Te(!1), R = Te(!1), y = Te(null), O = Te(null), T = Te(null), I = Te([]), h = Te(null);
   let a = null, d = !1, S = null, c = null, D;
-  const T = () => r.getLayoutEngineProp(), w = () => r.isLegacyLayoutEngine(), W = (o) => r.reset(o), M = (...o) => r.preview(...o), te = (...o) => r.commit(...o), F = u || It({
+  const P = () => r.getLayoutEngineProp(), w = () => r.isLegacyLayoutEngine(), W = (o) => r.reset(o), M = (...o) => r.preview(...o), te = (...o) => r.commit(...o), F = u || It({
     getDragActivationDistance: () => e.dragActivationDistance
-  }), _e = (o, z, k, H) => {
-    let q = o.x, E = o.y, g = z, P = k;
-    const X = H === "sw" || H === "w" || H === "nw", K = H === "ne" || H === "n" || H === "nw";
-    return X && (q = o.x + (o.w - g), q < 0 && (q = 0, g = o.w)), K && (E = o.y + (o.h - P), E < 0 && (E = 0, P = o.h)), { ...o, x: q, y: E, w: g, h: P };
+  }), _e = (o, z, k, q) => {
+    let H = o.x, A = o.y, g = z, x = k;
+    const Y = q === "sw" || q === "w" || q === "nw", K = q === "ne" || q === "n" || q === "nw";
+    return Y && (H = o.x + (o.w - g), H < 0 && (H = 0, g = o.w)), K && (A = o.y + (o.h - x), A < 0 && (A = 0, x = o.h)), { ...o, x: H, y: A, w: g, h: x };
   }, Ge = () => {
     var o, z, k;
-    return t.layout.length >= (((k = (z = (o = T()) == null ? void 0 : o.scheduler) == null ? void 0 : z.auto) == null ? void 0 : k.workerMinItems) || 1e3);
+    return t.layout.length >= (((k = (z = (o = P()) == null ? void 0 : o.scheduler) == null ? void 0 : z.auto) == null ? void 0 : k.workerMinItems) || 1e3);
   }, V = () => {
     const o = e.width, z = e.containerPadding || e.margin;
     if (typeof o != "number" || !Number.isFinite(o) || o <= 0 || e.cols <= 0 || e.rowHeight <= 0)
@@ -1866,15 +1876,15 @@ function tr({
         renderPrecision: e.renderPrecision || "integer"
       };
   }, j = () => {
-    A.value = null, I.value = [], h.value = null;
+    T.value = null, I.value = [], h.value = null;
   }, Me = (o, z, k) => {
-    m.value = !0, A.value = o, I.value = z.slice(), h.value = k || null;
-  }, ye = (o, z, k, H = !1) => {
+    m.value = !0, T.value = o, I.value = z.slice(), h.value = k || null;
+  }, ye = (o, z, k, q = !1) => {
     if (o.status === "blocked" && o.blocked) {
-      const q = o.blocked.reason, E = o.blocked.itemIds.length > 0 ? o.blocked.itemIds : z, g = `Pointer move blocked by ${q}.`;
-      Me(q, E, g), H && i.notifyMoveBlocked({
-        reason: q,
-        ids: E,
+      const H = o.blocked.reason, A = o.blocked.itemIds.length > 0 ? o.blocked.itemIds : z, g = `Pointer move blocked by ${H}.`;
+      Me(H, A, g), q && i.notifyMoveBlocked({
+        reason: H,
+        ids: A,
         activeId: k,
         message: g,
         operationResult: o
@@ -1886,7 +1896,7 @@ function tr({
     y.value = null, O.value = null, m.value = !1, R.value = !1, j(), a = null, d = !1, S = null, c = null, D = void 0, F.reset("clear-active-interaction");
   }, f = () => {
     t.activeDrag = null, t.oldDragItem = null, y.value = null, m.value = !1, j(), a = null, d = !1, S = null, s.reset(), i.clearGuides(), F.reset("finish-drag-interaction");
-  }, x = (o, z) => o.x === z.x && o.y === z.y && o.w === z.w && o.h === z.h, b = (o, z) => o.find((k) => k.type === z), ne = (o) => o.kind === "group" ? {
+  }, b = (o, z) => o.x === z.x && o.y === z.y && o.w === z.w && o.h === z.h, E = (o, z) => o.find((k) => k.type === z), ne = (o) => o.kind === "group" ? {
     kind: "group",
     activeId: o.activeId,
     ids: o.ids
@@ -1905,39 +1915,39 @@ function tr({
     activeDragId: y,
     activeResizeId: O,
     dragBlocked: m,
-    dragBlockedReason: A,
+    dragBlockedReason: T,
     dragBlockedItemIds: I,
     dragBlockedMessage: h,
     resizeBlocked: R,
     clearActiveInteraction: be,
-    onResizeStart: (o, z, k, { e: H, node: q, handle: E }) => {
+    onResizeStart: (o, z, k, { e: q, node: H, handle: A }) => {
       l.cancel();
-      const { layout: g } = t, P = he(g, o);
-      if (!P) return;
-      const X = E || "se", K = v("resize-interaction", o), B = F.dispatch({
+      const { layout: g } = t, x = he(g, o);
+      if (!x) return;
+      const Y = A || "se", K = v("resize-interaction", o), B = F.dispatch({
         type: "START_RESIZE",
         interactionId: K,
         itemId: o,
-        handle: X,
-        geometry: { x: P.x, y: P.y, w: P.w, h: P.h }
+        handle: Y,
+        geometry: { x: x.x, y: x.y, w: x.w, h: x.h }
       });
-      b(B.effects, "EMIT_RESIZE_START") && (c = K, D = void 0, L(g, "replace"), O.value = o, R.value = !1, i.resetSnap(), s.init(q), t.oldResizeItem = He(P), t.oldLayout = Fe(g), t.resizing = !0, w() || (W(g), r.start({
+      E(B.effects, "EMIT_RESIZE_START") && (c = K, D = void 0, L(g, "replace"), O.value = o, R.value = !1, i.resetSnap(), s.init(H), t.oldResizeItem = He(x), t.oldLayout = Fe(g), t.resizing = !0, w() || (W(g), r.start({
         id: v("resize-start", o),
         type: "resize",
         itemId: o
-      })), n.emitResizeStart(g, P, P, void 0, H, q));
+      })), n.emitResizeStart(g, x, x, void 0, q, H));
     },
-    onResize: (o, z, k, { e: H, node: q, handle: E }) => {
+    onResize: (o, z, k, { e: q, node: H, handle: A }) => {
       var Ye;
-      const { oldResizeItem: g } = t, { cols: P, preventCollision: X, allowOverlap: K } = e, B = E, Q = he(t.layout, o);
+      const { oldResizeItem: g } = t, { cols: x, preventCollision: Y, allowOverlap: K } = e, B = A, Q = he(t.layout, o);
       if (!Q) return;
       const se = _e(Q, z, k, B);
-      if (x(Q, se))
+      if (b(Q, se))
         return;
       if (!w()) {
         const Se = t.layout, ve = he(Se, o);
         if (!ve) return;
-        s.maybeScroll(H, q);
+        s.maybeScroll(q, H);
         const qe = i.snapCandidate(
           o,
           ve,
@@ -1978,7 +1988,7 @@ function tr({
               h: me.h
             }
           });
-          if (Oe = b(Ee.effects, "PREVIEW_RESIZE"), !Oe) return;
+          if (Oe = E(Ee.effects, "PREVIEW_RESIZE"), !Oe) return;
         }
         if (!Oe) return;
         M(
@@ -2003,35 +2013,35 @@ function tr({
               static: !0,
               i: o
             };
-            O.value === o && (R.value = Ee.status === "blocked"), n.emitResize(ze, g, Pe, Ve, H, q), (Ee.status === "changed" || Ee.status === "fallback") && (t.layout = Z(ze)), t.activeDrag = Z(Ve), i.updateIntelligence(o, ve, Ve, B);
+            O.value === o && (R.value = Ee.status === "blocked"), n.emitResize(ze, g, Pe, Ve, q, H), (Ee.status === "changed" || Ee.status === "fallback") && (t.layout = Z(ze)), t.activeDrag = Z(Ve), i.updateIntelligence(o, ve, Ve, B);
           },
           Ge()
         );
         return;
       }
-      const Y = t.layout.length >= Gt;
-      if (s.maybeScroll(H, q), !Y) {
+      const $ = t.layout.length >= Gt;
+      if (s.maybeScroll(q, H), !$) {
         const { layout: Se } = t;
         let ve = !1, qe, ce, me, Oe = !1;
         const [Ee, ze] = cn(Se, o, (le) => {
           ce = le.x, me = le.y;
-          const vt = E === "sw" || E === "w" || E === "nw", Rt = E === "ne" || E === "n" || E === "nw";
+          const vt = A === "sw" || A === "w" || A === "nw", Rt = A === "ne" || A === "n" || A === "nw";
           (vt || Rt) && (vt && (ce = le.x + (le.w - z), z = le.x !== ce && ce < 0 ? le.w : z, ce = ce < 0 ? 0 : ce), Rt && (me = le.y + (le.h - k), k = le.y !== me && me < 0 ? le.h : k, me = me < 0 ? 0 : me), ve = !0);
           const Ke = i.snapCandidate(
             o,
             le,
             { ...le, x: ce, y: me, w: z, h: k },
             Se,
-            E
+            A
           );
-          return ce = Ke.x, me = Ke.y, z = Ke.w, k = Ke.h, ve = ve || ce !== le.x || me !== le.y, X && !K && (Oe = nt(Se, { ...le, w: z, h: k, x: ce, y: me }).length > 0, Oe && (me = le.y, k = le.h, ce = le.x, z = le.w, ve = !1)), le.w = z, le.h = k, le;
+          return ce = Ke.x, me = Ke.y, z = Ke.w, k = Ke.h, ve = ve || ce !== le.x || me !== le.y, Y && !K && (Oe = nt(Se, { ...le, w: z, h: k, x: ce, y: me }).length > 0, Oe && (me = le.y, k = le.h, ce = le.x, z = le.w, ve = !1)), le.w = z, le.h = k, le;
         });
         if (!ze) return;
         O.value === o && (R.value = Oe), qe = Ee, ve && (qe = Qe(
           Ee,
           ze,
           xe(e),
-          P,
+          x,
           K,
           ce,
           me,
@@ -2052,42 +2062,42 @@ function tr({
             interactionId: c,
             geometry: { x: Pe.x, y: Pe.y, w: Pe.w, h: Pe.h }
           });
-          if (!b(le.effects, "PREVIEW_RESIZE")) return;
+          if (!E(le.effects, "PREVIEW_RESIZE")) return;
         }
-        n.emitResize(qe, g, ze, Pe, H, q);
-        const Ve = K ? qe : Ue(qe, xe(e), P), Je = he(Ve, o) || ze, ht = {
+        n.emitResize(qe, g, ze, Pe, q, H);
+        const Ve = K ? qe : Ue(qe, xe(e), x), Je = he(Ve, o) || ze, ht = {
           ...Pe,
           w: Je.w,
           h: Je.h,
           x: Je.x,
           y: Je.y
         };
-        t.layout = Z(Ve), t.activeDrag = Z(ht), i.updateIntelligence(o, ze, ht, E);
+        t.layout = Z(Ve), t.activeDrag = Z(ht), i.updateIntelligence(o, ze, ht, A);
         return;
       }
       const fe = t.layout, G = he(fe, o);
       if (!G) return;
       const Ce = G.x, De = G.y, ge = G.w, C = G.h;
-      let N = !1, _ = G.x, $ = G.y, ee = !1;
-      const oe = E === "sw" || E === "w" || E === "nw", Ie = E === "ne" || E === "n" || E === "nw";
-      (oe || Ie) && (oe && (_ = G.x + (G.w - z), z = G.x !== _ && _ < 0 ? G.w : z, _ = _ < 0 ? 0 : _), Ie && ($ = G.y + (G.h - k), k = G.y !== $ && $ < 0 ? G.h : k, $ = $ < 0 ? 0 : $), N = !0);
+      let N = !1, _ = G.x, U = G.y, ee = !1;
+      const oe = A === "sw" || A === "w" || A === "nw", Ie = A === "ne" || A === "n" || A === "nw";
+      (oe || Ie) && (oe && (_ = G.x + (G.w - z), z = G.x !== _ && _ < 0 ? G.w : z, _ = _ < 0 ? 0 : _), Ie && (U = G.y + (G.h - k), k = G.y !== U && U < 0 ? G.h : k, U = U < 0 ? 0 : U), N = !0);
       const ae = i.snapCandidate(
         o,
         G,
-        { ...G, x: _, y: $, w: z, h: k },
+        { ...G, x: _, y: U, w: z, h: k },
         fe,
-        E
+        A
       );
-      _ = ae.x, $ = ae.y, z = ae.w, k = ae.h, N = N || _ !== G.x || $ !== G.y, X && !K && (ee = nt(fe, { ...G, w: z, h: k, x: _, y: $ }).length > 0, ee && (_ = G.x, $ = G.y, z = G.w, k = G.h, N = !1)), O.value === o && (R.value = ee), G.w = z, G.h = k;
+      _ = ae.x, U = ae.y, z = ae.w, k = ae.h, N = N || _ !== G.x || U !== G.y, Y && !K && (ee = nt(fe, { ...G, w: z, h: k, x: _, y: U }).length > 0, ee && (_ = G.x, U = G.y, z = G.w, k = G.h, N = !1)), O.value === o && (R.value = ee), G.w = z, G.h = k;
       let Re = fe;
       N && (Re = Qe(
         fe,
         G,
         xe(e),
-        P,
+        x,
         K,
         _,
-        $,
+        U,
         !0,
         e.preventCollision
       ));
@@ -2105,45 +2115,45 @@ function tr({
           interactionId: c,
           geometry: { x: re.x, y: re.y, w: re.w, h: re.h }
         });
-        if (!b(Se.effects, "PREVIEW_RESIZE")) return;
+        if (!E(Se.effects, "PREVIEW_RESIZE")) return;
       }
-      n.emitResize(Re, g, G, re, H, q), (G.x !== Ce || G.y !== De || G.w !== ge || G.h !== C || K && Re !== t.layout) && (K || l.resetMovedFlags(fe), l.schedule({
-        cols: P,
+      n.emitResize(Re, g, G, re, q, H), (G.x !== Ce || G.y !== De || G.w !== ge || G.h !== C || K && Re !== t.layout) && (K || l.resetMovedFlags(fe), l.schedule({
+        cols: x,
         compactType: xe(e),
         layout: K && Re !== t.layout ? Re : void 0,
         placeholder: re,
         shouldCompact: !K
-      }), i.updateIntelligence(o, G, re, E));
+      }), i.updateIntelligence(o, G, re, A));
     },
-    onResizeStop: (o, z, k, { e: H, node: q, handle: E }) => {
+    onResizeStop: (o, z, k, { e: q, node: H, handle: A }) => {
       var De;
       l.cancel();
-      const { layout: g, oldResizeItem: P, oldLayout: X } = t, { cols: K, allowOverlap: B } = e, Q = he(g, o);
+      const { layout: g, oldResizeItem: x, oldLayout: Y } = t, { cols: K, allowOverlap: B } = e, Q = he(g, o);
       if (!Q) return;
-      const se = E, Y = t.activeDrag || _e(Q, z, k, se);
+      const se = A, $ = t.activeDrag || _e(Q, z, k, se);
       let fe;
       if (c) {
         const ge = F.dispatch({
           type: "STOP_RESIZE",
           interactionId: c,
           geometry: {
-            x: Y.x,
-            y: Y.y,
-            w: Y.w,
-            h: Y.h
+            x: $.x,
+            y: $.y,
+            w: $.w,
+            h: $.h
           }
         });
-        if (fe = b(ge.effects, "COMMIT_RESIZE"), !fe) {
-          (b(ge.effects, "EMIT_RESIZE_STOP") || !c) && n.emitResizeStop(g, P, Q, void 0, H, q), ie();
+        if (fe = E(ge.effects, "COMMIT_RESIZE"), !fe) {
+          (E(ge.effects, "EMIT_RESIZE_STOP") || !c) && n.emitResizeStop(g, x, Q, void 0, q, H), ie();
           return;
         }
       }
       if (!fe) {
-        n.emitResizeStop(g, P, Q, void 0, H, q), ie();
+        n.emitResizeStop(g, x, Q, void 0, q, H), ie();
         return;
       }
       if (!w()) {
-        let ge = Y;
+        let ge = $;
         const C = r.getCommitted(), N = (De = i.resolveResizeIntent) == null ? void 0 : De.call(i, {
           id: o,
           item: Q,
@@ -2154,7 +2164,7 @@ function tr({
           phase: "commit"
         });
         if ((N == null ? void 0 : N.kind) === "blocked") {
-          R.value = !0, n.emitResizeStop(g, P, Q, void 0, H, q), ie();
+          R.value = !0, n.emitResizeStop(g, x, Q, void 0, q, H), ie();
           return;
         }
         (N == null ? void 0 : N.kind) === "allowed" && (ge = N.candidate, D = N.constraint || D), te(
@@ -2166,17 +2176,17 @@ function tr({
             h: ge.h,
             x: ge.x,
             y: ge.y,
-            handle: E,
+            handle: A,
             constraint: D
           },
           (_) => {
             (async () => {
               var ae, Re;
               if (_.status === "stale" || !F.isCurrentRequest(fe.interactionId, fe.requestId)) return;
-              let $ = [];
+              let U = [];
               if (c) {
                 const re = _.status === "cancelled" ? "error" : _.status;
-                $ = F.dispatch({
+                U = F.dispatch({
                   type: "APPLY_RESULT",
                   interactionId: c,
                   requestId: fe.requestId,
@@ -2185,16 +2195,16 @@ function tr({
               }
               const ee = _.status === "changed" || _.status === "fallback" ? _.layout : r.getCommitted(), oe = he(ee, o) || Q, Ie = _.status === "changed" || _.status === "fallback" ? (t.suppressLayoutChange = !0, await ((ae = i.commitResize) == null ? void 0 : ae.call(i, {
                 id: o,
-                beforeLayout: X || C || g,
+                beforeLayout: Y || C || g,
                 afterLayout: ee,
                 handle: se
               }))) : null;
               if (Ie && Ie.status !== "changed" && Ie.status !== "noop") {
-                const re = X || C || g;
+                const re = Y || C || g;
                 t.suppressLayoutChange = !0, t.layout = Z(re), (Re = i.rollbackInteraction) == null || Re.call(i, re, Ie.status), t.activeDrag = null, t.oldResizeItem = null, t.resizing = !1, O.value = null, R.value = !1, c = null, D = void 0, s.reset(), t.oldLayout = null;
                 return;
               }
-              b($, "EMIT_RESIZE_STOP") && n.emitResizeStop(ee, P, oe, void 0, H, q), t.activeDrag = null, t.layout = Z(ee), t.oldResizeItem = null, t.resizing = !1, O.value = null, R.value = !1, c = null, D = void 0, s.reset(), i.clearGuides(), t.oldLayout = null, p(ee, X || C || g, "push");
+              E(U, "EMIT_RESIZE_STOP") && n.emitResizeStop(ee, x, oe, void 0, q, H), t.activeDrag = null, t.layout = Z(ee), t.oldResizeItem = null, t.resizing = !1, O.value = null, R.value = !1, c = null, D = void 0, s.reset(), i.clearGuides(), t.oldLayout = null, p(ee, Y || C || g, "push");
             })();
           },
           Ge()
@@ -2212,35 +2222,35 @@ function tr({
         var C, N;
         const ge = (t.suppressLayoutChange = !0, await ((C = i.commitResize) == null ? void 0 : C.call(i, {
           id: o,
-          beforeLayout: X || g,
+          beforeLayout: Y || g,
           afterLayout: G,
           handle: se
         })));
         if (ge && ge.status !== "changed" && ge.status !== "noop") {
-          const _ = X || g;
+          const _ = Y || g;
           t.suppressLayoutChange = !0, t.layout = Z(_), (N = i.rollbackInteraction) == null || N.call(i, _, ge.status), ie();
           return;
         }
-        b(Ce, "EMIT_RESIZE_STOP") && n.emitResizeStop(G, P, Q, void 0, H, q), t.activeDrag = null, t.layout = Z(G), t.oldResizeItem = null, t.resizing = !1, O.value = null, R.value = !1, c = null, D = void 0, s.reset(), i.clearGuides(), t.oldLayout = null, p(G, X || g, "push");
+        E(Ce, "EMIT_RESIZE_STOP") && n.emitResizeStop(G, x, Q, void 0, q, H), t.activeDrag = null, t.layout = Z(G), t.oldResizeItem = null, t.resizing = !1, O.value = null, R.value = !1, c = null, D = void 0, s.reset(), i.clearGuides(), t.oldLayout = null, p(G, Y || g, "push");
       })();
     },
-    onDragStart: (o, z, k, { e: H, node: q }) => {
+    onDragStart: (o, z, k, { e: q, node: H }) => {
       l.cancel();
-      const { layout: E } = t, g = he(E, o);
+      const { layout: A } = t, g = he(A, o);
       if (!g) return;
-      const P = i.resolveMoveDrag({
+      const x = i.resolveMoveDrag({
         id: o,
         item: g,
-        layout: E,
+        layout: A,
         legacyLayoutEngine: w(),
-        event: H
+        event: q
       });
-      if (P.kind === "blocked") {
+      if (x.kind === "blocked") {
         a = {
           kind: "blocked",
-          reason: P.reason,
-          ids: P.ids,
-          activeId: P.activeId
+          reason: x.reason,
+          ids: x.ids,
+          activeId: x.activeId
         };
         const Q = v("drag-interaction", o), se = F.dispatch({
           type: "START_DRAG",
@@ -2249,29 +2259,29 @@ function tr({
           grid: { x: z, y: k },
           context: ne(a)
         });
-        if (!b(se.effects, "EMIT_DRAG_START")) {
+        if (!E(se.effects, "EMIT_DRAG_START")) {
           a = null;
           return;
         }
-        return S = Q, y.value = P.activeId || o, Me(
-          P.reason,
-          P.ids,
-          `Pointer move blocked by ${P.reason}.`
-        ), t.oldDragItem = He(g), t.oldLayout = Fe(E), t.activeDrag = Z({ w: g.w, h: g.h, x: g.x, y: g.y, placeholder: !0, i: o }), d = !1, i.notifyMoveBlocked({
-          ...P,
-          message: `Pointer move blocked by ${P.reason}.`
-        }), n.emitDragStart(E, g, g, void 0, H, q);
+        return S = Q, y.value = x.activeId || o, Me(
+          x.reason,
+          x.ids,
+          `Pointer move blocked by ${x.reason}.`
+        ), t.oldDragItem = He(g), t.oldLayout = Fe(A), t.activeDrag = Z({ w: g.w, h: g.h, x: g.x, y: g.y, placeholder: !0, i: o }), d = !1, i.notifyMoveBlocked({
+          ...x,
+          message: `Pointer move blocked by ${x.reason}.`
+        }), n.emitDragStart(A, g, g, void 0, q, H);
       }
-      const X = { w: g.w, h: g.h, x: g.x, y: g.y, placeholder: !0, i: o };
-      a = P.kind === "group" ? {
+      const Y = { w: g.w, h: g.h, x: g.x, y: g.y, placeholder: !0, i: o };
+      a = x.kind === "group" ? {
         kind: "group",
-        activeId: P.activeId,
-        ids: P.ids,
+        activeId: x.activeId,
+        ids: x.ids,
         startX: g.x,
         startY: g.y
       } : {
         kind: "single",
-        id: P.id,
+        id: x.id,
         startX: g.x,
         startY: g.y
       };
@@ -2282,22 +2292,22 @@ function tr({
         grid: { x: z, y: k },
         context: ne(a)
       });
-      if (!b(B.effects, "EMIT_DRAG_START")) {
+      if (!E(B.effects, "EMIT_DRAG_START")) {
         a = null;
         return;
       }
-      return S = K, L(E, "replace"), y.value = a.kind === "group" ? a.activeId : o, m.value = !1, j(), i.resetSnap(), i.clearGuides(), d = !1, s.init(q), t.oldDragItem = He(g), t.oldLayout = Fe(E), t.activeDrag = Z(X), w() || (W(E), r.start({
+      return S = K, L(A, "replace"), y.value = a.kind === "group" ? a.activeId : o, m.value = !1, j(), i.resetSnap(), i.clearGuides(), d = !1, s.init(H), t.oldDragItem = He(g), t.oldLayout = Fe(A), t.activeDrag = Z(Y), w() || (W(A), r.start({
         id: S,
         type: "drag",
         itemId: y.value || o
-      })), n.emitDragStart(E, g, g, void 0, H, q);
+      })), n.emitDragStart(A, g, g, void 0, q, H);
     },
-    onDrag: (o, z, k, { e: H, node: q }) => {
-      const { oldDragItem: E } = t;
+    onDrag: (o, z, k, { e: q, node: H }) => {
+      const { oldDragItem: A } = t;
       let { layout: g } = t;
-      const { cols: P, allowOverlap: X, preventCollision: K } = e, B = he(g, o);
+      const { cols: x, allowOverlap: Y, preventCollision: K } = e, B = he(g, o);
       if (!B) return;
-      if (s.maybeScroll(H, q), (a == null ? void 0 : a.kind) === "blocked") {
+      if (s.maybeScroll(q, H), (a == null ? void 0 : a.kind) === "blocked") {
         m.value = !0;
         return;
       }
@@ -2308,12 +2318,12 @@ function tr({
           N,
           { ...N, x: z, y: k },
           g
-        ), $ = F.dispatch({
+        ), U = F.dispatch({
           type: "MOVE_DRAG",
           interactionId: S,
           currentPx: { x: _.x, y: _.y },
           grid: { x: _.x, y: _.y }
-        }), ee = b($.effects, "PREVIEW_DRAG");
+        }), ee = E(U.effects, "PREVIEW_DRAG");
         if (!ee) {
           d || i.clearGuides();
           return;
@@ -2340,7 +2350,7 @@ function tr({
               placeholder: !0,
               i: C.activeId
             };
-            y.value === C.activeId && ye(ae, C.ids, C.activeId), n.emitDrag(Re, E, re, Be, H, q), (ae.status === "changed" || ae.status === "fallback") && (t.layout = Z(Re)), t.activeDrag = Z(Be), i.updateIntelligence(C.activeId, N, Be);
+            y.value === C.activeId && ye(ae, C.ids, C.activeId), n.emitDrag(Re, A, re, Be, q, H), (ae.status === "changed" || ae.status === "fallback") && (t.layout = Z(Re)), t.activeDrag = Z(Be), i.updateIntelligence(C.activeId, N, Be);
           },
           Ge()
         );
@@ -2352,7 +2362,7 @@ function tr({
           interactionId: S,
           currentPx: { x: C.x, y: C.y },
           grid: { x: C.x, y: C.y }
-        }), _ = b(N.effects, "PREVIEW_DRAG");
+        }), _ = E(N.effects, "PREVIEW_DRAG");
         if (!_) {
           d || i.clearGuides();
           return;
@@ -2360,9 +2370,9 @@ function tr({
         d = !0, M(
           _.requestId,
           { type: "move", id: o, x: C.x, y: C.y, userAction: !0 },
-          ($) => {
-            if ($.status === "stale" || !F.isCurrentPreviewRequest(_.interactionId, _.requestId) || (a == null ? void 0 : a.kind) !== "single" || a.id !== o || y.value !== o) return;
-            const ee = $.status === "changed" || $.status === "fallback" ? $.layout : r.getCommitted(), oe = he(ee, o) || B, Ie = $.placeholder || {
+          (U) => {
+            if (U.status === "stale" || !F.isCurrentPreviewRequest(_.interactionId, _.requestId) || (a == null ? void 0 : a.kind) !== "single" || a.id !== o || y.value !== o) return;
+            const ee = U.status === "changed" || U.status === "fallback" ? U.layout : r.getCommitted(), oe = he(ee, o) || B, Ie = U.placeholder || {
               w: oe.w,
               h: oe.h,
               x: oe.x,
@@ -2370,15 +2380,15 @@ function tr({
               placeholder: !0,
               i: o
             };
-            y.value === o && ye($, [o], o), n.emitDrag(ee, E, oe, Ie, H, q), ($.status === "changed" || $.status === "fallback") && (t.layout = Z(ee)), t.activeDrag = Z(Ie), i.updateIntelligence(o, B, Ie);
+            y.value === o && ye(U, [o], o), n.emitDrag(ee, A, oe, Ie, q, H), (U.status === "changed" || U.status === "fallback") && (t.layout = Z(ee)), t.activeDrag = Z(Ie), i.updateIntelligence(o, B, Ie);
           },
           Ge()
         );
         return;
       }
-      const Q = t.layout.length >= Gt, se = B.x, Y = B.y;
+      const Q = t.layout.length >= Gt, se = B.x, $ = B.y;
       if (y.value === o) {
-        const C = K && !X ? nt(g, { ...B, x: z, y: k }) : [];
+        const C = K && !Y ? nt(g, { ...B, x: z, y: k }) : [];
         C.length > 0 ? Me(
           "collision",
           C.map((N) => N.i),
@@ -2391,7 +2401,7 @@ function tr({
         currentPx: { x: G.x, y: G.y },
         grid: { x: G.x, y: G.y }
       });
-      if (!b(Ce.effects, "PREVIEW_DRAG")) {
+      if (!E(Ce.effects, "PREVIEW_DRAG")) {
         d || i.clearGuides();
         return;
       }
@@ -2399,17 +2409,17 @@ function tr({
         g,
         B,
         xe(e),
-        P,
-        X,
+        x,
+        Y,
         G.x,
         G.y,
         fe,
         K
       );
       const De = { w: B.w, h: B.h, x: B.x, y: B.y, placeholder: !0, i: o };
-      if (n.emitDrag(g, E, B, De, H, q), !!(B.x !== se || B.y !== Y || X && g !== t.layout)) {
+      if (n.emitDrag(g, A, B, De, q, H), !!(B.x !== se || B.y !== $ || Y && g !== t.layout)) {
         if (!Q) {
-          const C = X ? g : Ue(g, xe(e), P), N = he(C, o) || B, _ = {
+          const C = Y ? g : Ue(g, xe(e), x), N = he(C, o) || B, _ = {
             w: N.w,
             h: N.h,
             x: N.x,
@@ -2420,69 +2430,69 @@ function tr({
           t.layout = Z(C), t.activeDrag = Z(_), i.updateIntelligence(o, B, _);
           return;
         }
-        X || l.resetMovedFlags(t.layout), l.schedule({
-          cols: P,
+        Y || l.resetMovedFlags(t.layout), l.schedule({
+          cols: x,
           compactType: xe(e),
-          layout: X && g !== t.layout ? g : void 0,
+          layout: Y && g !== t.layout ? g : void 0,
           placeholder: De,
-          shouldCompact: !X
+          shouldCompact: !Y
         }), i.updateIntelligence(o, B, De);
       }
     },
-    onDragStop: (o, z, k, { e: H, node: q }) => {
+    onDragStop: (o, z, k, { e: q, node: H }) => {
       if (l.cancel(), !t.activeDrag) return;
-      const { oldDragItem: E, oldLayout: g } = t, P = t.layout;
-      let X = P;
-      const { cols: K, preventCollision: B, allowOverlap: Q } = e, se = he(X, o);
+      const { oldDragItem: A, oldLayout: g } = t, x = t.layout;
+      let Y = x;
+      const { cols: K, preventCollision: B, allowOverlap: Q } = e, se = he(Y, o);
       if (!se) return;
-      let Y, fe = [];
+      let $, fe = [];
       if (S) {
         const C = F.dispatch({
           type: "STOP_DRAG",
           interactionId: S,
           grid: { x: z, y: k }
         });
-        fe = C.effects, Y = b(C.effects, "COMMIT_DRAG");
+        fe = C.effects, $ = E(C.effects, "COMMIT_DRAG");
       }
-      if (!Y) {
-        (b(fe, "EMIT_DRAG_STOP") || !S) && n.emitDragStop(P, E, se, void 0, H, q), f(), t.oldLayout = null;
+      if (!$) {
+        (E(fe, "EMIT_DRAG_STOP") || !S) && n.emitDragStop(x, A, se, void 0, q, H), f(), t.oldLayout = null;
         return;
       }
       if ((a == null ? void 0 : a.kind) === "group" && !w()) {
-        const C = a, N = t.activeDrag || { x: z, y: k }, _ = N.x - C.startX, $ = N.y - C.startY, ee = r.getCommitted();
+        const C = a, N = t.activeDrag || { x: z, y: k }, _ = N.x - C.startX, U = N.y - C.startY, ee = r.getCommitted();
         te(
-          Y.requestId,
+          $.requestId,
           {
             type: "groupMove",
             ids: C.ids,
             activeId: C.activeId,
             dx: _,
-            dy: $,
+            dy: U,
             userAction: !0
           },
           (oe) => {
             (async () => {
               var Be, Ye;
-              if (oe.status === "stale" || !F.isCurrentRequest(Y.interactionId, Y.requestId)) return;
+              if (oe.status === "stale" || !F.isCurrentRequest($.interactionId, $.requestId)) return;
               oe.status === "blocked" && ye(oe, C.ids, C.activeId, !0);
               const Ie = F.dispatch({
                 type: "APPLY_RESULT",
-                interactionId: Y.interactionId,
-                requestId: Y.requestId,
+                interactionId: $.interactionId,
+                requestId: $.requestId,
                 status: oe.status === "cancelled" ? "error" : oe.status
               }).effects, ae = oe.status === "changed" || oe.status === "fallback" ? oe.layout : r.getCommitted(), Re = he(ae, C.activeId) || se, re = oe.status === "changed" || oe.status === "fallback" ? (t.suppressLayoutChange = !0, await ((Be = i.commitMove) == null ? void 0 : Be.call(i, {
                 ids: C.ids,
                 activeId: C.activeId,
-                beforeLayout: g || ee || P,
+                beforeLayout: g || ee || x,
                 afterLayout: ae,
                 source: "pointer"
               }))) : null;
               if (re && re.status !== "changed" && re.status !== "noop") {
-                const Se = g || ee || P;
+                const Se = g || ee || x;
                 t.suppressLayoutChange = !0, t.layout = Z(Se), (Ye = i.rollbackInteraction) == null || Ye.call(i, Se, re.status), t.activeDrag = null, t.oldDragItem = null, y.value = null, m.value = !1, j(), a = null, d = !1, S = null, s.reset(), t.oldLayout = null;
                 return;
               }
-              b(Ie, "EMIT_DRAG_STOP") && n.emitDragStop(ae, E, Re, void 0, H, q), t.activeDrag = null, t.layout = Z(ae), t.oldDragItem = null, y.value = null, m.value = !1, j(), a = null, d = !1, S = null, s.reset(), i.clearGuides(), t.oldLayout = null, p(ae, g || ee || P, "push");
+              E(Ie, "EMIT_DRAG_STOP") && n.emitDragStop(ae, A, Re, void 0, q, H), t.activeDrag = null, t.layout = Z(ae), t.oldDragItem = null, y.value = null, m.value = !1, j(), a = null, d = !1, S = null, s.reset(), i.clearGuides(), t.oldLayout = null, p(ae, g || ee || x, "push");
             })();
           },
           Ge()
@@ -2492,31 +2502,31 @@ function tr({
       if (!w()) {
         const C = t.activeDrag || { x: z, y: k }, N = r.getCommitted();
         te(
-          Y.requestId,
+          $.requestId,
           { type: "move", id: o, x: C.x, y: C.y, userAction: !0 },
           (_) => {
             (async () => {
               var ae, Re;
-              if (_.status === "stale" || !F.isCurrentRequest(Y.interactionId, Y.requestId)) return;
+              if (_.status === "stale" || !F.isCurrentRequest($.interactionId, $.requestId)) return;
               _.status === "blocked" && ye(_, [o], o, !0);
-              const $ = F.dispatch({
+              const U = F.dispatch({
                 type: "APPLY_RESULT",
-                interactionId: Y.interactionId,
-                requestId: Y.requestId,
+                interactionId: $.interactionId,
+                requestId: $.requestId,
                 status: _.status === "cancelled" ? "error" : _.status
               }).effects, ee = _.status === "changed" || _.status === "fallback" ? _.layout : r.getCommitted(), oe = he(ee, o) || se, Ie = _.status === "changed" || _.status === "fallback" ? (t.suppressLayoutChange = !0, await ((ae = i.commitMove) == null ? void 0 : ae.call(i, {
                 ids: [o],
                 activeId: o,
-                beforeLayout: g || N || P,
+                beforeLayout: g || N || x,
                 afterLayout: ee,
                 source: "pointer"
               }))) : null;
               if (Ie && Ie.status !== "changed" && Ie.status !== "noop") {
-                const re = g || N || P;
+                const re = g || N || x;
                 t.suppressLayoutChange = !0, t.layout = Z(re), (Re = i.rollbackInteraction) == null || Re.call(i, re, Ie.status), t.activeDrag = null, t.oldDragItem = null, y.value = null, m.value = !1, j(), a = null, d = !1, S = null, s.reset(), t.oldLayout = null;
                 return;
               }
-              b($, "EMIT_DRAG_STOP") && n.emitDragStop(ee, E, oe, void 0, H, q), t.activeDrag = null, t.layout = Z(ee), t.oldDragItem = null, y.value = null, m.value = !1, j(), a = null, d = !1, S = null, s.reset(), i.clearGuides(), t.oldLayout = null, p(ee, g || N || P, "push");
+              E(U, "EMIT_DRAG_STOP") && n.emitDragStop(ee, A, oe, void 0, q, H), t.activeDrag = null, t.layout = Z(ee), t.oldDragItem = null, y.value = null, m.value = !1, j(), a = null, d = !1, S = null, s.reset(), i.clearGuides(), t.oldLayout = null, p(ee, g || N || x, "push");
             })();
           },
           Ge()
@@ -2524,8 +2534,8 @@ function tr({
         return;
       }
       const G = !0, Ce = t.activeDrag || { x: z, y: k };
-      X = Qe(
-        X,
+      Y = Qe(
+        Y,
         se,
         xe(e),
         K,
@@ -2535,10 +2545,10 @@ function tr({
         G,
         B
       );
-      const De = Q ? X : Ue(X, xe(e), K), ge = F.dispatch({
+      const De = Q ? Y : Ue(Y, xe(e), K), ge = F.dispatch({
         type: "APPLY_RESULT",
-        interactionId: Y.interactionId,
-        requestId: Y.requestId,
+        interactionId: $.interactionId,
+        requestId: $.requestId,
         status: "changed"
       }).effects;
       (async () => {
@@ -2546,16 +2556,16 @@ function tr({
         const C = (t.suppressLayoutChange = !0, await ((N = i.commitMove) == null ? void 0 : N.call(i, {
           ids: [o],
           activeId: o,
-          beforeLayout: g || P,
+          beforeLayout: g || x,
           afterLayout: De,
           source: "pointer"
         })));
         if (C && C.status !== "changed" && C.status !== "noop") {
-          const $ = g || P;
-          t.suppressLayoutChange = !0, t.layout = Z($), (_ = i.rollbackInteraction) == null || _.call(i, $, C.status), t.activeDrag = null, t.oldDragItem = null, y.value = null, m.value = !1, j(), a = null, d = !1, S = null, s.reset(), t.oldLayout = null;
+          const U = g || x;
+          t.suppressLayoutChange = !0, t.layout = Z(U), (_ = i.rollbackInteraction) == null || _.call(i, U, C.status), t.activeDrag = null, t.oldDragItem = null, y.value = null, m.value = !1, j(), a = null, d = !1, S = null, s.reset(), t.oldLayout = null;
           return;
         }
-        b(ge, "EMIT_DRAG_STOP") && n.emitDragStop(De, E, se, void 0, H, q), t.activeDrag = null, t.layout = Z(De), t.oldDragItem = null, y.value = null, m.value = !1, j(), a = null, d = !1, S = null, s.reset(), i.clearGuides(), t.oldLayout = null, p(De, g || P, "push");
+        E(ge, "EMIT_DRAG_STOP") && n.emitDragStop(De, A, se, void 0, q, H), t.activeDrag = null, t.layout = Z(De), t.oldDragItem = null, y.value = null, m.value = !1, j(), a = null, d = !1, S = null, s.reset(), i.clearGuides(), t.oldLayout = null, p(De, g || x, "push");
       })();
     }
   };
@@ -2577,74 +2587,74 @@ function nr({
   let R = null;
   const y = L || It({
     getDragActivationDistance: () => e.dragActivationDistance
-  }), O = () => r.getLayoutEngineProp(), A = () => r.isLegacyLayoutEngine(), I = (f = t.layout) => r.reset(f), h = (...f) => r.preview(...f), a = (...f) => r.commit(...f), d = (f, x) => f.find((b) => b.type === x), S = (f) => {
+  }), O = () => r.getLayoutEngineProp(), T = () => r.isLegacyLayoutEngine(), I = (f = t.layout) => r.reset(f), h = (...f) => r.preview(...f), a = (...f) => r.commit(...f), d = (f, b) => f.find((E) => E.type === b), S = (f) => {
     if (!R) {
-      const x = p("drop", f), b = y.dispatch({
+      const b = p("drop", f), E = y.dispatch({
         type: "ENTER_DROP",
-        interactionId: x,
+        interactionId: b,
         itemId: f
       });
-      if (d(b.effects, "REJECT_TRANSITION")) return null;
-      R = x;
+      if (d(E.effects, "REJECT_TRANSITION")) return null;
+      R = b;
     }
     return R;
-  }, c = (f, x, b, ne) => {
+  }, c = (f, b, E, ne) => {
     const ie = S(f);
     if (!ie) return null;
-    const U = y.dispatch({
+    const X = y.dispatch({
       type: "MOVE_DROP",
       interactionId: ie,
-      grid: x,
-      size: b,
+      grid: b,
+      size: E,
       strategy: ne
     });
-    return d(U.effects, "PREVIEW_DROP") || null;
+    return d(X.effects, "PREVIEW_DROP") || null;
   }, D = (f) => {
     y.reset(f), R = null;
-  }, T = (f) => {
+  }, P = (f) => {
     t.externalDropSession = f ? Z(f) : null;
-  }, w = (f) => t.layout.filter((x) => x.i !== f), W = () => {
-    const f = String(e.droppingItem.i), x = S(f);
-    if (!x) return null;
-    const b = t.externalDropSession;
-    if (b && b.id === f && b.status !== "committing")
-      return b;
+  }, w = (f) => t.layout.filter((b) => b.i !== f), W = () => {
+    const f = String(e.droppingItem.i), b = S(f);
+    if (!b) return null;
+    const E = t.externalDropSession;
+    if (E && E.id === f && E.status !== "committing")
+      return E;
     const ne = Zn({
       id: f,
-      interactionId: x,
+      interactionId: b,
       sourceItem: e.droppingItem,
       baseLayout: w(f),
       strategy: e.dropStrategy
     });
-    return T(ne), ne;
+    return P(ne), ne;
   }, M = (f = "drop-cleanup") => {
-    T(null), s.reset(), i.clearGuides(), D(f);
-  }, te = (f, x) => {
-    const b = $n(f, x);
-    T(b), b.status === "ready" && b.ghostItem && i.updateIntelligence(b.id, b.ghostItem, b.ghostItem);
-  }, F = (f, x) => {
-    const b = Ue(
-      [...f.baseLayout.map(He), He(x)],
+    P(null), s.reset(), i.clearGuides(), D(f);
+  }, te = (f, b) => {
+    const E = $n(f, b);
+    P(E), E.status === "ready" && E.ghostItem && i.updateIntelligence(E.id, E.ghostItem, E.ghostItem);
+  }, F = (f, b) => {
+    const E = Ue(
+      [...f.baseLayout.map(He), He(b)],
       xe(e),
       e.cols,
       e.allowOverlap
-    ), ne = he(b, f.id) || x;
+    ), ne = he(E, f.id) || b;
     return {
       status: "changed",
-      layout: b,
+      layout: E,
       placeholder: ne
     };
   }, _e = (f) => {
-    const { cols: x, maxRows: b, allowOverlap: ne } = e, ie = f.target || { x: f.resolvedItem.x, y: f.resolvedItem.y };
-    let U = null;
+    const { cols: b, maxRows: E, allowOverlap: ne } = e, ie = f.target || { x: f.resolvedItem.x, y: f.resolvedItem.y };
+    let X = null;
     if (f.strategy === "auto") {
       const J = ln(
         f.baseLayout,
         { w: f.resolvedItem.w, h: f.resolvedItem.h },
-        x,
+        b,
         ie.x,
         ie.y,
-        b
+        E
       );
       if (J) {
         const pe = {
@@ -2653,51 +2663,51 @@ function nr({
           y: J.y,
           static: !1
         };
-        U = i.snapCandidate(f.id, pe, pe, f.baseLayout);
+        X = i.snapCandidate(f.id, pe, pe, f.baseLayout);
       }
-    } else if (U = He(f.resolvedItem), !ne) {
-      const J = nt(f.baseLayout, U);
-      J.length > 0 && (U.x = Math.min(...J.map((pe) => pe.x)), U.y = Math.max(...J.map((pe) => pe.y + pe.h)));
+    } else if (X = He(f.resolvedItem), !ne) {
+      const J = nt(f.baseLayout, X);
+      J.length > 0 && (X.x = Math.min(...J.map((pe) => pe.x)), X.y = Math.max(...J.map((pe) => pe.y + pe.h)));
     }
-    return !U || U.y + U.h > b ? {
+    return !X || X.y + X.h > E ? {
       status: "blocked",
       layout: f.baseLayout,
       blocked: { reason: "maxRows", itemIds: [f.id] },
-      placeholder: U || f.resolvedItem
-    } : F(f, U);
+      placeholder: X || f.resolvedItem
+    } : F(f, X);
   }, Ge = (f) => {
-    const x = f.ghostItem || f.resolvedItem;
-    return F(f, x);
-  }, V = async (f, x, b, ne, ie) => {
-    var we, o, z, k, H, q, E;
-    if (x.status === "stale" || !y.isCurrentRequest(ne, ie)) return;
-    const U = x.status === "cancelled" ? "error" : x.status;
+    const b = f.ghostItem || f.resolvedItem;
+    return F(f, b);
+  }, V = async (f, b, E, ne, ie) => {
+    var we, o, z, k, q, H, A;
+    if (b.status === "stale" || !y.isCurrentRequest(ne, ie)) return;
+    const X = b.status === "cancelled" ? "error" : b.status;
     if (y.dispatch({
       type: "APPLY_RESULT",
       interactionId: ne,
       requestId: ie,
-      status: U
-    }), x.status === "blocked" || x.status === "cancelled" || x.status === "error") {
-      const g = Xt(f, ((we = x.drop) == null ? void 0 : we.reason) || ((o = x.blocked) == null ? void 0 : o.reason) || "commit-rejected", {
-        geometry: x.placeholder || f.ghostItem || f.resolvedItem,
-        message: (z = x.error) == null ? void 0 : z.message,
-        itemIds: (k = x.blocked) == null ? void 0 : k.itemIds
+      status: X
+    }), b.status === "blocked" || b.status === "cancelled" || b.status === "error") {
+      const g = Xt(f, ((we = b.drop) == null ? void 0 : we.reason) || ((o = b.blocked) == null ? void 0 : o.reason) || "commit-rejected", {
+        geometry: b.placeholder || f.ghostItem || f.resolvedItem,
+        message: (z = b.error) == null ? void 0 : z.message,
+        itemIds: (k = b.blocked) == null ? void 0 : k.itemIds
       });
-      T(g), M(((H = g.blocked) == null ? void 0 : H.reason) || "drop-commit-rejected");
+      P(g), M(((q = g.blocked) == null ? void 0 : q.reason) || "drop-commit-rejected");
       return;
     }
-    const { committedLayout: J, committedItem: pe, eventLayout: ke } = Un(f, x), de = pe ? (t.suppressLayoutChange = !0, await ((q = i.commitDrop) == null ? void 0 : q.call(i, {
+    const { committedLayout: J, committedItem: pe, eventLayout: ke } = Un(f, b), de = pe ? (t.suppressLayoutChange = !0, await ((H = i.commitDrop) == null ? void 0 : H.call(i, {
       id: f.id,
       beforeLayout: f.baseLayout,
       afterLayout: J,
       item: pe,
-      event: b
+      event: E
     }))) : null;
     if (de && de.status !== "changed" && de.status !== "noop") {
-      t.suppressLayoutChange = !0, t.layout = Z(f.baseLayout), (E = i.rollbackInteraction) == null || E.call(i, f.baseLayout, de.status), m.value = 0, M(de.status);
+      t.suppressLayoutChange = !0, t.layout = Z(f.baseLayout), (A = i.rollbackInteraction) == null || A.call(i, f.baseLayout, de.status), m.value = 0, M(de.status);
       return;
     }
-    m.value = 0, n.emitDrop(ke, b, pe), M("drop-cleanup");
+    m.value = 0, n.emitDrop(ke, E, pe), M("drop-cleanup");
   };
   return {
     clearDropInteraction: () => M("clear-active-interaction"),
@@ -2705,12 +2715,12 @@ function nr({
     onDrop: (f) => {
       var ke, de, we, o;
       f.preventDefault(), f.stopPropagation();
-      const x = t.externalDropSession, b = !!(x && !x.blocked && (x.status === "ready" || x.status === "previewing" && x.ghostItem));
-      if (!x || !b) {
-        m.value = 0, M(((ke = x == null ? void 0 : x.blocked) == null ? void 0 : ke.reason) || "drop-commit-rejected");
+      const b = t.externalDropSession, E = !!(b && !b.blocked && (b.status === "ready" || b.status === "previewing" && b.ghostItem));
+      if (!b || !E) {
+        m.value = 0, M(((ke = b == null ? void 0 : b.blocked) == null ? void 0 : ke.reason) || "drop-commit-rejected");
         return;
       }
-      const ne = S(x.id);
+      const ne = S(b.id);
       if (!ne) {
         M("drop-commit-rejected");
         return;
@@ -2718,23 +2728,23 @@ function nr({
       const ie = y.dispatch({
         type: "COMMIT_DROP",
         interactionId: ne
-      }), U = d(ie.effects, "COMMIT_DROP");
-      if (!U) {
+      }), X = d(ie.effects, "COMMIT_DROP");
+      if (!X) {
         M("drop-commit-rejected");
         return;
       }
       const J = {
-        ...x,
+        ...b,
         status: "committing",
-        requestId: U.requestId
+        requestId: X.requestId
       }, pe = _t(J, "commit");
-      if (T(J), A()) {
+      if (P(J), T()) {
         V(
           J,
           Ge(J),
           f,
-          U.interactionId,
-          U.requestId
+          X.interactionId,
+          X.requestId
         );
         return;
       }
@@ -2743,15 +2753,15 @@ function nr({
         type: "drop",
         itemId: J.id
       }), a(
-        U.requestId,
+        X.requestId,
         pe,
         (z) => {
           V(
             J,
             z,
             f,
-            U.interactionId,
-            U.requestId
+            X.interactionId,
+            X.requestId
           );
         },
         J.baseLayout.length >= (((o = (we = (de = O()) == null ? void 0 : de.scheduler) == null ? void 0 : we.auto) == null ? void 0 : o.workerMinItems) || 1e3)
@@ -2767,48 +2777,48 @@ function nr({
       var G, Ce, De, ge, C;
       if (f.preventDefault(), f.stopPropagation(), u && !((Ce = (G = f.currentTarget) == null ? void 0 : G.classList) != null && Ce.contains(v)))
         return !1;
-      const x = W();
-      if (!x) return !1;
-      const b = n.callDropDragOver(f);
-      if (b === !1)
+      const b = W();
+      if (!b) return !1;
+      const E = n.callDropDragOver(f);
+      if (E === !1)
         return M("drop-drag-over-rejected"), !1;
       const {
         margin: ne,
         cols: ie,
-        rowHeight: U,
+        rowHeight: X,
         maxRows: J,
         width: pe,
         containerPadding: ke,
         transformScale: de,
         dropStrategy: we
-      } = e, o = f.currentTarget instanceof Element ? f.currentTarget.getBoundingClientRect() : { left: 0, top: 0 }, z = (f.clientX - o.left) / de, k = (f.clientY - o.top) / de, H = typeof (b == null ? void 0 : b.w) == "number" ? b.w : e.droppingItem.w, q = typeof (b == null ? void 0 : b.h) == "number" ? b.h : e.droppingItem.h, E = {
+      } = e, o = f.currentTarget instanceof Element ? f.currentTarget.getBoundingClientRect() : { left: 0, top: 0 }, z = (f.clientX - o.left) / de, k = (f.clientY - o.top) / de, q = typeof (E == null ? void 0 : E.w) == "number" ? E.w : e.droppingItem.w, H = typeof (E == null ? void 0 : E.h) == "number" ? E.h : e.droppingItem.h, A = {
         cols: ie,
         margin: ne,
         maxRows: J,
-        rowHeight: U,
+        rowHeight: X,
         containerWidth: pe || 0,
         containerPadding: ke || ne,
         renderPrecision: e.renderPrecision || void 0
-      }, g = je(E, 0, 0, H, q), P = Vt(
-        E,
+      }, g = je(A, 0, 0, q, H), x = Vt(
+        A,
         k - g.height / 2,
         z - g.width / 2,
-        H,
-        q
-      ), X = w(x.id), K = {
-        ...x.resolvedItem,
+        q,
+        H
+      ), Y = w(b.id), K = {
+        ...b.resolvedItem,
         ...e.droppingItem,
-        i: x.id,
-        w: H,
-        h: q,
-        x: P.x,
-        y: P.y,
+        i: b.id,
+        w: q,
+        h: H,
+        x: x.x,
+        y: x.y,
         static: !1
-      }, B = i.snapCandidate(x.id, K, K, X), Q = Yn(x, {
-        overrides: b || null,
+      }, B = i.snapCandidate(b.id, K, K, Y), Q = Yn(b, {
+        overrides: E || null,
         target: { x: B.x, y: B.y },
         strategy: we,
-        baseLayout: X,
+        baseLayout: Y,
         snapCandidate: () => B
       }), se = c(
         Q.id,
@@ -2817,29 +2827,29 @@ function nr({
         we
       );
       if (!se) {
-        T(Q);
+        P(Q);
         return;
       }
-      const Y = {
+      const $ = {
         ...Q,
         requestId: se.requestId,
         status: "previewing"
-      }, fe = _t(Y, "preview");
-      if (T(Y), A()) {
-        te(Y, _e(Y));
+      }, fe = _t($, "preview");
+      if (P($), T()) {
+        te($, _e($));
         return;
       }
-      I(Y.baseLayout), r.start({
+      I($.baseLayout), r.start({
         id: R || se.interactionId,
         type: "drop",
-        itemId: Y.id
+        itemId: $.id
       }), h(
         se.requestId,
         fe,
         (N) => {
-          N.status !== "stale" && y.isCurrentPreviewRequest(se.interactionId, se.requestId) && te(Y, N);
+          N.status !== "stale" && y.isCurrentPreviewRequest(se.interactionId, se.requestId) && te($, N);
         },
-        Y.baseLayout.length >= (((C = (ge = (De = O()) == null ? void 0 : De.scheduler) == null ? void 0 : ge.auto) == null ? void 0 : C.workerMinItems) || 1e3)
+        $.baseLayout.length >= (((C = (ge = (De = O()) == null ? void 0 : De.scheduler) == null ? void 0 : ge.auto) == null ? void 0 : C.workerMinItems) || 1e3)
       );
     }
   };
@@ -2894,13 +2904,13 @@ function ar({
     }
     r.value = null, v([dt("invalid-height", { height: y, source: O })]);
   }, m = () => {
-    var A;
+    var T;
     if (u) return;
     if (L(), !e()) {
       r.value = null, v([]);
       return;
     }
-    const y = ((A = t.value) == null ? void 0 : A.parentElement) || null;
+    const y = ((T = t.value) == null ? void 0 : T.parentElement) || null;
     if (!y) {
       r.value = null, v([dt("missing-parent")]);
       return;
@@ -3011,7 +3021,7 @@ const ft = "vue-grid-layout", dr = typeof navigator != "undefined" && /firefox/i
       context: {
         source: "grid"
       }
-    })), A = new Proxy(u, {
+    })), T = new Proxy(u, {
       get(V, j) {
         return j === "rowHeight" ? O.value.rowHeight : V[j];
       }
@@ -3021,7 +3031,7 @@ const ft = "vue-grid-layout", dr = typeof navigator != "undefined" && /firefox/i
     }), h = {
       current: null
     }, a = n({
-      props: A,
+      props: T,
       layoutRef: Qt(p, "layout"),
       engineBridge: I,
       getLayout: () => p.layout,
@@ -3047,16 +3057,16 @@ const ft = "vue-grid-layout", dr = typeof navigator != "undefined" && /firefox/i
       setActiveDrag: (V) => {
         p.activeDrag = Z(V);
       }
-    }), T = Qn({
+    }), P = Qn({
       getConfig: () => u.autoScroll,
       rootClassName: ft
     }), w = rr({
-      props: A,
+      props: T,
       state: p,
       eventBridge: v,
       engineBridge: I,
       frameUpdate: D,
-      autoScroll: T,
+      autoScroll: P,
       editor: d,
       isFirefox: dr,
       layoutClassName: ft,
@@ -3083,7 +3093,7 @@ const ft = "vue-grid-layout", dr = typeof navigator != "undefined" && /firefox/i
     };
     L.watchLayoutDependencies(W), Wt(() => {
       var V;
-      D.cancel(), w.removeDroppingPlaceholder("component-unmounted"), T.reset(), I.dispose("component unmounted"), (V = a.stop) == null || V.call(a), y.stop();
+      D.cancel(), w.removeDroppingPlaceholder("component-unmounted"), P.reset(), I.dispose("component unmounted"), (V = a.stop) == null || V.call(a), y.stop();
     });
     let M = "";
     const te = () => {
@@ -3099,16 +3109,16 @@ const ft = "vue-grid-layout", dr = typeof navigator != "undefined" && /firefox/i
       p.mounted = !0, (V = a.mount) == null || V.call(a), te();
     });
     const F = () => {
-      var U, J;
-      const V = ((U = p.externalDropSession) == null ? void 0 : U.ghostItem) || null, j = V || p.activeDrag;
+      var X, J;
+      const V = ((X = p.externalDropSession) == null ? void 0 : X.ghostItem) || null, j = V || p.activeDrag;
       if (!j) return null;
       const {
         width: Me = 0,
         cols: ye,
         margin: be,
         containerPadding: f,
-        maxRows: x,
-        useCSSTransforms: b,
+        maxRows: b,
+        useCSSTransforms: E,
         transformScale: ne
       } = u, ie = O.value;
       return We(kt, {
@@ -3125,14 +3135,14 @@ const ft = "vue-grid-layout", dr = typeof navigator != "undefined" && /firefox/i
         cols: ye,
         margin: be,
         containerPadding: f || be,
-        maxRows: x,
+        maxRows: b,
         rowHeight: ie.rowHeight,
         dragActivationDistance: u.dragActivationDistance,
         renderPrecision: ie.renderPrecision,
         isDraggable: !1,
         isResizable: !1,
         isBounded: !1,
-        useCSSTransforms: b,
+        useCSSTransforms: E,
         transformScale: ne
       }, {
         default: () => [We("div", null, null)]
@@ -3144,69 +3154,71 @@ const ft = "vue-grid-layout", dr = typeof navigator != "undefined" && /firefox/i
       const {
         width: be = 0,
         cols: f,
-        margin: x,
-        containerPadding: b,
+        margin: b,
+        containerPadding: E,
         maxRows: ne,
         isDraggable: ie,
-        isResizable: U,
+        isResizable: X,
         isBounded: J,
         useCSSTransforms: pe,
         transformScale: ke,
         draggableCancel: de,
-        draggableHandle: we,
-        resizeHandles: o,
-        resizeHandle: z
-      } = u, k = O.value, {
+        draggableCancelInteractiveElements: we,
+        draggableHandle: o,
+        resizeHandles: z,
+        resizeHandle: k
+      } = u, q = O.value, {
         mounted: H,
-        droppingPosition: q
-      } = p, E = a.getItemRenderState(ye, {
+        droppingPosition: A
+      } = p, g = a.getItemRenderState(ye, {
         isDraggable: ie,
-        isResizable: U,
+        isResizable: X,
         isBounded: J
       }, Me);
-      if (!E.visible) return null;
-      const g = E.previewItem || ye, P = typeof E.resizeHandles != "undefined" ? E.resizeHandles : ye.resizeHandles || o;
+      if (!g.visible) return null;
+      const x = g.previewItem || ye, Y = typeof g.resizeHandles != "undefined" ? g.resizeHandles : ye.resizeHandles || z;
       return We(kt, {
         key: ye.i,
         containerWidth: be,
         cols: f,
-        margin: x,
-        containerPadding: b || x,
+        margin: b,
+        containerPadding: E || b,
         maxRows: ne,
-        rowHeight: k.rowHeight,
+        rowHeight: q.rowHeight,
         dragActivationDistance: u.dragActivationDistance,
-        renderPrecision: k.renderPrecision,
+        renderPrecision: q.renderPrecision,
         cancel: de,
-        handle: we,
+        cancelInteractiveElements: we,
+        handle: o,
         onDragStop: w.onDragStop,
         onDragStart: w.onDragStart,
         onDrag: w.onDrag,
         onResizeStart: w.onResizeStart,
         onResize: w.onResize,
         onResizeStop: w.onResizeStop,
-        isDraggable: E.draggable,
-        isResizable: E.resizable,
-        isBounded: E.bounded,
+        isDraggable: g.draggable,
+        isResizable: g.resizable,
+        isBounded: g.bounded,
         isDragBlocked: w.dragBlocked.value && w.activeDragId.value === ye.i,
         isResizeBlocked: w.resizeBlocked.value && w.activeResizeId.value === ye.i,
         useCSSTransforms: pe && H,
         usePercentages: !H,
         transformScale: ke,
-        w: g.w,
-        h: g.h,
-        x: g.x,
-        y: g.y,
-        i: g.i,
-        minH: g.minH,
-        minW: g.minW,
-        maxH: g.maxH,
-        maxW: g.maxW,
-        static: g.static,
-        class: E.className,
-        onItemClick: E.onClick,
+        w: x.w,
+        h: x.h,
+        x: x.x,
+        y: x.y,
+        i: x.i,
+        minH: x.minH,
+        minW: x.minW,
+        maxH: x.maxH,
+        maxW: x.maxW,
+        static: x.static,
+        class: g.className,
+        onItemClick: g.onClick,
         droppingPosition: void 0,
-        resizeHandles: P,
-        resizeHandle: z
+        resizeHandles: Y,
+        resizeHandle: k
       }, ur(V) ? V : {
         default: () => [V]
       });
@@ -3217,14 +3229,14 @@ const ft = "vue-grid-layout", dr = typeof navigator != "undefined" && /firefox/i
         style: j,
         isDroppable: Me,
         innerRef: ye
-      } = u, be = O.value, f = Wn(s), x = a.isExternalDropEnabled(Me), b = gt(ft, f.class, V, a.getRootClassNames()), ne = {
+      } = u, be = O.value, f = Wn(s), b = a.isExternalDropEnabled(Me), E = gt(ft, f.class, V, a.getRootClassNames()), ne = {
         ...f.style && typeof f.style == "object" && !Array.isArray(f.style) ? f.style : {},
         height: be.containerStyle.height,
         ...be.containerStyle.overflow ? {
           overflow: be.containerStyle.overflow
         } : {},
         ...j
-      }, ie = l.default ? sn(qt(en, null, l.default())) : [], U = L.syncRenderedChildren(ie, W), J = Xn(p, U);
+      }, ie = l.default ? sn(qt(en, null, l.default())) : [], X = L.syncRenderedChildren(ie, W), J = Xn(p, X);
       _e.clear();
       for (let de = 0; de < J.length; de++) {
         const we = J[de];
@@ -3243,14 +3255,14 @@ const ft = "vue-grid-layout", dr = typeof navigator != "undefined" && /firefox/i
       };
       return We("div", Nt(f.attrs, {
         ref: ke,
-        class: b,
+        class: E,
         style: ne,
         onMousemove: a.onRootPointerMove,
         onClick: a.onRootClick,
-        onDrop: x ? w.onDrop : $e,
-        onDragleave: x ? w.onDragLeave : $e,
-        onDragenter: x ? w.onDragEnter : $e,
-        onDragover: x ? w.onDragOver : $e
+        onDrop: b ? w.onDrop : $e,
+        onDragleave: b ? w.onDragLeave : $e,
+        onDragenter: b ? w.onDragEnter : $e,
+        onDragover: b ? w.onDragOver : $e
       }), [ie.map((de) => Ge(de, _e)), F(), a.renderOverlay({
         geometry: pe,
         itemMap: _e,

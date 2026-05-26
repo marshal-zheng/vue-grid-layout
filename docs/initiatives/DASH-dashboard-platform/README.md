@@ -32,7 +32,7 @@ Dashboard 平台与文档生命周期的目标是让 dashboard 能以版本化�
 | responsive-profiles | profile resolver、dashboard responsive composable、thin component | done | docs/specs/responsive-dashboard-profiles | dashboard-document-adapter | tasks 15/15；兼容语言需按 lean-core 2.0 重读 |
 | dashboard-shell | headless dashboard editor shell、menu/keyboard/highlight/result stream | done | docs/specs/dashboard-editor-shell-integration | responsive-profiles, EDITOR/professional-editor-ux | tasks 17/17 |
 | placement-policies | shell widget placement policies、adapter transaction 与 responsive write-back | done | docs/specs/dashboard-editor-shell-placement-policies | dashboard-shell, EDITOR/editor-placement-session | tasks 10/10 |
-| command-history-first | shell/editor history、documentWriteBack owner、rollback checkpoint、synthetic pointer/drop results | in-spec | docs/specs/command-history-first-dashboard-editing | dashboard-shell, placement-policies, EDITOR/editor-command-kernel | tasks 32/38；T1-T6 core shell/history/write-back 路径与 T7 dogfood workbench/result 面板迁移已完成；下一步 T8 public exports、README 与迁移说明 |
+| command-history-first | shell/editor history、documentWriteBack owner、rollback checkpoint、synthetic pointer/drop results | in-spec | docs/specs/command-history-first-dashboard-editing | dashboard-shell, placement-policies, EDITOR/editor-command-kernel | tasks 35/38；T1-T8 已完成，包含 core shell/history/write-back、dogfood workbench、public exports、README 与迁移说明；下一步 T9 总体验证与交付检查 |
 | dashboard-pure-runtime-split | pure document/runtime/migration API 与 Vue/editor/dashboard shell integration 拆分 | open | none | CORE/lean-core-boundary, command-history-first | 只有 bundle closure 或消费者证据足够时再切 spec |
 
 ## Discovery Inbox

@@ -51,6 +51,10 @@ declare const PersistentGridLayout: import("vue").DefineComponent<import("vue").
         type: PropType<string>;
         default: string;
     };
+    draggableCancelInteractiveElements: {
+        type: PropType<boolean>;
+        default: boolean;
+    };
     draggableHandle: {
         type: PropType<string>;
         default: string;
@@ -208,6 +212,10 @@ declare const PersistentGridLayout: import("vue").DefineComponent<import("vue").
         type: PropType<string>;
         default: string;
     };
+    draggableCancelInteractiveElements: {
+        type: PropType<boolean>;
+        default: boolean;
+    };
     draggableHandle: {
         type: PropType<string>;
         default: string;
@@ -344,6 +352,7 @@ declare const PersistentGridLayout: import("vue").DefineComponent<import("vue").
     };
     dragActivationDistance: import("../interaction-state-machine").GridDragActivationDistance;
     draggableCancel: string;
+    draggableCancelInteractiveElements: boolean;
     draggableHandle: string;
     modelValue: Layout;
     margin: number[];

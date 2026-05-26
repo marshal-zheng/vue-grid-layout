@@ -129,6 +129,10 @@ declare const GridItem: import("vue").DefineComponent<import("vue").ExtractPropT
         type: StringConstructor;
         default: string;
     };
+    cancelInteractiveElements: {
+        type: BooleanConstructor;
+        default: boolean;
+    };
     droppingPosition: {
         type: PropType<DroppingPosition | null>;
         default: null;
@@ -263,6 +267,10 @@ declare const GridItem: import("vue").DefineComponent<import("vue").ExtractPropT
         type: StringConstructor;
         default: string;
     };
+    cancelInteractiveElements: {
+        type: BooleanConstructor;
+        default: boolean;
+    };
     droppingPosition: {
         type: PropType<DroppingPosition | null>;
         default: null;
@@ -293,5 +301,6 @@ declare const GridItem: import("vue").DefineComponent<import("vue").ExtractPropT
     isDragBlocked: boolean;
     isResizeBlocked: boolean;
     onItemClick: (event: MouseEvent) => void;
+    cancelInteractiveElements: boolean;
 }, {}, {}, {}, string, import("vue").ComponentProvideOptions, true, {}, any>;
 export default GridItem;

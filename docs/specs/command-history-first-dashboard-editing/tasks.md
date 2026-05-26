@@ -153,15 +153,15 @@ _需求追溯: R9.AC5, R9.AC6, R10.AC5_
 
 ### 8. 更新 Public Exports、README 与迁移说明
 
-- [ ] 8.1 同步 ESM/CJS public exports 与类型测试，确保 editor subscription、rollback checkpoint、documentWriteBack API 和 synthetic action types 可被消费。
+- [x] 8.1 同步 ESM/CJS public exports 与类型测试，确保 editor subscription、rollback checkpoint、documentWriteBack API 和 synthetic action types 可被消费。
 
 _需求追溯: R10.AC1, R10.AC7_
 
-- [ ] 8.2 更新 README：说明 shell/editor history、dashboard wrapper `documentChange`、legacy `historyStore` 三者职责边界和推荐迁移路径。
+- [x] 8.2 更新 README：说明 shell/editor history、dashboard wrapper `documentChange`、legacy `historyStore` 三者职责边界和推荐迁移路径。
 
 _需求追溯: R1.AC4, R6.AC5, R10.AC2_
 
-- [ ] 8.3 文档中标注 compatibility path 的限制：legacy undo/redo 不承诺 shell adapter transaction、selection/focus 或 metadata 恢复。
+- [x] 8.3 文档中标注 compatibility path 的限制：legacy undo/redo 不承诺 shell adapter transaction、selection/focus 或 metadata 恢复。
 
 _需求追溯: R1.AC4, R6.AC4, R6.AC5_
 

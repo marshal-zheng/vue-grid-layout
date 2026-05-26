@@ -118,8 +118,8 @@ The root entry is lean core and is equivalent to `@marsio/vue-grid-layout/core`.
 | Persistence | `@marsio/vue-grid-layout/persistence` | Durable layout document adapters; does not require Pinia. |
 | Headless Editor | `@marsio/vue-grid-layout/editor` | Controller, commands, metadata, placement and keyboard helpers. No bundled toolbar, inspector, palette or command UI. |
 | Dashboard Runtime | `@marsio/vue-grid-layout/dashboard` | Dashboard document adapter, responsive runtime and migration helpers. |
-| Dashboard Editor Shell | `@marsio/vue-grid-layout/dashboard-editor-shell` | Headless shell actions, menus and transactions. Render UI in your app. |
-| History | `@marsio/vue-grid-layout/history` | Optional Pinia-powered undo/redo. Requires `pinia`. |
+| Dashboard Editor Shell | `@marsio/vue-grid-layout/dashboard-editor-shell` | Headless shell actions, menus, transactions and shell-managed dashboard document write-back. Render UI in your app. |
+| History | `@marsio/vue-grid-layout/history` | Optional Pinia-powered layout-only undo/redo. Requires `pinia`. |
 | Worker | `@marsio/vue-grid-layout/worker` | Layout engine worker runtime entry. |
 | CSS | `@marsio/vue-grid-layout/style.css` | Import once in your app or component library entry. |
 | MCP / AI Tooling | `@marsio/vue-grid-layout-mcp` | Independent package; the root package does not export `./mcp`. |
@@ -133,6 +133,7 @@ Undeclared deep imports are private implementation details. The package `exports
 - `build/web/vue-grid-layout.worker.js` is replaced by the `@marsio/vue-grid-layout/worker` export.
 - `typings/index.d.ts` is replaced by generated declarations under `dist/types`.
 - Advanced root imports should move to the subpaths listed above; only core/responsive root compatibility is retained.
+- Dashboard editor migrations should prefer `@marsio/vue-grid-layout/editor` command history plus `@marsio/vue-grid-layout/dashboard-editor-shell` with `documentWriteBack: "shell"`; legacy `historyStore` remains layout-only compatibility.
 - Rollback should use the last stable branch or tag. Do not mix new `dist` package exports with old `build` artifacts.
 
 ## Usage
@@ -212,6 +213,7 @@ Pointer interactions are guarded by an internal state machine so click-like item
 - Install optional peer: `npm i pinia`.
 - Create a store from `@marsio/vue-grid-layout/history` and push committed layout snapshots from `layoutChange`.
 - Use the store’s `undo` / `redo` / `canUndo` / `canRedo` to drive shortcuts or toolbar buttons.
+- For dashboard editors, prefer editor command history through `useDashboardEditorShell({ documentWriteBack: "shell" })`. This Pinia store is a layout snapshot compatibility path and does not track shell adapter transactions, selection/focus, editor metadata or dashboard sidecar state.
 
 ```vue
 <template>
@@ -400,6 +402,13 @@ Event order for committed layout commands is:
 
 Metadata-only commands emit editor command/state events and update editor history/dirty state without emitting `layoutChange`.
 
+Public command-history APIs:
+
+- `editor.subscribe(listener)` registers additional `GridEditorEventListener` callbacks without replacing the listener supplied in `onEvent`; the returned cleanup is idempotent.
+- `editor.createRollbackCheckpoint(reason)` captures layout, selection, metadata, section rows and editor history stacks before an app-owned transaction.
+- `editor.restoreRollbackCheckpoint(checkpoint, reason)` restores that checkpoint without creating a new user-visible history entry.
+- `createGridEditorHistory().checkpoint()` and `.restore(checkpoint)` are public for shells that need to preserve undo/redo stacks across failed external commits.
+
 Known editor limits: group resize and group bounding-box ghosting are not included, section/row metadata is a client editing model rather than a permission boundary, system clipboard depends on browser permission, hidden items are not a security boundary, legacy layout-engine mode does not support multi-item group move, and legacy `historyStore` remains a layout-only compatibility layer. New guard, metadata, selection, section row, transaction preview and pointer command behavior are committed through editor command history, not through the legacy `historyStore` contract.
 
 ### localStorage refresh recovery
@@ -575,6 +584,7 @@ const shell = useDashboardEditorShell({
   model: dashboardResponsiveModel,
   gridElement: gridRootRef,
   mode,
+  documentWriteBack: "shell",
   controlled: true,
   widgetAdapter,
   referenceAdapter,
@@ -605,7 +615,19 @@ Shell responsibilities:
 
 Document ownership is controlled-first. If the shell is given controlled `document`/runtime inputs, successful mutations emit `onDocumentChange` and shell events with a proposed document and `persist: false`; the shell does not autosave. With `controlled: false`, the shell may update the supplied local document ref after a successful action, but remote persistence is still caller-owned.
 
+When `documentWriteBack: "shell"` is enabled on the dashboard profile model, shell and `DashboardResponsiveVueGridLayout`, the shell becomes the only dashboard document write-back owner for editor commands. The responsive model still updates its runtime shadow and projection events, but it no longer emits component-owned `documentChange` for the same layout commit.
+
 Adapter transactions follow `prepare -> editor/dashboard mutation -> commit`, with rollback/compensation when prepare succeeds but mutation or commit fails. This avoids reporting layout success when business payload creation failed, and avoids orphan business payloads when placement/write-back is blocked.
+
+### Command-history-first dashboard editing
+
+Use one write-back owner per dashboard editor:
+
+- Recommended editor path: create the dashboard profile model with `documentWriteBack: "shell"`, pass the same value to `useDashboardEditorShell()` and to `DashboardResponsiveVueGridLayout`, then route toolbar, menu, keyboard, pointer drag/resize and external drop through editor command history. Shell `undo()` and `redo()` replay editor history and write the active dashboard profile/document sidecar in the same transaction.
+- Component-owned path: omit `documentWriteBack` or use `"component"` when you only need runtime projection and component `documentChange` from `DashboardResponsiveVueGridLayout`. Do not also mirror the same commit through shell actions.
+- Compatibility path: `historyStore` from `@marsio/vue-grid-layout/history` is layout-only. It can mirror committed geometry for older integrations, but it does not restore shell adapter transactions, business payload rollback, selection/focus, `editorMetaById`, `sectionRows`, reference payload state or dashboard persistence decisions.
+
+Pointer drag, pointer resize and external drop can originate directly from the grid rather than from an explicit shell button. In shell-managed mode, the shell subscribes to editor `command-commit` events and emits synthetic `pointer-move`, `pointer-resize` and `external-drop` action results with command id, action source, affected ids, write-back status, patches and diagnostics.
 
 ### Shell placement strategies
 
@@ -743,6 +765,7 @@ const model = useDashboardResponsiveProfileModel({
   breakpoints: { desktop: 960, mobile: 0 },
   targetViewRule: { mobileBreakpointIds: ['mobile'] },
   mode: 'edit',
+  documentWriteBack: 'shell',
   onEvent: event => console.log(event.type)
 })
 ```
@@ -756,11 +779,14 @@ For a thin component wrapper, key slot children by dashboard widget id:
   :breakpoints="{ desktop: 960, mobile: 0 }"
   :targetViewRule="{ mobileBreakpointIds: ['mobile'] }"
   :container-height="640"
+  document-write-back="shell"
 >
   <WidgetCard key="temperature" />
   <WidgetCard key="pressure" />
 </DashboardResponsiveVueGridLayout>
 ```
+
+Use `documentWriteBack: 'shell'` only when `useDashboardEditorShell()` owns the editor transaction. Leave it as the default component path for simple runtime demos that want `DashboardResponsiveVueGridLayout` to emit `documentChange` directly.
 
 Legacy responsive layouts can be converted into a dashboard document. Breakpoint ids such as `lg`, `md`, `sm`, `xs` and `xxs` become dashboard profile ids; by default the largest breakpoint width becomes the default dashboard layout.
 
