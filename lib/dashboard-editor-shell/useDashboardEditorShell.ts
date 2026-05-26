@@ -8,6 +8,7 @@ import {
   type Ref,
   type WatchStopHandle
 } from "vue";
+import { deepEqual } from "fast-equals";
 import { writeDashboardResponsiveRuntimeToDocument } from "../dashboard-responsive";
 import type { DashboardResponsiveRuntime } from "../dashboard-responsive";
 import { translateDashboardLayout } from "../dashboard-migration";
@@ -19,6 +20,7 @@ import type {
   GridEditorCommandSource,
   GridEditorController,
   GridEditorEvent,
+  GridEditorHistoryEntry,
   GridEditorHistorySnapshot,
   GridEditorPlacementSession,
   GridEditorRollbackCheckpoint
@@ -1004,6 +1006,15 @@ export function useDashboardEditorShell(
     return cloneLayout(snapshot.layouts[snapshot.breakpoint] || []);
   };
 
+  const historyEntryHasDocumentMutation = (
+    entry: GridEditorHistoryEntry | undefined
+  ): boolean => {
+    if (!entry) return false;
+    return !deepEqual(layoutFromHistorySnapshot(entry.before), layoutFromHistorySnapshot(entry.after)) ||
+      !deepEqual(entry.before.editorMetaById, entry.after.editorMetaById) ||
+      !deepEqual(entry.before.sectionRows, entry.after.sectionRows);
+  };
+
   const executeHistoryMutation = async (
     actionType: "undo" | "redo",
     actionOptions: DashboardEditorShellActionOptions = {}
@@ -1022,6 +1033,7 @@ export function useDashboardEditorShell(
       pendingShellCommandIds.delete(actionId);
     });
     const nextLayout = layoutFromHistorySnapshot(actionType === "undo" ? result.undo?.before : result.undo?.after);
+    const hasDocumentMutation = historyEntryHasDocumentMutation(result.undo);
     const coordinated = coordinateShellCommandCommit({
       actionId,
       actionType,
@@ -1029,7 +1041,7 @@ export function useDashboardEditorShell(
       result,
       nextLayout,
       removeMissingItems: true,
-      hasDocumentMutation: Boolean(nextLayout),
+      hasDocumentMutation,
       rollbackCheckpoint,
       rollbackReason: "shell-history-write-back-rollback",
       data: { historyEntry: result.undo?.id }

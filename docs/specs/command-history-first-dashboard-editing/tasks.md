@@ -117,19 +117,19 @@ _需求追溯: R3.AC1, R3.AC2, R3.AC3, R3.AC6, R9.AC4, R9.AC6, R10.AC4_
 
 ### 6. 统一 Undo/Redo Shell Write-back 路径
 
-- [ ] 6.1 将 shell `undo()` / `redo()` 改为通过 editor history replay 后进入同一 shell write-back coordinator。
+- [x] 6.1 将 shell `undo()` / `redo()` 改为通过 editor history replay 后进入同一 shell write-back coordinator。
 
 _需求追溯: R8.AC1, R8.AC2, R8.AC4_
 
-- [ ] 6.2 将 keyboard/menu/toolbar/API 触发的 undo/redo 全部路由到 shell history action pipeline。
+- [x] 6.2 将 keyboard/menu/toolbar/API 触发的 undo/redo 全部路由到 shell history action pipeline。
 
 _需求追溯: R1.AC1, R8.AC2_
 
-- [ ] 6.3 处理 undo/redo 的 add/delete/paste/drop geometry、durable metadata 与 sectionRows 写回；纯 selection/focus 变化不写 dashboard document，但仍返回可观察 result。
+- [x] 6.3 处理 undo/redo 的 add/delete/paste/drop geometry、durable metadata 与 sectionRows 写回；纯 selection/focus 变化不写 dashboard document，但仍返回可观察 result。
 
 _需求追溯: R1.AC2, R8.AC3, R8.AC5, R8.AC6_
 
-- [ ] 6.4 增加 undo/redo 集成测试，覆盖 write-back 失败恢复、redo stack 一致、selection-only 不写 document、sidecar 恢复。
+- [x] 6.4 增加 undo/redo 集成测试，覆盖 write-back 失败恢复、redo stack 一致、selection-only 不写 document、sidecar 恢复。
 
 _需求追溯: R8.AC1, R8.AC4, R8.AC5, R8.AC6, R8.AC7, R10.AC3, R10.AC4_
 

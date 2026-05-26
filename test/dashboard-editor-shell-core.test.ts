@@ -8,9 +8,14 @@ import {
   resolveDashboardResponsiveProfile
 } from '../lib/dashboard-responsive'
 import {
+  createGridEditorHistory,
+  createGridEditorHistoryEntry,
+  createGridEditorSelection,
   createGridEditorController,
+  emptyGridEditorSectionRows,
   internalGridEditorClipboard
 } from '../lib/editor'
+import type { GridEditorHistorySnapshot, GridEditorSectionRowState } from '../lib/editor'
 import {
   buildDashboardContextMenu,
   buildWidgetContextMenu,
@@ -130,6 +135,30 @@ const createGridElement = () => ({
 
 const layoutGeometry = (layout: Layout): Layout =>
   layout.map(item => ({ i: item.i, x: item.x, y: item.y, w: item.w, h: item.h }))
+
+const dashboardWidget = (
+  document: DashboardLayoutDocument,
+  id: string,
+  profile = 'desktop'
+) => document.layouts.default.profiles?.[profile]?.widgets?.[id] || document.layouts.default.widgets[id]
+
+const dashboardSectionRows = (
+  document: DashboardLayoutDocument,
+  profile = 'desktop'
+) => document.layouts.default.profiles?.[profile]?.editor?.sectionRows || document.layouts.default.editor?.sectionRows
+
+const editorHistorySnapshot = (
+  layout: Layout,
+  selectedIds: string[] = [],
+  input: Partial<Pick<GridEditorHistorySnapshot, 'editorMetaById' | 'sectionRows'>> = {}
+): GridEditorHistorySnapshot => ({
+  kind: 'layout',
+  layout: layout.map(item => ({ ...item })),
+  editorMetaById: input.editorMetaById || {},
+  sectionRows: input.sectionRows || emptyGridEditorSectionRows(),
+  selection: createGridEditorSelection(selectedIds),
+  focusId: selectedIds[0] || null
+})
 
 const flushShellCoordinator = async () => {
   for (let i = 0; i < 4; i += 1) {
@@ -554,6 +583,210 @@ async function testShellHistoryAndDeleteWriteBack() {
   const undoRemove = await shell.actions.undo({ source: 'keyboard' })
   assert.equal(undoRemove.ok, true)
   assert.equal(Boolean(documentRef.value.layouts.default.widgets.a), true)
+}
+
+async function testShellManagedUndoRedoWriteBackSidecarAndSelectionOnly() {
+  const documentRef = ref(createDocument())
+  const runtime = ref(resolveRuntime(documentRef.value))
+  const layoutRef = ref<Layout>(runtime.value.layout.map(item => ({ ...item })))
+  const sectionRows = ref<GridEditorSectionRowState>({
+    version: 1,
+    items: {
+      row1: {
+        id: 'row1',
+        kind: 'row',
+        order: 0,
+        itemIds: ['a', 'b'],
+        collapsed: false
+      }
+    },
+    itemMembership: {
+      a: { rowId: 'row1' },
+      b: { rowId: 'row1' }
+    }
+  })
+  const editor = createGridEditorController({
+    layout: layoutRef,
+    defaultMode: 'edit',
+    editorMetaById: ref(runtime.value.editorMetaById),
+    sectionRows,
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
+  })
+  const documentChanges: string[] = []
+  const events: DashboardEditorShellEvent[] = []
+  const shell = useDashboardEditorShell({
+    document: documentRef,
+    runtime,
+    editor,
+    gridElement: ref(createGridElement()),
+    mode: ref('edit'),
+    controlled: false,
+    documentWriteBack: 'shell',
+    createMissingProfileOnEdit: true,
+    menu: {
+      defaultAddStrategy: 'first-fit'
+    },
+    onDocumentChange: event => {
+      documentChanges.push(event.actionId)
+      documentRef.value = event.document
+      runtime.value = resolveRuntime(event.document)
+    },
+    onEvent: event => events.push(event)
+  })
+
+  await shell.actions.copyWidget('a')
+  const pasted = await shell.actions.pasteWidget(null, { source: 'keyboard' })
+  assert.equal(pasted.ok, true)
+  const pastedId = pasted.affectedIds[0]
+  assert.equal(Boolean(dashboardWidget(documentRef.value, pastedId)), true)
+
+  const undoPaste = await shell.actions.undo({ source: 'keyboard' })
+  assert.equal(undoPaste.ok, true)
+  assert.equal(undoPaste.writeResult?.ok, true)
+  assert.equal(Boolean(dashboardWidget(documentRef.value, pastedId)), false)
+  const redoPaste = await shell.actions.redo({ source: 'toolbar' })
+  assert.equal(redoPaste.ok, true)
+  assert.equal(redoPaste.writeResult?.ok, true)
+  assert.equal(Boolean(dashboardWidget(documentRef.value, pastedId)), true)
+  const redoAgain = await shell.actions.redo({ source: 'api' })
+  assert.equal(redoAgain.ok, false)
+  assert.equal(redoAgain.status, 'blocked')
+
+  const collapsed = await editor.execute({
+    type: 'section-row-collapse',
+    payload: { id: 'row1' },
+    source: 'toolbar'
+  })
+  assert.equal(collapsed.status, 'changed')
+  assert.equal(editor.sectionRows.value.items.row1.collapsed, true)
+
+  const undoSection = await shell.actions.undo({ source: 'keyboard' })
+  assert.equal(undoSection.ok, true)
+  assert.equal(undoSection.writeResult?.ok, true)
+  assert.equal(dashboardSectionRows(documentRef.value)?.items.row1.collapsed, false)
+  const redoSection = await shell.actions.redo({ source: 'keyboard' })
+  assert.equal(redoSection.ok, true)
+  assert.equal(redoSection.writeResult?.ok, true)
+  assert.equal(dashboardSectionRows(documentRef.value)?.items.row1.collapsed, true)
+  assert.ok(shellActionResults(events).some(event => event.actionType === 'undo' && event.writeResult?.ok === true))
+  shell.stop()
+
+  const selectionDocumentRef = ref(createDocument())
+  const selectionRuntime = ref(resolveRuntime(selectionDocumentRef.value))
+  const selectionLayoutRef = ref<Layout>(selectionRuntime.value.layout.map(item => ({ ...item })))
+  const history = createGridEditorHistory()
+  history.push(createGridEditorHistoryEntry({
+    commandId: 'selection-only',
+    commandType: 'select',
+    before: editorHistorySnapshot(selectionLayoutRef.value, [], {
+      editorMetaById: selectionRuntime.value.editorMetaById
+    }),
+    after: editorHistorySnapshot(selectionLayoutRef.value, ['a'], {
+      editorMetaById: selectionRuntime.value.editorMetaById
+    }),
+    targetIds: ['a'],
+    affectedIds: ['a'],
+    source: 'api',
+    historyMode: 'record'
+  }))
+  const selectionEditor = createGridEditorController({
+    layout: selectionLayoutRef,
+    defaultMode: 'edit',
+    defaultSelectedIds: ['a'],
+    editorMetaById: ref(selectionRuntime.value.editorMetaById),
+    history
+  })
+  const selectionDocumentChanges: string[] = []
+  const selectionShell = useDashboardEditorShell({
+    document: selectionDocumentRef,
+    runtime: selectionRuntime,
+    editor: selectionEditor,
+    gridElement: ref(createGridElement()),
+    mode: ref('edit'),
+    controlled: false,
+    documentWriteBack: 'shell',
+    createMissingProfileOnEdit: true,
+    onDocumentChange: event => {
+      selectionDocumentChanges.push(event.actionId)
+    }
+  })
+  const undoSelection = await selectionShell.actions.undo({ source: 'keyboard' })
+  assert.equal(undoSelection.ok, true)
+  assert.equal(undoSelection.writeResult, undefined)
+  assert.deepEqual(selectionEditor.selection.value.selectedIds, [])
+  const redoSelection = await selectionShell.actions.redo({ source: 'keyboard' })
+  assert.equal(redoSelection.ok, true)
+  assert.equal(redoSelection.writeResult, undefined)
+  assert.deepEqual(selectionEditor.selection.value.selectedIds, ['a'])
+  assert.equal(selectionDocumentChanges.length, 0)
+  selectionShell.stop()
+}
+
+async function testShellManagedUndoWriteBackFailureRestoresReplayAndRedoStack() {
+  const documentRef = ref(createDocument())
+  const missing = resolveDashboardResponsiveProfile(documentRef.value, {
+    width: 700,
+    breakpoints: { watch: 0 },
+    breakpoint: 'watch',
+    targetView: 'desktop',
+    mode: 'edit',
+    validation: 'sanitize',
+    allowUnknownProfileItems: true
+  })
+  assert.equal(missing.ok, true)
+  const runtime = ref(missing.ok ? missing.runtime : null as never)
+  const layoutRef = ref<Layout>(runtime.value.layout.map(item => ({ ...item })))
+  const editor = createGridEditorController({
+    layout: layoutRef,
+    defaultMode: 'edit',
+    editorMetaById: ref(runtime.value.editorMetaById),
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
+  })
+  const moved = await editor.execute({
+    type: 'move',
+    targetIds: ['a'],
+    source: 'pointer',
+    payload: { dx: 1, dy: 0 }
+  })
+  assert.equal(moved.status, 'changed')
+  assert.equal(layoutRef.value.find(item => item.i === 'a')?.x, 1)
+
+  const shell = useDashboardEditorShell({
+    document: documentRef,
+    runtime,
+    editor,
+    gridElement: ref(createGridElement()),
+    mode: ref('edit'),
+    controlled: false,
+    documentWriteBack: 'shell',
+    createMissingProfileOnEdit: false
+  })
+  const undo = await shell.actions.undo({ source: 'keyboard' })
+  assert.equal(undo.ok, false)
+  assert.equal(undo.status, 'blocked')
+  assert.equal(undo.writeResult?.ok, false)
+  assert.equal(layoutRef.value.find(item => item.i === 'a')?.x, 1)
+  assert.equal(documentRef.value.layouts.default.widgets.a.col, 0)
+  shell.stop()
+
+  const undoAfterFailure = await editor.execute({ type: 'undo', source: 'keyboard' })
+  assert.equal(undoAfterFailure.status, 'changed')
+  assert.equal(layoutRef.value.find(item => item.i === 'a')?.x, 0)
+  const redoAfterFailure = await editor.execute({ type: 'redo', source: 'keyboard' })
+  assert.equal(redoAfterFailure.status, 'changed')
+  assert.equal(layoutRef.value.find(item => item.i === 'a')?.x, 1)
 }
 
 async function testShellManagedSyntheticPointerCommitWritesDocumentAndEvent() {
@@ -1475,6 +1708,8 @@ async function main() {
   await testDashboardMenuPasteHereUsesWidgetAdapter()
   await testTargetlessWidgetPasteUsesPlacementPolicy()
   await testShellHistoryAndDeleteWriteBack()
+  await testShellManagedUndoRedoWriteBackSidecarAndSelectionOnly()
+  await testShellManagedUndoWriteBackFailureRestoresReplayAndRedoStack()
   await testShellManagedSyntheticPointerCommitWritesDocumentAndEvent()
   await testShellManagedResizeAndDropSyntheticWriteBackResults()
   await testShellManagedSyntheticTerminalResultsAndCleanup()
