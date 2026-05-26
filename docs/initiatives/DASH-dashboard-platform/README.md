@@ -32,7 +32,7 @@ Dashboard 平台与文档生命周期的目标是让 dashboard 能以版本化�
 | responsive-profiles | profile resolver、dashboard responsive composable、thin component | done | docs/specs/responsive-dashboard-profiles | dashboard-document-adapter | tasks 15/15；兼容语言需按 lean-core 2.0 重读 |
 | dashboard-shell | headless dashboard editor shell、menu/keyboard/highlight/result stream | done | docs/specs/dashboard-editor-shell-integration | responsive-profiles, EDITOR/professional-editor-ux | tasks 17/17 |
 | placement-policies | shell widget placement policies、adapter transaction 与 responsive write-back | done | docs/specs/dashboard-editor-shell-placement-policies | dashboard-shell, EDITOR/editor-placement-session | tasks 10/10 |
-| command-history-first | shell/editor history、documentWriteBack owner、rollback checkpoint、synthetic pointer/drop results | in-spec | docs/specs/command-history-first-dashboard-editing | dashboard-shell, placement-policies, EDITOR/editor-command-kernel | tasks 35/38；T1-T8 已完成，包含 core shell/history/write-back、dogfood workbench、public exports、README 与迁移说明；下一步 T9 总体验证与交付检查 |
+| command-history-first | shell/editor history、documentWriteBack owner、rollback checkpoint、synthetic pointer/drop results | done | docs/specs/command-history-first-dashboard-editing | dashboard-shell, placement-policies, EDITOR/editor-command-kernel | tasks 38/38；final coverage gate 已记录在 `docs/specs/command-history-first-dashboard-editing/tasks.md`，验证通过 `npm test`、`npm run test:examples`、`npm run check:package`、`npm run check:bundle`、`npm run build`、`npm run test:package`、`npm run test:browser` |
 | dashboard-pure-runtime-split | pure document/runtime/migration API 与 Vue/editor/dashboard shell integration 拆分 | open | none | CORE/lean-core-boundary, command-history-first | 只有 bundle closure 或消费者证据足够时再切 spec |
 
 ## Discovery Inbox
@@ -46,10 +46,11 @@ Dashboard 平台与文档生命周期的目标是让 dashboard 能以版本化�
 | ID | 问题 | 影响 | 状态 | 说明 |
 |---|---|---|---|---|
 | pure-runtime-threshold | `dashboard.mjs` 多大或哪些消费者需求足以触发 pure runtime split | 影响 package exports 和 dashboard 子入口 | open | 需要 `check:bundle` 或真实消费者需求作为证据 |
-| history-owner-default | command-history-first 完成后，shell-managed write-back 是否应成为 dashboard editor 默认推荐路径 | 影响 README、示例和 compatibility path 表述 | open | 在该 spec 实现后再定 |
+| history-owner-default | command-history-first 完成后，shell-managed write-back 是否应成为 dashboard editor 默认推荐路径 | 影响 README、示例和 compatibility path 表述 | resolved | 已定：dashboard editor 默认推荐 shell/editor history + `documentWriteBack: "shell"`；legacy `historyStore` 保留为 layout-only compatibility path，README 与示例已同步 |
 
 ## Decision Log
 
 | ID | 决策 | 日期 | 依据 | 影响 |
 |---|---|---|---|---|
 | d1 | dashboard split 不放进 lean-core 本轮 | 2026-05-22 | roadmap review 认为 lean-core 只要求 dashboard 不污染 root/core/responsive | pure runtime split 保持 open |
+| d2 | dashboard editor 默认推荐 shell/editor history + shell-managed document write-back | 2026-05-26 | command-history-first final coverage gate 覆盖 R1-R10，示例/README/API/tests 均完成 | legacy history 保持 compatibility / layout-only；后续 dashboard editor spec 应接入 shell command pipeline |

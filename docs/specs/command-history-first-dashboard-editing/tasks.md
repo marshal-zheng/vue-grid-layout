@@ -167,14 +167,69 @@ _需求追溯: R1.AC4, R6.AC4, R6.AC5_
 
 ### 9. 总体验证与交付检查
 
-- [ ] 9.1 跑 editor、dashboard shell、dashboard responsive、examples 和 type tests，修复由新 API 与行为变更引入的失败。
+- [x] 9.1 跑 editor、dashboard shell、dashboard responsive、examples 和 type tests，修复由新 API 与行为变更引入的失败。
 
 _需求追溯: R10.AC3, R10.AC4, R10.AC6_
 
-- [ ] 9.2 跑仓库标准验证命令：`npm test`、`npm run test:examples`、`npm run check:package`、`npm run build`；如涉及 browser smoke，再跑 `npm run test:browser`。
+- [x] 9.2 跑仓库标准验证命令：`npm test`、`npm run test:examples`、`npm run check:package`、`npm run build`；如涉及 browser smoke，再跑 `npm run test:browser`。
 
 _需求追溯: R9.AC5, R10.AC5, R10.AC6_
 
-- [ ] 9.3 交付说明中列出新主线、兼容路径、未运行验证缺口和迁移注意事项。
+- [x] 9.3 交付说明中列出新主线、兼容路径、未运行验证缺口和迁移注意事项。
 
 _需求追溯: R1.AC4, R6.AC5, R10.AC2, R10.AC6_
+
+## T9 交付检查记录
+
+- 新主线: dashboard editor 应使用 editor command history + `useDashboardEditorShell({ documentWriteBack: "shell" })`，并把 `documentWriteBack="shell"` 同步到 dashboard profile model 与 `DashboardResponsiveVueGridLayout`。
+- 兼容路径: `@marsio/vue-grid-layout/history` / `historyStore` 仍保留为 layout-only compatibility，不承诺 shell adapter transaction、selection/focus、`editorMetaById`、`sectionRows` 或 dashboard persistence 恢复。
+- 迁移注意事项: 不要同时让 component `documentChange` 和 shell-managed write-back 处理同一个 dashboard editor commit；受控调用方仍需在 `onDocumentChange` 里显式持久化 proposed document。
+- 验证缺口: 无。已运行 `npm test`、`npm run test:examples`、`npm run check:package`、`npm run check:bundle`、`npm run build`、`npm run test:package`、`npm run test:browser`。
+
+## Final Coverage Gate
+
+日期: 2026-05-26
+
+### Requirements
+
+- R1: Command History 成为 Dashboard 编辑唯一主线 — covered — evidence: `lib/dashboard-editor-shell/useDashboardEditorShell.ts` 将 shell action、placement、pointer synthetic 和 undo/redo 收敛到 editor command/result pipeline；`example/25-dashboard-editor-shell.js` 主流程使用 shell-managed write-back；README 标注 legacy history 为 compatibility path。
+- R2: Shell 承接 Dashboard Document Write-back — covered — evidence: `lib/dashboard-editor-shell/useDashboardEditorShell.ts` 的 shell-managed coordinator 写回 profile-scoped document、发出 result、失败恢复 rollback checkpoint；`lib/dashboard.ts` 与 `lib/dashboard-responsive/resolve.ts` 写回 `editorMetaById`/`sectionRows`；`test/dashboard-editor-shell-core.test.ts` 覆盖 write-back 成功、受控 proposal、失败 rollback。
+- R3: Pointer、Resize 和 Drop Commit 接入 Shell 事务 — covered — evidence: `lib/dashboard-editor-shell/useDashboardEditorShell.ts` 将 `move`/`resize`/`add`/`paste` 映射到 `pointer-move`、`pointer-resize`、`external-drop`；`test/dashboard-editor-shell-core.test.ts` 覆盖 synthetic pointer/resize/drop result 以及 blocked/cancelled/timeout/error/stale cleanup。
+- R4: 防止双写与状态回声 — covered — evidence: `lib/dashboard-responsive/useDashboardResponsiveProfileModel.ts` 在 `documentWriteBack: "shell"` 下跳过 component document write-back；`lib/DashboardResponsiveVueGridLayout.tsx` 只透传 prop 并禁用 immediate legacy mirror；`scripts/check-doc-imports.mjs` 断言 shell demo 无 `@documentChange`/`historyStore` 主路径。
+- R5: Editor Event Subscription 成为可组合观察面 — covered — evidence: `lib/editor/controller.ts` 实现 `subscribe()`、多监听器派发和 listener error diagnostic；`lib/editor/types.ts` 暴露 `GridEditorEventListener`；`test/editor-core.test.ts` 覆盖多监听器、cleanup 幂等、错误隔离。
+- R6: Legacy History 仅作为 Layout-only 兼容镜像 — covered — evidence: `lib/dashboard-editor-shell/useDashboardEditorShell.ts` 只在 shell-managed 成功后延迟镜像 layout；`README.md` 和 `example/24-dashboard-runtime-lab.js` 标注 legacy history 为 compatibility / layout-only；`test/dashboard-editor-shell-core.test.ts` 覆盖 legacy mirror 不污染 sidecar。
+- R7: Adapter Transaction 与 Business Payload 一致性 — covered — evidence: `lib/dashboard-editor-shell/transactions.ts` 保持 `prepare -> mutate/write-back -> commit -> rollback`；`lib/dashboard-editor-shell/useDashboardEditorShell.ts` 在 placement/widget/reference adapter 失败时恢复 editor/history/document proposal；`test/dashboard-editor-shell-core.test.ts` 覆盖 adapter commit failure rollback 与 diagnostics。
+- R8: Undo/Redo 统一穿过 Shell Write-back — covered — evidence: `lib/dashboard-editor-shell/useDashboardEditorShell.ts` 的 `actions.undo()`/`actions.redo()` 通过 editor history replay 后调用同一 write-back coordinator；`test/dashboard-editor-shell-core.test.ts` 覆盖 add/delete/paste/drop、selection-only、sidecar 恢复、write-back failure 与 redo stack 一致性。
+- R9: Dogfood Workbench 迁移与真实链路验证 — covered — evidence: `example/25-dashboard-editor-shell.js` 使用 `documentWriteBack: "shell"` 并展示 result/diagnostic stream、synthetic pointer/resize/drop；`example/24-dashboard-runtime-lab.js` 标注 legacy compatibility；`npm run test:examples` 和 `npm run test:browser` 已通过。
+- R10: Public API、文档与测试覆盖 — covered — evidence: `test/editor-types.test.ts`、`test/dashboard-types.test.ts`、`scripts/test-package-consumers.mjs` 覆盖 public 类型/ESM/CJS 消费；`README.md` 记录迁移路径和 API 边界；标准验证命令全部通过。
+
+### Design
+
+- 架构概述 — covered — evidence: `GridEditorController` command history、`useDashboardEditorShell({ documentWriteBack: "shell" })`、responsive model/component compatibility path 和 legacy layout-only mirror 均已在代码与 README 中落地。
+- 数据流图 — covered — evidence: editor command commit、shell synthetic/explicit action、document write-back、adapter commit、失败 rollback、controlled refresh acknowledgement 分别由 `lib/editor/controller.ts`、`lib/dashboard-editor-shell/useDashboardEditorShell.ts` 和 `lib/dashboard-responsive/useDashboardResponsiveProfileModel.ts` 实现并测试。
+- GridEditorController 接口 — covered — evidence: `lib/editor/types.ts` 暴露 `subscribe()`、`createRollbackCheckpoint()`、`restoreRollbackCheckpoint()`；`lib/editor/history.ts` 暴露 `checkpoint()`/`restore()`；`test/editor-core.test.ts` 覆盖行为。
+- Dashboard Responsive Profile Model — covered — evidence: `lib/dashboard-responsive/types.ts` 与 `lib/dashboard-responsive/useDashboardResponsiveProfileModel.ts` 增加 `documentWriteBack` opt-in，并在 shell 模式下停止 component-owned document mutation。
+- DashboardEditorShell — covered — evidence: `lib/dashboard-editor-shell/types.ts` 暴露 `documentWriteBack` 与 synthetic action types；`lib/dashboard-editor-shell/useDashboardEditorShell.ts` 实现订阅、去重、rollback checkpoint、legacy mirror 延迟写入和 result emission。
+- Dashboard Document Write-back — covered — evidence: `lib/dashboard.ts` 与 `lib/dashboard-responsive/resolve.ts` 写回 durable `editorMetaById`/`sectionRows`，并在删除 item 时清理 orphan sidecar；`test/dashboard-core.test.ts` 覆盖 grid/list/profile scoped 写回。
+- Legacy History — covered — evidence: shell-managed 模式不再把 `historyStore` 作为 immediate controller mirror，成功后只推送 layout snapshot；README 与示例明确 compatibility path 限制。
+- API 接口设计 — covered — evidence: `DashboardDocumentWriteBackOwner`、model/shell/component options、editor listener/checkpoint 类型、synthetic action data 和 write-back sidecar options 均在 public 类型与 package consumer 测试中可用。
+- 数据模型与数据库变更 — covered — evidence: 无数据库变更；dashboard editor envelope 保持兼容扩展，写入 `editorMetaById`、`sectionRows` 和 version，selection/focus 未写入 document。
+- 安全考量 — covered — evidence: adapter diagnostics 只暴露 stage/id/status/error code 级信息，listener error 被隔离，controlled document 只发 proposal，shell-managed 去重并在 stop/unmount 清理订阅/transaction。
+- 测试策略与验证命令 — covered — evidence: `npm test`、`npm run test:examples`、`npm run check:package`、`npm run check:bundle`、`npm run build`、`npm run test:package`、`npm run test:browser` 均已通过。
+- 需求追踪 — covered — evidence: tasks 1-9 均保留 `_需求追溯` 映射，且本 coverage gate 对 R1-R10 逐项给出 evidence。
+
+### Tasks
+
+- Task 1: Editor Event Subscription 与 History Checkpoint 基础 — covered — evidence: `lib/editor/types.ts`、`lib/editor/history.ts`、`lib/editor/controller.ts` 和 `test/editor-core.test.ts`/`test/editor-types.test.ts` 已实现并验证。
+- Task 2: Dashboard Document Durable Sidecar 写回 — covered — evidence: `lib/dashboard.ts`、`lib/dashboard-responsive/resolve.ts`、`test/dashboard-core.test.ts` 和 `test/dashboard-types.test.ts` 覆盖 sidecar 写回、unknown field preservation 与 orphan cleanup。
+- Task 3: Shell-managed Write-back Opt-in API 与兼容默认行为 — covered — evidence: model/shell/component 均支持 `documentWriteBack`，默认 component 行为保留，shell 模式跳过 component-owned write-back。
+- Task 4: Shell Command Commit Coordinator — covered — evidence: `useDashboardEditorShell()` 统一处理 explicit/synthetic/history action 的 write-back、rollback、controlled proposal、去重和 legacy mirror。
+- Task 5: Pointer、Resize、External Drop Synthetic Action Result — covered — evidence: synthetic action types、mapping、result data 与 cleanup 分支由 shell 实现，`test/dashboard-editor-shell-core.test.ts` 覆盖。
+- Task 6: Undo/Redo Shell Write-back 路径 — covered — evidence: shell undo/redo 走 editor history replay 和同一 write-back coordinator，相关集成测试覆盖 sidecar、selection-only 和失败恢复。
+- Task 7: Dogfood Workbench 与示例结果面板 — covered — evidence: `example/25-dashboard-editor-shell.js` 已迁移到 shell-managed 主线并展示 result/diagnostic stream，`scripts/check-doc-imports.mjs` 和 examples/headless/browser 验证通过。
+- Task 8: Public Exports、README 与迁移说明 — covered — evidence: README、public 类型测试、package consumer 脚本和 build artifact 均已更新并验证。
+- Task 9: 总体验证与交付检查 — covered — evidence: T9 交付检查记录已列出主线、兼容路径、迁移注意事项和无验证缺口；标准验证命令全部通过。
+
+### Remaining gaps/risks
+
+- 无。
