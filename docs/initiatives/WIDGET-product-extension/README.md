@@ -27,7 +27,7 @@ Widget 产品扩展与 AI 助手的目标是在 headless editor、dashboard docu
 
 | ID | 能力/范围 | 状态 | 关联 spec | 依赖 | 说明 |
 |---|---|---|---|---|---|
-| widget-registry-protocol | registry core、layout defaults、settings descriptor、template materialization、dashboard sidecar、shell bridge | in-spec | docs/specs/widget-registry-protocol | DASH/dashboard-shell, EDITOR/l3-intelligence, LAYOUT/item-capabilities-aspect-ratio | tasks 0/13 |
+| widget-registry-protocol | registry core、layout defaults、settings descriptor、template materialization、dashboard sidecar、shell bridge | done | docs/specs/widget-registry-protocol | DASH/dashboard-shell, EDITOR/l3-intelligence, LAYOUT/item-capabilities-aspect-ratio | tasks 14/14；Round 2 independent review PASS；证据：docs/specs/widget-registry-protocol/tasks.md |
 | editor-kit-ui | toolbar、outline、inspector、widget palette、context menu、command palette、empty state、diagnostics panel | open | none | widget-registry-protocol, EDITOR/editor-bulk-productivity | roadmap bucket，尚未生成 focused spec brief |
 | ai-mcp-dashboard-assistant | layout lint、explain blocked operations、auto tidy/arrange、schema-to-dashboard、model migration assistant、registry introspection | idea | none | widget-registry-protocol, LAYOUT/layout-engine-pro | 差异化能力，但应等 registry 和 diagnostics 稳定后再做 |
 | mcp-docs-introspection | MCP docs/examples/types 与 widget registry introspection 数据 | open | none | widget-registry-protocol | 可作为 AI assistant 前置或 registry 收尾项 |

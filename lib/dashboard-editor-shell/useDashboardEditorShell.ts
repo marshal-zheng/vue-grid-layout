@@ -425,6 +425,7 @@ export function useDashboardEditorShell(
   let highlightTimer: ReturnType<typeof setTimeout> | null = null;
   let mutationQueue: Promise<void> = Promise.resolve();
   let pendingClipboardPasteIntent: PendingClipboardPasteIntent | null = null;
+  let widgetClipboardPayload: DashboardEditorShellAdapterResult | null = null;
   const pendingPlacementCommits = new Map<string, PendingPlacementShellCommit>();
   const placementCommitFinalizations = new Map<string, Promise<DashboardEditorShellActionResult | null>>();
   const processedCommandIds = new Set<string>();
@@ -441,7 +442,7 @@ export function useDashboardEditorShell(
   ): string => `${commandId}:${checkpoint?.revision ?? "unknown"}`;
 
   const enqueueMutation = <T>(
-    run: () => Promise<T>
+    run: () => T | Promise<T>
   ): Promise<T> => {
     const queued = mutationQueue.catch(() => undefined).then(run);
     mutationQueue = queued.then(() => undefined, () => undefined);
@@ -450,6 +451,10 @@ export function useDashboardEditorShell(
 
   const clearPendingClipboardPasteIntent = () => {
     pendingClipboardPasteIntent = null;
+  };
+
+  const clearWidgetClipboardPayload = () => {
+    widgetClipboardPayload = null;
   };
 
   const markCutClipboardPasteIntent = (
@@ -1229,7 +1234,7 @@ export function useDashboardEditorShell(
   const finalizeShellManagedCommandCommit = async (
     command: GridEditorCommand,
     result: GridEditorCommandResult
-  ): Promise<DashboardEditorShellActionResult | null> => enqueueMutation(async () => {
+  ): Promise<DashboardEditorShellActionResult | null> => enqueueMutation(() => {
     if (!shellManagedWriteBack()) return null;
     if (processedCommandIds.has(result.id)) return null;
     if (pendingShellCommandIds.has(result.id)) return null;
@@ -1293,7 +1298,7 @@ export function useDashboardEditorShell(
   const finalizeShellManagedCommandTerminal = async (
     command: GridEditorCommand,
     result: GridEditorCommandResult
-  ): Promise<DashboardEditorShellActionResult | null> => enqueueMutation(async () => {
+  ): Promise<DashboardEditorShellActionResult | null> => enqueueMutation(() => {
     if (!shellManagedWriteBack()) return null;
     if (processedCommandIds.has(result.id)) return null;
     if (pendingShellCommandIds.has(result.id)) return null;
@@ -1911,6 +1916,7 @@ export function useDashboardEditorShell(
       const actionId = createDashboardEditorShellActionId("copy-widget");
       const source = actionOptions.source || "api";
       clearPendingClipboardPasteIntent();
+      clearWidgetClipboardPayload();
       const adapter = options.widgetAdapter;
       const runtime = getRuntime();
       const adapterCtx = actionContext(actionId, "copy-widget", source, selectedIds);
@@ -1927,7 +1933,7 @@ export function useDashboardEditorShell(
                 { actionId, actionType: "copy-widget", source, reason: "adapter-unavailable", recoverable: true }
               )]
             } as DashboardEditorShellAdapterResult;
-      return executeEditorMutation("copy-widget", {
+      const copyResult = await executeEditorMutation("copy-widget", {
         type: "copy",
         targetIds: selectedIds,
         payload: {
@@ -1948,6 +1954,10 @@ export function useDashboardEditorShell(
           return adapterResult?.ok === false ? adapterResult : null;
         }
       });
+      widgetClipboardPayload = copyResult.ok && adapterResult?.ok !== false && adapterResult?.metadata
+        ? adapterResult || null
+        : null;
+      return copyResult;
     },
 
     cutWidget: async (ids?: string | string[], removeOptions: DashboardEditorShellRemoveOptions = {}) => {
@@ -2038,7 +2048,7 @@ export function useDashboardEditorShell(
         prepare: prepareWidgetMutation("preparePasteWidget"),
         commit: commitWidgetMutation,
         rollback: rollbackWidgetMutation,
-        contextExtra: { placementIntent }
+        contextExtra: { placementIntent, payload: widgetClipboardPayload || undefined }
       });
       return placementSessionActionResult("place-clipboard", source, result.session, position.position, actionId);
     },
@@ -2101,7 +2111,7 @@ export function useDashboardEditorShell(
       }, {
         source: pasteOptions.source || "api",
         position: position.position,
-        contextExtra: { placementIntent },
+        contextExtra: { placementIntent, payload: widgetClipboardPayload || undefined },
         prepare,
         commit: commitWidgetMutation,
         rollback: rollbackWidgetMutation
@@ -2303,6 +2313,7 @@ export function useDashboardEditorShell(
       const strategy = normalizePlacementStrategy(actionOptions, "cursor");
       const position = resolvePlacementPosition(target, { ...actionOptions, itemSize: { w: template.w || 2, h: template.h || 2 } }, "cursor");
       if (!position.ok) return blockedActionResult("add-widget", actionOptions.source || "api", position.reason, [], position.diagnostics);
+      const prepare = prepareWidgetMutation("prepareAddWidget");
       if (actionOptions.placementMode === "interactive") {
         const editor = getEditor();
         const source = actionOptions.source || "api";
@@ -2352,11 +2363,13 @@ export function useDashboardEditorShell(
           actionType: "add-widget",
           source,
           position: position.position,
-          contextExtra: { placementIntent, template }
+          contextExtra: { placementIntent, template, payload: template.payload },
+          prepare,
+          commit: commitWidgetMutation,
+          rollback: rollbackWidgetMutation
         });
         return placementSessionActionResult("add-widget", source, result.session, position.position, actionId);
       }
-      const prepare = prepareWidgetMutation("prepareAddWidget");
       return executeEditorMutation("add-widget", {
         type: "add",
         payload: {

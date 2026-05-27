@@ -46,6 +46,11 @@
       "import": "./dist/dashboard-editor-shell.mjs",
       "require": "./dist/dashboard-editor-shell.cjs"
     },
+    "./widget-registry": {
+      "types": "./dist/types/widget-registry.d.ts",
+      "import": "./dist/widget-registry.mjs",
+      "require": "./dist/widget-registry.cjs"
+    },
     "./persistence": {
       "types": "./dist/types/persistence.d.ts",
       "import": "./dist/persistence.mjs",
@@ -71,10 +76,11 @@
     "dev": "vite --host 0.0.0.0",
     "build": "node scripts/build-package.mjs",
     "build-docs": "vite build --config vite.docs.config.ts",
-    "test": "node test/run-persistence-tests.js && node test/run-layout-engine-tests.js && node test/run-editor-tests.js && node test/run-dashboard-tests.js && node test/run-dashboard-editor-shell-tests.js",
+    "test": "node test/run-persistence-tests.js && node test/run-layout-engine-tests.js && node test/run-editor-tests.js && node test/run-dashboard-tests.js && node test/run-dashboard-editor-shell-tests.js && node test/run-widget-registry-tests.js",
     "test:dashboard": "node test/run-dashboard-tests.js",
     "test:dashboard-editor-shell": "node test/run-dashboard-editor-shell-tests.js",
     "test:editor": "node test/run-editor-tests.js",
+    "test:widget-registry": "node test/run-widget-registry-tests.js",
     "test:layout-engine": "node test/run-layout-engine-tests.js",
     "test:package": "node scripts/test-package-consumers.mjs",
     "test:examples": "node scripts/check-doc-imports.mjs",

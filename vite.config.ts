@@ -14,6 +14,7 @@ const entryPoints = {
   editor: path.resolve(__dirname, "lib/entries/editor.ts"),
   dashboard: path.resolve(__dirname, "lib/entries/dashboard.ts"),
   "dashboard-editor-shell": path.resolve(__dirname, "lib/entries/dashboard-editor-shell.ts"),
+  "widget-registry": path.resolve(__dirname, "lib/entries/widget-registry.ts"),
   persistence: path.resolve(__dirname, "lib/entries/persistence.ts"),
   history: path.resolve(__dirname, "lib/entries/history.ts"),
   worker: path.resolve(__dirname, "lib/entries/worker.ts")
@@ -38,6 +39,7 @@ const packageAliases = [
   { find: /^@marsio\/vue-grid-layout\/editor$/, replacement: path.resolve(__dirname, "lib/entries/editor.ts") },
   { find: /^@marsio\/vue-grid-layout\/dashboard$/, replacement: path.resolve(__dirname, "lib/entries/dashboard.ts") },
   { find: /^@marsio\/vue-grid-layout\/dashboard-editor-shell$/, replacement: path.resolve(__dirname, "lib/entries/dashboard-editor-shell.ts") },
+  { find: /^@marsio\/vue-grid-layout\/widget-registry$/, replacement: path.resolve(__dirname, "lib/entries/widget-registry.ts") },
   { find: /^@marsio\/vue-grid-layout\/persistence$/, replacement: path.resolve(__dirname, "lib/entries/persistence.ts") },
   { find: /^@marsio\/vue-grid-layout\/history$/, replacement: path.resolve(__dirname, "lib/entries/history.ts") },
   { find: /^@marsio\/vue-grid-layout\/worker$/, replacement: path.resolve(__dirname, "lib/entries/worker.ts") },

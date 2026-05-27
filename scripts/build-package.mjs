@@ -32,6 +32,7 @@ const publicEntries = [
   "editor",
   "dashboard",
   "dashboard-editor-shell",
+  "widget-registry",
   "persistence",
   "history",
   "worker"

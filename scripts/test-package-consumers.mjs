@@ -67,6 +67,7 @@ import { createLayoutEngine, executeLayoutOperation, workerLayoutExecutor } from
 import { EditorGridLayout, EditorResponsiveGridLayout, createGridEditorController, createGridEditorHistory } from '@marsio/vue-grid-layout/editor';
 import { DashboardResponsiveVueGridLayout, serializeDashboardLayoutDocument } from '@marsio/vue-grid-layout/dashboard';
 import { runDashboardEditorShellTransaction, useDashboardEditorShell } from '@marsio/vue-grid-layout/dashboard-editor-shell';
+import { createWidgetRegistry, materializeWidgetTemplate } from '@marsio/vue-grid-layout/widget-registry';
 import { PersistentGridLayout, PersistentResponsiveGridLayout, serializeLayoutDocument } from '@marsio/vue-grid-layout/persistence';
 import { runLayoutWorkerRequest } from '@marsio/vue-grid-layout/worker';
 assert.equal(VGL, VueGridLayout);
@@ -86,6 +87,8 @@ assert.equal(typeof DashboardResponsiveVueGridLayout, 'object');
 assert.equal(typeof serializeDashboardLayoutDocument, 'function');
 assert.equal(typeof useDashboardEditorShell, 'function');
 assert.equal(typeof runDashboardEditorShellTransaction, 'function');
+assert.equal(typeof createWidgetRegistry, 'function');
+assert.equal(typeof materializeWidgetTemplate, 'function');
 assert.equal(typeof PersistentGridLayout, 'object');
 assert.equal(typeof PersistentResponsiveGridLayout, 'object');
 assert.equal(typeof serializeLayoutDocument, 'function');
@@ -104,6 +107,7 @@ const engine = require('@marsio/vue-grid-layout/layout-engine');
 const editor = require('@marsio/vue-grid-layout/editor');
 const dashboard = require('@marsio/vue-grid-layout/dashboard');
 const shell = require('@marsio/vue-grid-layout/dashboard-editor-shell');
+const widgetRegistry = require('@marsio/vue-grid-layout/widget-registry');
 const persistence = require('@marsio/vue-grid-layout/persistence');
 const worker = require('@marsio/vue-grid-layout/worker');
 assert.equal(VGL.default, VGL);
@@ -120,6 +124,8 @@ assert.equal(typeof dashboard.DashboardResponsiveVueGridLayout, 'object');
 assert.equal(typeof dashboard.serializeDashboardLayoutDocument, 'function');
 assert.equal(typeof shell.useDashboardEditorShell, 'function');
 assert.equal(typeof shell.runDashboardEditorShellTransaction, 'function');
+assert.equal(typeof widgetRegistry.createWidgetRegistry, 'function');
+assert.equal(typeof widgetRegistry.materializeWidgetTemplate, 'function');
 assert.equal(typeof persistence.PersistentGridLayout, 'object');
 assert.equal(typeof persistence.PersistentResponsiveGridLayout, 'object');
 assert.equal(typeof persistence.serializeLayoutDocument, 'function');
@@ -200,6 +206,12 @@ import {
   type DashboardEditorShellActionType,
   type DashboardEditorShellSyntheticCommitData
 } from '@marsio/vue-grid-layout/dashboard-editor-shell';
+import {
+  createWidgetRegistry,
+  materializeWidgetTemplate,
+  type WidgetTypeDefinition,
+  type WidgetInstanceMetadata
+} from '@marsio/vue-grid-layout/widget-registry';
 import { PersistentGridLayout, PersistentResponsiveGridLayout, serializeLayoutDocument } from '@marsio/vue-grid-layout/persistence';
 import { createGridHistoryStore } from '@marsio/vue-grid-layout/history';
 import { runLayoutWorkerRequest } from '@marsio/vue-grid-layout/worker';
@@ -221,8 +233,18 @@ const syntheticData: DashboardEditorShellSyntheticCommitData = {
   commandType: 'add',
   synthesized: true
 };
+const widgetType: WidgetTypeDefinition = {
+  type: 'consumer-kpi',
+  version: '1.0.0',
+  title: 'Consumer KPI',
+  layoutDefaults: { w: 2, h: 2 },
+  settings: { fields: [{ id: 'title', type: 'string', defaultValue: 'Revenue' }] }
+};
+const registry = createWidgetRegistry([widgetType]);
+const materialized = materializeWidgetTemplate(registry, { type: 'consumer-kpi' });
+const widgetMetadata: WidgetInstanceMetadata | null = materialized.ok ? materialized.instance : null;
 const workerUrl = new URL('@marsio/vue-grid-layout/worker', import.meta.url).toString();
-void [VGL, VueGridLayout, ResponsiveGrid, createLayoutEngine, workerLayoutExecutor, EditorGridLayout, EditorResponsiveGridLayout, createGridEditorController, createGridEditorHistory, DashboardResponsiveVueGridLayout, PersistentGridLayout, PersistentResponsiveGridLayout, serializeDashboardLayoutDocument, useDashboardEditorShell, serializeLayoutDocument, createGridHistoryStore, runLayoutWorkerRequest, workerUrl, layout, editor, writeBackOwner, shellAction, syntheticData];
+void [VGL, VueGridLayout, ResponsiveGrid, createLayoutEngine, workerLayoutExecutor, EditorGridLayout, EditorResponsiveGridLayout, createGridEditorController, createGridEditorHistory, DashboardResponsiveVueGridLayout, PersistentGridLayout, PersistentResponsiveGridLayout, serializeDashboardLayoutDocument, useDashboardEditorShell, serializeLayoutDocument, createGridHistoryStore, runLayoutWorkerRequest, workerUrl, layout, editor, writeBackOwner, shellAction, syntheticData, registry, materialized, widgetMetadata];
 `);
 write(path.join(tsDir, "src", "negative.ts"), `
 import { VueGridLayout } from '@marsio/vue-grid-layout/core';

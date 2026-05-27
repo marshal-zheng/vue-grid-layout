@@ -22,6 +22,7 @@ VGL is Vue3-only and does not require jQuery.
 - [Height Modes and Render Precision](#height-modes-and-render-precision)
 - [Professional Dashboard Editor](#professional-dashboard-editor)
 - [Dashboard Editor Shell Integration](#dashboard-editor-shell-integration)
+- [Widget Registry Protocol](#widget-registry-protocol)
 - [Dashboard Layout Document Adapter](#dashboard-layout-document-adapter)
 - [Dashboard Responsive Profiles](#dashboard-responsive-profiles)
 - [Layout Settings Migration and Repair](#layout-settings-migration-and-repair)
@@ -119,6 +120,7 @@ The root entry is lean core and is equivalent to `@marsio/vue-grid-layout/core`.
 | Headless Editor | `@marsio/vue-grid-layout/editor` | Controller, commands, metadata, placement and keyboard helpers. No bundled toolbar, inspector, palette or command UI. |
 | Dashboard Runtime | `@marsio/vue-grid-layout/dashboard` | Dashboard document adapter, responsive runtime and migration helpers. |
 | Dashboard Editor Shell | `@marsio/vue-grid-layout/dashboard-editor-shell` | Headless shell actions, menus, transactions and shell-managed dashboard document write-back. Render UI in your app. |
+| Widget Registry | `@marsio/vue-grid-layout/widget-registry` | Optional API-first widget type, template, settings, sidecar and shell adapter protocol. No renderer or UI kit runtime. |
 | History | `@marsio/vue-grid-layout/history` | Optional Pinia-powered layout-only undo/redo. Requires `pinia`. |
 | Worker | `@marsio/vue-grid-layout/worker` | Layout engine worker runtime entry. |
 | CSS | `@marsio/vue-grid-layout/style.css` | Import once in your app or component library entry. |
@@ -639,6 +641,58 @@ Shell add/paste/drop entry points accept `strategy?: "cursor" | "nearest-fit" | 
 - Responsive write-back stays scoped to the current runtime/profile. Editing a default layout does not overwrite profile overrides, and editing a profile does not materialize unrelated inherited items.
 
 See `example/25-dashboard-editor-shell.js` for context menu descriptors, paste at pointer, selection/highlight/scroll, empty dashboard add, palette hook, widget copy/paste, reference copy/paste/replace mocks, remove confirm and move-all wiring. The example menu/palette/buttons are demonstration UI only; their DOM, styles and labels are not public API.
+
+## Widget Registry Protocol
+
+`@marsio/vue-grid-layout/widget-registry` is an optional headless protocol for product dashboards that need stable widget type metadata without pulling a UI kit, renderer, chart library, plugin marketplace or AI assistant into the core grid. It describes widget types, layout defaults, settings descriptors, template materialization, `extensions.widget` sidecar helpers and shell adapters.
+
+```ts
+import {
+  createWidgetRegistry,
+  materializeWidgetTemplate,
+  createWidgetRegistryPaletteAdapter,
+  createWidgetRegistryWidgetAdapter,
+  validateDashboardWidgetInstances
+} from "@marsio/vue-grid-layout/widget-registry";
+
+const registry = createWidgetRegistry([
+  {
+    type: "kpi",
+    version: "1.0.0",
+    title: "KPI",
+    category: "metrics",
+    layoutDefaults: { w: 3, h: 2, minW: 2, minH: 1 },
+    rendererHint: { rendererKey: "builtin", componentKey: "kpi-card" },
+    settings: {
+      fields: [
+        { id: "title", type: "string", defaultValue: "Revenue", required: true },
+        { id: "format", type: "enum", defaultValue: "compact", options: [{ value: "compact" }, { value: "full" }] }
+      ]
+    }
+  }
+]);
+
+const widget = materializeWidgetTemplate(registry, {
+  type: "kpi",
+  id: "revenue-kpi",
+  settings: { title: "Revenue" }
+});
+
+if (widget.ok) {
+  await shell.actions.addWidgetFromTemplate(widget.template, null, { strategy: "first-fit" });
+}
+```
+
+Registry boundaries:
+
+- Widget definitions are JSON-safe. Functions, DOM nodes, Vue refs, class instances, circular objects, non-finite numbers and reserved keys are rejected or cleaned according to `policy: "strict" | "tolerant"`.
+- `rendererHint` is only a string metadata hint such as `rendererKey`, `componentKey` or `slot`; the registry never stores component objects, dynamic import functions or renderer resolvers.
+- Layout defaults bridge to the existing item capability/aspect-ratio model through fields such as `static`, `draggable`, `resizable`, `bounded`, `resizeHandles`, `preserveAspectRatio` and `aspectRatio`.
+- Settings descriptors intentionally cover common fields only: `string`, `number`, `boolean`, `enum`, `color`, `text`, `json`, `object`, `array` and `ref`. `object`, `array` and `json` are lightweight JSON-safe checks, not a full JSON Schema runtime.
+- Widget instance metadata belongs under each dashboard item at `DashboardItemLayout.extensions.widget`. Basic `LayoutItem` geometry stays clean; normal move/resize write-back does not rewrite widget settings, bindings, payload or renderer metadata.
+- `createWidgetRegistryPaletteAdapter()` and `createWidgetRegistryWidgetAdapter()` are composable adapters for `useDashboardEditorShell()`. Existing handwritten `DashboardEditorShellWidgetTemplate`, `palette.open` and `widgetAdapter` integrations remain compatible.
+
+The registry entry is separate from `./dashboard`, `./dashboard-editor-shell`, `./editor`, `./core` and `./responsive`. Root/core/responsive users do not pay for widget protocol code unless they import the `./widget-registry` subpath.
 
 ## Dashboard Layout Document Adapter
 

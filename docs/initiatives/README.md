@@ -6,15 +6,15 @@
 
 当用户询问“结合北极星下一步做什么”时，默认先给出一个全局推荐，而不是并列展开所有 initiative。
 
-当前下一步：推进 WIDGET `widget-registry-protocol`。理由是该 spec 已经进入执行态但 tasks 仍为 0/13，且前置的 item capability sidecar 与 DASH shell-managed dashboard editing 均已完成；相比之下，LAYOUT `external-drop-session` 与 `layout-engine-pro` 仍分别有 ownership / first-slice 开放问题。
+当前下一步：先交付 WIDGET `widget-registry-protocol` 已完成 worktree，并同步主工作区状态。理由是该 spec 已完成 tasks 14/14 且 Round 2 independent review PASS，但在 Worktree Mode 下仍需要 delivery；交付后再进入 WIDGET 后续产品层规划。
 
 最近完成的规划收口：LAYOUT 的 `item-capabilities-aspect-ratio` 已完成 tasks 41/41，并已解除 `widget-registry-protocol` 与 `layout-engine-pro` 的 capability/aspect-ratio 前置依赖。EDITOR 的 `ux-l3-reconcile` 已把 `professional-dashboard-editor-ux` 剩余 tasks 20-22 判定为被 `professional-dashboard-editor-l3-intelligence` 覆盖/取代，无需新 spec。
 
 顺序约束：
-- `widget-registry-protocol` 的 layout defaults / capability bridge 可以基于已完成的 item capability sidecar 推进。
+- `widget-registry-protocol` 的 layout defaults / capability bridge 已基于完成的 item capability sidecar 落地。
 - 切 `layout-engine-pro` focused spec 前，先回答 `pro-first-slice`：nested/inter-grid 优先，还是 group resize/custom compactor 优先。
 - `external-drop-session-refactor` 与 `editor-placement-session` 仍有 ownership 边界问题；推进时需要先对齐 LAYOUT/EDITOR 交界。
-- 当前只选一个全局下一步时，优先推进 WIDGET 的 `widget-registry-protocol`；如果用户想先回到 layout 方向，则先澄清 `external-drop-owner` 或 `pro-first-slice`。
+- 当前只选一个全局下一步时，优先交付 WIDGET 的 `widget-registry-protocol`；交付后如继续 WIDGET，先澄清 `editor-kit-package-boundary`，再切 Editor Kit UI 或 MCP introspection 的 focused brief。
 
 ## Active Initiatives
 
@@ -25,7 +25,7 @@
 | LAYOUT | 布局引擎与约束能力 | active | docs/initiatives/LAYOUT-engine-pro | engine/repair/item capabilities 已完成；external drop session 和 Layout Engine Pro 仍未完成 | 先对齐 `external-drop-owner`，或回答 `pro-first-slice` 后切 Layout Engine Pro brief |
 | DASH | Dashboard 平台与文档生命周期 | active | docs/initiatives/DASH-dashboard-platform | document/profile/shell/command-history-first 主线已完成；pure runtime split 仍需 bundle 或消费者证据 | 需要时按 `check:bundle` 或真实消费者需求评估 pure runtime split |
 | EDITOR | 专业编辑器体验与生产力 | active | docs/initiatives/EDITOR-professional-editor | command/group/UX/L3 已完成；placement 还有非阻塞 follow-up；bulk productivity 仍待切片 | 后续需要时选择 productivity 第一片 |
-| WIDGET | Widget 产品扩展与 AI 助手 | active | docs/initiatives/WIDGET-product-extension | widget registry 已成 spec 但未实现；item capability 前置依赖已完成；Editor Kit UI 和 AI/MCP 仍是后续范围 | 可推进 `widget-registry-protocol` |
+| WIDGET | Widget 产品扩展与 AI 助手 | active | docs/initiatives/WIDGET-product-extension | widget registry protocol 已完成待交付；Editor Kit UI、MCP introspection 和 AI/MCP 仍是后续范围 | 先交付 `widget-registry-protocol`；之后澄清 `editor-kit-package-boundary` |
 
 ## Archived Initiatives
 

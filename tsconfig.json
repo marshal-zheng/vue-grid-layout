@@ -18,6 +18,7 @@
       "@marsio/vue-grid-layout/editor": ["lib/entries/editor.ts"],
       "@marsio/vue-grid-layout/dashboard": ["lib/entries/dashboard.ts"],
       "@marsio/vue-grid-layout/dashboard-editor-shell": ["lib/entries/dashboard-editor-shell.ts"],
+      "@marsio/vue-grid-layout/widget-registry": ["lib/entries/widget-registry.ts"],
       "@marsio/vue-grid-layout/persistence": ["lib/entries/persistence.ts"],
       "@marsio/vue-grid-layout/history": ["lib/entries/history.ts"],
       "@marsio/vue-grid-layout/worker": ["lib/entries/worker.ts"],
