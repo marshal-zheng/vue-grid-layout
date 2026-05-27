@@ -536,6 +536,122 @@ function testGroupDragInteractionOperations() {
   assert.ok(emitted.includes('drag'))
 }
 
+function testDragPlaceholderFollowsPointerTarget() {
+  const layout: Layout = [
+    { i: 'region', x: 5, y: 3, w: 7, h: 3 },
+    { i: 'health', x: 8, y: 0, w: 4, h: 3, static: true }
+  ]
+  const state = {
+    layout,
+    oldLayout: null,
+    activeDrag: null as LayoutItem | null,
+    oldDragItem: null,
+    oldResizeItem: null,
+    activeResize: null,
+    resizing: false
+  }
+  let emittedPlaceholder: LayoutItem | undefined
+  let intelligencePlaceholder: LayoutItem | undefined
+  const operations: LayoutOperation[] = []
+  const interactions = useGridDragResizeInteractions({
+    props: {
+      autoScroll: false,
+      allowOverlap: false,
+      cols: 12,
+      compactType: 'vertical',
+      containerPadding: null,
+      dropStrategy: 'cursor',
+      droppingItem: { i: 'drop', w: 1, h: 1 },
+      margin: [10, 10],
+      maxRows: Infinity,
+      preventCollision: false,
+      rowHeight: 30,
+      transformScale: 1,
+      verticalCompact: false,
+      width: 900
+    },
+    state,
+    eventBridge: {
+      emitDragStart: () => undefined,
+      emitDrag: (_layout, _oldItem, _newItem, placeholder) => {
+        emittedPlaceholder = placeholder
+      },
+      emitDragStop: () => undefined,
+      emitResizeStart: () => undefined,
+      emitResize: () => undefined,
+      emitResizeStop: () => undefined,
+      emitDrop: () => undefined,
+      callDropDragOver: () => undefined
+    },
+    engineBridge: {
+      getLayoutEngineProp: () => ({}),
+      isLegacyLayoutEngine: () => false,
+      reset: () => undefined,
+      start: () => undefined,
+      getCommitted: () => layout,
+      preview: (_id, operation, apply) => {
+        operations.push(operation)
+        apply({
+          id: 'preview',
+          status: 'changed',
+          layout: [
+            { i: 'region', x: 5, y: 8, w: 7, h: 3 },
+            { i: 'health', x: 8, y: 0, w: 4, h: 3, static: true }
+          ],
+          patches: [],
+          affectedIds: ['region'],
+          collisions: [],
+          placeholder: { i: 'region', x: 5, y: 8, w: 7, h: 3 }
+        })
+        return null
+      },
+      commit: () => null
+    } as never,
+    frameUpdate: {
+      cancel: () => undefined,
+      schedule: () => undefined,
+      resetMovedFlags: () => undefined
+    } as never,
+    autoScroll: {
+      init: () => undefined,
+      maybeScroll: () => undefined,
+      reset: () => undefined
+    } as never,
+    editor: {
+      clearGuides: () => undefined,
+      resetSnap: () => undefined,
+      snapCandidate: (_activeId, _activeItem, candidate) => candidate,
+      updateIntelligence: (_id, _item, placeholder) => {
+        intelligencePlaceholder = placeholder
+      },
+      resolveMoveDrag: input => ({ kind: 'single', id: input.id }),
+      notifyMoveBlocked: () => undefined
+    },
+    nextInteractionRequestId: (kind, id) => `${kind}:${id}`,
+    syncHistory: () => undefined,
+    onLayoutMaybeChanged: () => undefined
+  } as never)
+
+  const dragEvent = { e: {} as MouseEvent, node: {} as HTMLElement, newPosition: null } as never
+  interactions.onDragStart('region', 5, 3, dragEvent)
+  interactions.onDrag('region', 5, 1, dragEvent)
+
+  assert.equal(operations[0].type, 'move')
+  assert.equal((operations[0] as Extract<LayoutOperation, { type: 'move' }>).y, 1)
+  assert.deepEqual(
+    state.activeDrag && { i: state.activeDrag.i, x: state.activeDrag.x, y: state.activeDrag.y, w: state.activeDrag.w, h: state.activeDrag.h },
+    { i: 'region', x: 5, y: 1, w: 7, h: 3 }
+  )
+  assert.deepEqual(
+    emittedPlaceholder && { i: emittedPlaceholder.i, x: emittedPlaceholder.x, y: emittedPlaceholder.y },
+    { i: 'region', x: 5, y: 1 }
+  )
+  assert.deepEqual(
+    intelligencePlaceholder && { i: intelligencePlaceholder.i, x: intelligencePlaceholder.x, y: intelligencePlaceholder.y },
+    { i: 'region', x: 5, y: 1 }
+  )
+}
+
 function testGroupDragBlockedFeedback() {
   const layout: Layout = [
     { i: 'a', x: 0, y: 0, w: 2, h: 1 },
@@ -2151,6 +2267,7 @@ testOverlayGeometryRenderPrecision()
 testUseGridItemDragActivationThreshold()
 testUseGridItemDragBoundedAndDroppingProxy()
 testGroupDragInteractionOperations()
+testDragPlaceholderFollowsPointerTarget()
 testGroupDragBlockedFeedback()
 testClickLikeDragDoesNotShowGuides()
 testResizeNoopDoesNotPreviewOrCommit()

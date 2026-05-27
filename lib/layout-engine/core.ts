@@ -716,6 +716,17 @@ const executeMove = (
 
   const candidate = { ...sourceItem, x: operation.x, y: operation.y };
   const collisions = index.queryAllCollisions(candidate);
+  const staticCollisions = collisions.filter(item => item.static);
+  if (staticCollisions.length > 0) {
+    return makeBlockedResult(
+      request,
+      "static-item",
+      staticCollisions,
+      start,
+      true,
+      staticCollisions.map(item => item.i)
+    );
+  }
   if (collisions.length > 0 && request.options.preventCollision && !request.options.allowOverlap) {
     return makeBlockedResult(request, "collision", collisions, start, true);
   }

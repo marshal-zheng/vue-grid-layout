@@ -155,6 +155,20 @@ export function useGridDragResizeInteractions({
     };
   };
 
+  const buildMovePlaceholder = (
+    item: LayoutItem,
+    x: number,
+    y: number,
+    id = item.i
+  ): LayoutItem & { placeholder: true } => ({
+    w: item.w,
+    h: item.h,
+    x,
+    y,
+    i: id,
+    placeholder: true
+  });
+
   const clearDragBlockedFeedback = () => {
     dragBlockedReason.value = null;
     dragBlockedItemIds.value = [];
@@ -992,14 +1006,7 @@ export function useGridDragResizeInteractions({
             ? result.layout
             : engineBridge.getCommitted();
           const nextItem = getLayoutItem(nextLayout, context.activeId) || activeItem;
-          const placeholder = result.placeholder || {
-            w: nextItem.w,
-            h: nextItem.h,
-            x: nextItem.x,
-            y: nextItem.y,
-            placeholder: true,
-            i: context.activeId
-          };
+          const placeholder = buildMovePlaceholder(activeItem, snapped.x, snapped.y, context.activeId);
           if (activeDragId.value === context.activeId) {
             syncDragBlockedFromResult(result, context.ids, context.activeId);
           }
@@ -1040,14 +1047,7 @@ export function useGridDragResizeInteractions({
             ? result.layout
             : engineBridge.getCommitted();
           const nextItem = getLayoutItem(nextLayout, i) || l;
-          const placeholder = result.placeholder || {
-            w: nextItem.w,
-            h: nextItem.h,
-            x: nextItem.x,
-            y: nextItem.y,
-            placeholder: true,
-            i
-          };
+          const placeholder = buildMovePlaceholder(l, snapped.x, snapped.y, i);
           if (activeDragId.value === i) {
             syncDragBlockedFromResult(result, [i], i);
           }

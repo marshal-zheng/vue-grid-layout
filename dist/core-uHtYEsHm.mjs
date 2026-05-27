@@ -1,4 +1,4 @@
-import { a as b, f as T, j as Y, k as Z, l as q, d as x, o as h, s as E, E as oo } from "./utils-BCVYGne6.mjs";
+import { a as b, f as T, j as Y, k as Z, l as q, d as x, o as g, s as E, E as oo } from "./utils-BCVYGne6.mjs";
 import { k as j, a as to, c as no, b as eo, e as ao, f as io } from "./migration-CPonYzEY.mjs";
 function so(o, e) {
   const t = z(o);
@@ -63,7 +63,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     if (!n || !a || n.i !== a.i || G(n) !== G(a)) return !1;
   }
   return !0;
-}, M = (o, e, t) => {
+}, C = (o, e, t) => {
   const n = [], a = /* @__PURE__ */ new Map(), i = /* @__PURE__ */ new Map();
   return o.forEach((s) => a.set(s.i, s)), e.forEach((s) => i.set(s.i, s)), e.forEach((s) => {
     const c = a.get(s.i);
@@ -93,7 +93,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   return o.forEach((n) => {
     n.type === "compact" ? n.affectedIds.forEach((a) => t.add(a)) : n.type === "add" ? t.add(n.item.i) : t.add(n.id);
   }), e.forEach((n) => t.add(n.i)), Array.from(t);
-}, C = (o, e) => (e.indexStrategy || j()).build(o, {
+}, M = (o, e) => (e.indexStrategy || j()).build(o, {
   cols: e.cols,
   maxRows: e.maxRows,
   compactType: e.compactType,
@@ -193,7 +193,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     ...r.details || [],
     ...l.details
   ]);
-  const f = {
+  const u = {
     id: o.id,
     status: e,
     layout: t,
@@ -203,7 +203,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     diagnostics: r,
     ...p
   };
-  return xo(o, f), f;
+  return xo(o, u), u;
 }, vo = (o) => o.map((e) => ({
   code: e.code,
   level: e.level,
@@ -235,20 +235,20 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   const n = [], a = /* @__PURE__ */ new Set();
   if (t.ids.forEach((d) => {
     if (typeof d != "string") return;
-    const u = d.trim();
-    !u || a.has(u) || (a.add(u), n.push(u));
+    const f = d.trim();
+    !f || a.has(f) || (a.add(f), n.push(f));
   }), n.length === 0)
     return {
       ok: !1,
       result: m(o, "invalid-input", [], e, !0)
     };
-  const i = n.filter((d) => !h(o.layout, d));
+  const i = n.filter((d) => !g(o.layout, d));
   if (i.length > 0)
     return {
       ok: !1,
       result: m(o, "missing-item", [], e, !0, i)
     };
-  const s = n.map((d) => h(o.layout, d)).filter(Boolean), c = s.filter((d) => d.static);
+  const s = n.map((d) => g(o.layout, d)).filter(Boolean), c = s.filter((d) => d.static);
   if (c.length > 0)
     return {
       ok: !1,
@@ -261,7 +261,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
         c.map((d) => d.i)
       )
     };
-  const l = new Set(n), p = t.activeId && l.has(t.activeId) ? t.activeId : n[0], y = Math.trunc(t.dx), r = Math.trunc(t.dy), f = s.map((d) => ({
+  const l = new Set(n), p = t.activeId && l.has(t.activeId) ? t.activeId : n[0], y = Math.trunc(t.dx), r = Math.trunc(t.dy), u = s.map((d) => ({
     ...x(d),
     x: d.x + y,
     y: d.y + r
@@ -275,7 +275,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
       dx: y,
       dy: r,
       movingItems: s,
-      targetItems: f
+      targetItems: u
     }
   };
 }, Io = (o, e) => {
@@ -296,32 +296,32 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
 ), Ro = (o, e, t) => {
   const n = S(o);
   return e.targetItems.forEach((a) => {
-    const i = h(n, a.i);
+    const i = g(n, a.i);
     i && (i.x = a.x, i.y = a.y, i.moved = !0, t && (i.static = !0));
   }), n;
 }, ko = (o, e) => (e.movingItems.forEach((t) => {
-  const n = h(o, t.i);
+  const n = g(o, t.i);
   n && (typeof t.static == "undefined" ? delete n.static : n.static = t.static);
-}), o), Mo = (o, e, t, n, a) => {
+}), o), Co = (o, e, t, n, a) => {
   const i = t.movingItems[0], s = t.targetItems[0];
   if (!i || !s)
     return m(o, "invalid-input", [], n, !0);
   if (i.x === s.x && i.y === s.y)
     return O(o, n, !0, x(i));
-  if (a.some((u) => u.static)) {
-    const u = a.filter((g) => g.static);
+  if (a.some((f) => f.static)) {
+    const f = a.filter((h) => h.static);
     return m(
       o,
       "static-item",
-      u,
+      f,
       n,
       !0,
-      u.map((g) => g.i)
+      f.map((h) => h.i)
     );
   }
   if (a.length > 0 && o.options.preventCollision && !o.options.allowOverlap)
     return m(o, "collision", a, n, !0);
-  const c = S(o.layout), l = h(c, i.i);
+  const c = S(o.layout), l = g(c, i.i);
   if (!l) return m(o, "missing-item", [], n, !0, [i.i]);
   const p = E(
     c,
@@ -333,7 +333,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     s.y,
     o.operation.type === "groupMove" ? o.operation.userAction !== !1 : !0,
     o.options.preventCollision
-  ), y = $(L(p, o.options)), r = M(o.layout, y, o.options.compactType), f = h(y, i.i) || l, d = r.length === 0 || k(o.layout, y) ? "noop" : "changed";
+  ), y = $(L(p, o.options)), r = C(o.layout, y, o.options.compactType), u = g(y, i.i) || l, d = r.length === 0 || k(o.layout, y) ? "noop" : "changed";
   return v(
     o,
     d,
@@ -342,17 +342,17 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     a,
     n,
     !0,
-    { placeholder: x(f) }
+    { placeholder: x(u) }
   );
-}, Co = (o, e, t) => {
+}, Mo = (o, e, t) => {
   const n = bo(o, t);
   if (!n.ok) return n.result;
-  const a = n.value, i = a.movingItems.find((g) => g.i === a.activeId) || a.movingItems[0], s = Io(a, o.options);
+  const a = n.value, i = a.movingItems.find((h) => h.i === a.activeId) || a.movingItems[0], s = Io(a, o.options);
   if (s)
     return m(o, s.reason, [], t, !0, s.itemIds);
   if (a.dx === 0 && a.dy === 0 && i)
     return O(o, t, !0, x(i));
-  const c = Lo(a, e), l = c.filter((g) => g.static);
+  const c = Lo(a, e), l = c.filter((h) => h.static);
   if (l.length > 0)
     return m(
       o,
@@ -360,10 +360,10 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
       l,
       t,
       !0,
-      l.map((g) => g.i)
+      l.map((h) => h.i)
     );
   if (a.ids.length === 1)
-    return Mo(o, e, a, t, c);
+    return Co(o, e, a, t, c);
   if (c.length > 0 && o.options.preventCollision && !o.options.allowOverlap)
     return m(o, "collision", c, t, !0);
   const p = !o.options.allowOverlap, y = Ro(o.layout, a, p);
@@ -374,12 +374,12 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     o.options.cols,
     o.options.allowOverlap
   )), r = $(ko(r, a));
-  const f = M(o.layout, r, o.options.compactType), d = h(r, a.activeId) || i, u = f.length === 0 || k(o.layout, r) ? "noop" : "changed";
+  const u = C(o.layout, r, o.options.compactType), d = g(r, a.activeId) || i, f = u.length === 0 || k(o.layout, r) ? "noop" : "changed";
   return v(
     o,
-    u,
-    u === "noop" ? o.layout : r,
     f,
+    f === "noop" ? o.layout : r,
+    u,
     c,
     t,
     !0,
@@ -388,20 +388,29 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
 }, Oo = (o, e, t) => {
   const n = o.operation;
   if (n.type !== "move") return R(o, "invalid move operation", t);
-  const a = h(o.layout, n.id);
+  const a = g(o.layout, n.id);
   if (!a) return m(o, "missing-item", [], t, !0, [n.id]);
   if (a.static)
     return m(o, "static-item", [], t, !0, [n.id]);
   if (a.x === n.x && a.y === n.y)
     return O(o, t, !0, x(a));
-  const i = { ...a, x: n.x, y: n.y }, s = e.queryAllCollisions(i);
+  const i = { ...a, x: n.x, y: n.y }, s = e.queryAllCollisions(i), c = s.filter((h) => h.static);
+  if (c.length > 0)
+    return m(
+      o,
+      "static-item",
+      c,
+      t,
+      !0,
+      c.map((h) => h.i)
+    );
   if (s.length > 0 && o.options.preventCollision && !o.options.allowOverlap)
     return m(o, "collision", s, t, !0);
-  const c = S(o.layout), l = h(c, n.id);
-  if (!l) return m(o, "missing-item", [], t, !0, [n.id]);
-  const p = E(
-    c,
+  const l = S(o.layout), p = g(l, n.id);
+  if (!p) return m(o, "missing-item", [], t, !0, [n.id]);
+  const y = E(
     l,
+    p,
     o.options.compactType,
     o.options.cols,
     o.options.allowOverlap,
@@ -409,12 +418,12 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     n.y,
     n.userAction !== !1,
     o.options.preventCollision
-  ), y = $(L(p, o.options)), r = M(o.layout, y, o.options.compactType), f = h(y, n.id) || l, d = r.length === 0 || k(o.layout, y) ? "noop" : "changed";
-  return v(o, d, d === "noop" ? o.layout : y, r, s, t, !0, {
-    placeholder: x(f)
+  ), r = $(L(y, o.options)), u = C(o.layout, r, o.options.compactType), d = g(r, n.id) || p, f = u.length === 0 || k(o.layout, r) ? "noop" : "changed";
+  return v(o, f, f === "noop" ? o.layout : r, u, s, t, !0, {
+    placeholder: x(d)
   });
 }, Eo = (o, e, t) => {
-  var p, y, r, f, d, u, g, I, H, W, _, D;
+  var p, y, r, u, d, f, h, I, H, W, _, D;
   const n = (y = (p = e.constraint) == null ? void 0 : p.handlePolicy) == null ? void 0 : y.allowedHandles;
   if (n && n.indexOf(e.handle) === -1)
     return {
@@ -442,7 +451,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     typeof o.minH == "number" ? o.minH : 1,
     typeof o.maxH == "number" ? o.maxH : t.maxRows || V
   ), s = typeof e.x == "number" ? e.x : o.x, c = typeof e.y == "number" ? e.y : o.y, l = !1;
-  if (typeof e.x != "number" && yo(e.handle) && (s = o.x + (o.w - a), s < 0 && (s = 0, a = o.w), l = !0), typeof e.y != "number" && fo(e.handle) && (c = o.y + (o.h - i), c < 0 && (c = 0, i = o.h), l = !0), (f = (r = e.constraint) == null ? void 0 : r.aspectRatio) != null && f.enabled) {
+  if (typeof e.x != "number" && yo(e.handle) && (s = o.x + (o.w - a), s < 0 && (s = 0, a = o.w), l = !0), typeof e.y != "number" && fo(e.handle) && (c = o.y + (o.h - i), c < 0 && (c = 0, i = o.h), l = !0), (u = (r = e.constraint) == null ? void 0 : r.aspectRatio) != null && u.enabled) {
     const w = io({
       startItem: o,
       rawCandidate: { ...o, x: s, y: c, w: a, h: i },
@@ -459,8 +468,8 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     }), B = vo(w.diagnostics);
     if (w.kind === "blocked")
       return {
-        x: (u = (d = w.candidate) == null ? void 0 : d.x) != null ? u : s,
-        y: (I = (g = w.candidate) == null ? void 0 : g.y) != null ? I : c,
+        x: (f = (d = w.candidate) == null ? void 0 : d.x) != null ? f : s,
+        y: (I = (h = w.candidate) == null ? void 0 : h.y) != null ? I : c,
         w: (W = (H = w.candidate) == null ? void 0 : H.w) != null ? W : a,
         h: (D = (_ = w.candidate) == null ? void 0 : _.h) != null ? D : i,
         moved: l,
@@ -474,7 +483,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
 }, To = (o, e, t) => {
   const n = o.operation;
   if (n.type !== "resize") return R(o, "invalid resize operation", t);
-  const a = h(o.layout, n.id);
+  const a = g(o.layout, n.id);
   if (!a) return m(o, "missing-item", [], t, !0, [n.id]);
   if (a.static)
     return m(o, "static-item", [], t, !0, [n.id]);
@@ -494,7 +503,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   }, c = e.queryAllCollisions(s);
   if (c.length > 0 && o.options.preventCollision && !o.options.allowOverlap)
     return m(o, "collision", c, t, !0);
-  const l = S(o.layout), p = h(l, n.id);
+  const l = S(o.layout), p = g(l, n.id);
   if (!p) return m(o, "missing-item", [], t, !0, [n.id]);
   p.w = i.w, p.h = i.h;
   let y = l;
@@ -509,8 +518,8 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     !0,
     o.options.preventCollision
   ) : (p.x = i.x, p.y = i.y);
-  const r = $(L(y, o.options)), f = M(o.layout, r, o.options.compactType), d = h(r, n.id) || p, u = f.length === 0 || k(o.layout, r) ? "noop" : "changed";
-  return v(o, u, u === "noop" ? o.layout : r, f, c, t, !0, {
+  const r = $(L(y, o.options)), u = C(o.layout, r, o.options.compactType), d = g(r, n.id) || p, f = u.length === 0 || k(o.layout, r) ? "noop" : "changed";
+  return v(o, f, f === "noop" ? o.layout : r, u, c, t, !0, {
     placeholder: x(d),
     diagnostics: i.details && i.details.length > 0 ? { details: i.details } : void 0
   });
@@ -520,7 +529,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   const a = Math.floor(n.item.w), i = Math.floor(n.item.h);
   if (!F(a) || !F(i))
     return m(o, "invalid-input", [], t, !0);
-  const s = n.item.i || K, c = o.layout.filter((I) => I.i !== s), l = C(c, o.options);
+  const s = n.item.i || K, c = o.layout.filter((I) => I.i !== s), l = M(c, o.options);
   let p = null, y = "none";
   if (n.strategy === "cursor" && n.target) {
     const I = {
@@ -551,11 +560,11 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     w: a,
     h: i,
     static: !1
-  }, f = [...c.map(x), r], d = L(f, o.options), u = h(d, s) || r, g = M(o.layout, d, o.options.compactType);
-  return v(o, "changed", d, g, [], t, !0, {
-    placeholder: x(u),
+  }, u = [...c.map(x), r], d = L(u, o.options), f = g(d, s) || r, h = C(o.layout, d, o.options.compactType);
+  return v(o, "changed", d, h, [], t, !0, {
+    placeholder: x(f),
     drop: {
-      position: { x: u.x, y: u.y },
+      position: { x: f.x, y: f.y },
       strategy: n.strategy,
       fallback: y
     }
@@ -568,7 +577,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     o.options.compactType,
     o.options.cols,
     o.options.allowOverlap
-  ), n = M(o.layout, t, o.options.compactType), a = n.length === 0 || k(o.layout, t) ? "noop" : "changed";
+  ), n = C(o.layout, t, o.options.compactType), a = n.length === 0 || k(o.layout, t) ? "noop" : "changed";
   return v(o, a, a === "noop" ? o.layout : t, n, [], e, !1);
 }, $o = (o, e) => {
   try {
@@ -592,7 +601,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     t.sourceBreakpoint || t.breakpoint,
     t.cols,
     o.options.compactType
-  ), s = M(o.layout, i, o.options.compactType), c = s.length === 0 || k(o.layout, i) ? "noop" : "changed";
+  ), s = C(o.layout, i, o.options.compactType), c = s.length === 0 || k(o.layout, i) ? "noop" : "changed";
   return v(o, c, c === "noop" ? o.layout : i, s, [], e, !1);
 }, R = (o, e, t, n) => v(o, "error", o.layout, [], [], t, !1, {
   error: { message: e, cause: n }
@@ -600,7 +609,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   const e = o.options;
   switch (o.operation.type) {
     case "move": {
-      const t = b(o.layout), n = h(t, o.operation.id);
+      const t = b(o.layout), n = g(t, o.operation.id);
       if (!n) return o.layout;
       const a = E(
         t,
@@ -618,7 +627,7 @@ const _o = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     case "groupMove": {
       const t = Array.from(new Set(o.operation.ids.filter(Boolean)));
       if (t.length !== 1) return o.layout;
-      const n = b(o.layout), a = h(n, t[0]);
+      const n = b(o.layout), a = g(n, t[0]);
       if (!a) return o.layout;
       const i = E(
         n,
@@ -686,12 +695,12 @@ function P(o, e) {
 function Q(o, e) {
   const t = X(), n = J(o.options), a = { ...o, options: n };
   try {
-    const i = e || C(a.layout, n);
+    const i = e || M(a.layout, n);
     switch (a.operation.type) {
       case "move":
         return Oo(a, i, t);
       case "groupMove":
-        return Co(a, i, t);
+        return Mo(a, i, t);
       case "resize":
         return To(a, i, t);
       case "dropFit":
@@ -727,15 +736,15 @@ function Ao(o) {
 }
 function Do(o, e = []) {
   const t = J(o);
-  let n = b(e), a = C(n, t), i = 0;
+  let n = b(e), a = M(n, t), i = 0;
   const s = (l) => {
-    n = b(l), a = C(n, t), i++;
+    n = b(l), a = M(n, t), i++;
   }, c = (l) => {
-    var f;
-    const p = l.layout === n || k(l.layout, n), y = p ? a : C(l.layout, t), r = Q(l, y);
+    var u;
+    const p = l.layout === n || k(l.layout, n), y = p ? a : M(l.layout, t), r = Q(l, y);
     if (t.compareLegacy) {
       const d = P(l, r);
-      d.matches || (f = t.onEvent) == null || f.call(t, {
+      d.matches || (u = t.onEvent) == null || u.call(t, {
         type: "legacy-mismatch",
         id: l.id,
         message: "layout engine result differs from legacy path",
@@ -745,7 +754,7 @@ function Do(o, e = []) {
     }
     if (r.status === "changed" || r.status === "fallback") {
       const d = n;
-      n = b(r.layout), p && r.patches.length > 0 && mo(a, d, n, r.patches) || (a = C(n, t)), i++;
+      n = b(r.layout), p && r.patches.length > 0 && mo(a, d, n, r.patches) || (a = M(n, t)), i++;
     }
     return r;
   };

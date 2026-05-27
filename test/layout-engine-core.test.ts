@@ -192,6 +192,20 @@ function testNoopAndBlocked() {
   })
   assert.equal(staticMove.status, 'blocked')
   assert.equal(staticMove.blocked?.reason, 'static-item')
+
+  const staticCollisionMove = executeLayoutOperation({
+    id: 'static-collision-move',
+    phase: 'preview',
+    layout: [
+      { i: 'a', x: 0, y: 0, w: 2, h: 1 },
+      { i: 's', x: 2, y: 0, w: 2, h: 1, static: true }
+    ],
+    operation: { type: 'move', id: 'a', x: 2, y: 0, userAction: true },
+    options: { ...options, preventCollision: false }
+  })
+  assert.equal(staticCollisionMove.status, 'blocked')
+  assert.equal(staticCollisionMove.blocked?.reason, 'static-item')
+  assert.deepEqual(staticCollisionMove.blocked?.itemIds, ['s'])
 }
 
 function testGroupMoveValidationAndParity() {
