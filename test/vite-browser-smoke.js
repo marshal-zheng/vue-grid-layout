@@ -94,6 +94,135 @@ async function clickElementCenter(page, element, label) {
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 }
 
+async function flushAnimationFrames(page) {
+  await page.evaluate(() => new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  }));
+}
+
+async function getDashboardShellWidgetGeometry(page) {
+  return page.$$eval('.shell-widget', widgets => {
+    const entries = [];
+    for (const widget of widgets) {
+      const title = widget.querySelector('.widget-title')?.textContent?.trim();
+      const geometry = widget.querySelector('.widget-footer span:first-child')?.textContent?.trim();
+      if (title && geometry) entries.push([title, geometry]);
+    }
+    return Object.fromEntries(entries);
+  });
+}
+
+async function clickDashboardShellButton(page, label) {
+  const clicked = await page.evaluate(text => {
+    const button = Array.from(document.querySelectorAll('button'))
+      .find(node => (node.textContent || '').trim() === text);
+    if (!button) return false;
+    button.click();
+    return true;
+  }, label);
+  assert.equal(clicked, true, `dashboard shell button ${label} should exist`);
+  await flushAnimationFrames(page);
+}
+
+async function clickDashboardShellWidget(page, title) {
+  const clicked = await page.evaluate(text => {
+    const widget = Array.from(document.querySelectorAll('.shell-widget'))
+      .find(node => node.querySelector('.widget-title')?.textContent?.trim() === text);
+    if (!widget) return false;
+    widget.click();
+    return true;
+  }, title);
+  assert.equal(clicked, true, `dashboard shell widget ${title} should exist`);
+  await flushAnimationFrames(page);
+}
+
+async function getDashboardShellResult(page) {
+  return page.$eval('.result-box', node => ({
+    title: node.querySelector('strong')?.textContent?.trim() || '',
+    rows: Array.from(node.querySelectorAll('span')).map(row => row.textContent?.trim() || '')
+  }));
+}
+
+async function assertDashboardShellDropWidget(page) {
+  await clickDashboardShellButton(page, 'Desktop');
+  await clickDashboardShellButton(page, 'Drop widget');
+  await page.waitForFunction(() =>
+    document.querySelector('.result-box')?.textContent?.includes('External Drop') &&
+    document.querySelector('.result-box')?.textContent?.includes('Status: success; source: drop')
+  );
+  const desktopGeometry = await getDashboardShellWidgetGeometry(page);
+  assert.equal(desktopGeometry['Dropped widget'], '0,6 / 3x2');
+  assert.equal(Object.keys(desktopGeometry).length, 6);
+  let result = await getDashboardShellResult(page);
+  assert.equal(result.title, 'External Drop');
+  assert.ok(result.rows.includes('Status: success; source: drop'));
+  assert.ok(result.rows.includes('Write-back: written; synthetic'));
+
+  await clickDashboardShellButton(page, 'Reset');
+  await clickDashboardShellButton(page, 'Mobile');
+  await clickDashboardShellButton(page, 'Drop widget');
+  await page.waitForFunction(() =>
+    document.querySelector('.result-box')?.textContent?.includes('External Drop') &&
+    document.querySelector('.result-box')?.textContent?.includes('Status: success; source: drop')
+  );
+  const mobileGeometry = await getDashboardShellWidgetGeometry(page);
+  assert.equal(mobileGeometry['Dropped widget'], '0,15 / 4x2');
+  assert.equal(Object.keys(mobileGeometry).length, 6);
+  result = await getDashboardShellResult(page);
+  assert.equal(result.title, 'External Drop');
+  assert.ok(result.rows.includes('Status: success; source: drop'));
+  assert.ok(result.rows.includes('Write-back: written; synthetic'));
+
+  await clickDashboardShellButton(page, 'Reset');
+  await clickDashboardShellButton(page, 'Desktop');
+}
+
+async function assertDashboardShellDogfoodDrag(page) {
+  await page.setViewport({ width: 1600, height: 1000, deviceScaleFactor: 1 });
+  await page.waitForSelector('.dashboard-shell-demo .shell-widget .widget-title');
+  await flushAnimationFrames(page);
+  await clickDashboardShellWidget(page, 'Revenue summary');
+
+  for (let i = 0; i < 4; i += 1) {
+    await clickDashboardShellButton(page, 'Drag +1');
+  }
+  await page.waitForFunction(() => {
+    const widgets = Array.from(document.querySelectorAll('.shell-widget'));
+    const revenue = widgets.find(widget =>
+      widget.querySelector('.widget-title')?.textContent?.trim() === 'Revenue summary'
+    );
+    return revenue?.querySelector('.widget-footer span:first-child')?.textContent?.trim() === '4,0 / 4x3';
+  });
+
+  const beforeBlocked = await getDashboardShellWidgetGeometry(page);
+  assert.deepEqual(beforeBlocked, {
+    'Revenue summary': '4,0 / 4x3',
+    'Health monitor': '8,0 / 4x3',
+    'Pipeline table': '4,3 / 4x3',
+    'Incident queue': '0,6 / 5x3',
+    'Region map': '5,6 / 7x3'
+  });
+
+  await clickDashboardShellButton(page, 'Drag +1');
+  await page.waitForFunction(() => {
+    const result = document.querySelector('.result-box');
+    return Boolean(result && (result.textContent || '').includes('Status: blocked; source: pointer'));
+  });
+
+  const afterBlocked = await getDashboardShellWidgetGeometry(page);
+  assert.deepEqual(afterBlocked, beforeBlocked, 'static dashboard shell obstacle should block Drag +1 without layout drift');
+  const result = await getDashboardShellResult(page);
+  assert.equal(result.title, 'Pointer Move');
+  assert.ok(result.rows.includes('Status: blocked; source: pointer'));
+  assert.ok(result.rows.includes('Write-back: none; synthetic'));
+  assert.ok(
+    await page.$$eval('.diagnostic-row', rows =>
+      rows.some(row => (row.textContent || '').includes('shell-command-static-item'))
+    ),
+    'blocked Drag +1 should expose a static-item diagnostic'
+  );
+}
+
 async function assertDynamicAddRemoveDemo(page, baseUrl) {
   const url = `${baseUrl}index.html?demo=06-dynamic-add-remove`;
 
@@ -321,6 +450,10 @@ async function runBrowserSmoke(options = {}) {
       assert.ok(panelText.trim().length > 0, `demo ${demo} rendered an empty panel`);
       const hasGlobal = await page.evaluate(() => Object.prototype.hasOwnProperty.call(window, 'VueGridLayout'));
       assert.equal(hasGlobal, false, `demo ${demo} should not rely on window.VueGridLayout`);
+      if (demo === 'dashboard-shell' || demo === '25-dashboard-editor-shell') {
+        await assertDashboardShellDropWidget(page);
+        await assertDashboardShellDogfoodDrag(page);
+      }
     }
 
     await assertDynamicAddRemoveDemo(page, baseUrl);
