@@ -1,10 +1,10 @@
 import { unref as c, shallowRef as A, ref as E, watch as L, getCurrentInstance as z, onBeforeUnmount as N, defineComponent as U, toRef as p, onMounted as q, createVNode as F, mergeProps as G, isVNode as _, h as T, Fragment as W } from "vue";
-import { p as J, E as $ } from "./EditorGridLayout-cRS11Gqh.mjs";
+import { p as J, E as $ } from "./EditorGridLayout-XKdoG17w.mjs";
 import { b as K } from "./createGridLayoutComponent-BUqtSi2L.mjs";
 import { p as Z } from "./utils-BCVYGne6.mjs";
 import { deepEqual as P } from "fast-equals";
-import { l as V, e as M, d as Q, w as X, h as Y } from "./dashboard-migration-CPRNR9yH.mjs";
-import { D as ze, a as xe, c as Ae, b as Ne, f as Ue, g as qe, i as Fe, m as Ge, j as _e, p as Te, r as We, k as Je, s as $e, t as Ke, v as Ze, n as Qe } from "./dashboard-migration-CPRNR9yH.mjs";
+import { l as V, e as M, d as Q, w as X, h as Y } from "./dashboard-migration-BYf61Hth.mjs";
+import { D as ze, a as xe, c as Ae, b as Ne, f as Ue, g as qe, i as Fe, m as Ge, j as _e, p as Te, r as We, k as Je, s as $e, t as Ke, v as Ze, n as Qe } from "./dashboard-migration-BYf61Hth.mjs";
 import { r as ee } from "./resolve-C3SqJijI.mjs";
 const O = (e) => e.map((n) => ({ ...n })), te = (e) => ({
   layout: [],

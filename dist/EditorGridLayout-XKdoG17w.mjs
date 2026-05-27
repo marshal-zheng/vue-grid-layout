@@ -1,20 +1,20 @@
-import { c as Si, b as Ci } from "./createGridLayoutComponent-BUqtSi2L.mjs";
-import lt from "clsx";
-import { e as Ri, a as de, o as Pe, m as $t, l as Ei, k as ns, s as Pi, f as Bi, d as zo, i as as } from "./utils-BCVYGne6.mjs";
-import { y as He, B as $i, C as to, F as Me, w as Ks, x as Ft, h as oo, b as so, E as Gi, g as Ie, H as zi, i as Xs, e as Nt, d as wo, A as ht, r as cs, o as Ai, j as ds, p as ho, c as ls, a as Ot, s as us, q as fs, z as ys, G as Di } from "./commands-C5DwsbEU.mjs";
-import { k as Ti, f as Oi } from "./migration-CPonYzEY.mjs";
-import { ref as Ee, computed as ps, watch as vt, h as Le } from "vue";
-import { deepEqual as Ke } from "fast-equals";
-import { c as io, u as Li } from "./persistence-Db97X8w7.mjs";
+import { c as Ri, b as Ei } from "./createGridLayoutComponent-BUqtSi2L.mjs";
+import dt from "clsx";
+import { e as Pi, a as le, o as Pe, m as $t, l as Bi, k as cs, s as $i, f as Gi, d as zo, i as ds } from "./utils-BCVYGne6.mjs";
+import { y as Le, B as zi, C as eo, F as Me, w as Ys, x as Lt, h as to, b as oo, E as Ai, g as xe, H as Oi, i as _s, e as Ft, d as wo, A as ht, r as ls, o as Di, j as us, p as ho, c as fs, a as Ot, s as ys, q as ps, z as ms, G as Ti } from "./commands-BQlR3l-u.mjs";
+import { k as Li, f as Hi } from "./migration-CPonYzEY.mjs";
+import { ref as Ee, computed as gs, watch as vt, h as Te } from "vue";
+import { deepEqual as Ne } from "fast-equals";
+import { c as so, u as Fi } from "./persistence-Db97X8w7.mjs";
 import { e as ko } from "./core-C45AnvB2.mjs";
-import { f as Hi, c as Fi, a as ji } from "./resolve-C3SqJijI.mjs";
-const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigator != "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform) ? "mac" : "standard", Ki = (e) => !!(e && typeof e == "object"), Ys = (e, t = {}) => {
+import { f as ji, c as Ni, a as Ki } from "./resolve-C3SqJijI.mjs";
+const Xi = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigator != "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform) ? "mac" : "standard", Yi = (e) => !!(e && typeof e == "object"), Us = (e, t = {}) => {
   var a;
   const o = e.target;
-  if (!Ki(o)) return !1;
+  if (!Yi(o)) return !1;
   const s = (a = o.tagName) == null ? void 0 : a.toUpperCase();
   return s === "INPUT" || s === "TEXTAREA" || s === "SELECT" || o.isContentEditable ? !0 : (t.ignoredTargets || []).some((i) => typeof i == "string" ? typeof o.matches == "function" && o.matches(i) : i(o));
-}, Xi = [
+}, _i = [
   { key: "Escape", command: { type: "clearSelection", source: "keyboard" } },
   { key: "Delete", command: { type: "delete", source: "keyboard" } },
   { key: "Backspace", command: { type: "delete", source: "keyboard" } },
@@ -25,17 +25,17 @@ const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigato
   { key: "v", primary: !0, command: { type: "paste", source: "keyboard" } },
   { key: "d", primary: !0, command: { type: "duplicate", source: "keyboard" } },
   { key: "s", primary: !0, command: { type: "save", source: "keyboard" } }
-], Yi = (e, t) => e.toLowerCase() === t.toLowerCase(), _i = (e, t, o) => {
+], Ui = (e, t) => e.toLowerCase() === t.toLowerCase(), Wi = (e, t, o) => {
   const s = o === "mac" ? e.metaKey : e.ctrlKey, r = o === "mac" ? e.ctrlKey : e.metaKey, a = t.primary === !0;
   return !(a !== s || a && r || !a && (e.ctrlKey || e.metaKey) || (t.shift || !1) !== e.shiftKey || (t.alt || !1) !== e.altKey);
-}, Ui = (e, t) => {
-  const o = Ni(t.platform), s = Xi.find(
-    (r) => (!r.platform || r.platform === o) && Yi(e.key, r.key) && _i(e, r, o)
+}, qi = (e, t) => {
+  const o = Xi(t.platform), s = _i.find(
+    (r) => (!r.platform || r.platform === o) && Ui(e.key, r.key) && Wi(e, r, o)
   );
   return s ? typeof s.command == "function" ? s.command(e, t) : { ...s.command } : null;
-}, Wi = (e, t = {}) => {
-  if (Ys(e, t)) return null;
-  const o = e.key, s = e.shiftKey ? t.fastMoveStep || 4 : t.moveStep || 1, r = e.shiftKey ? t.fastResizeStep || 2 : t.resizeStep || 1, a = Ui(e, t);
+}, Vi = (e, t = {}) => {
+  if (Us(e, t)) return null;
+  const o = e.key, s = e.shiftKey ? t.fastMoveStep || 4 : t.moveStep || 1, r = e.shiftKey ? t.fastResizeStep || 2 : t.resizeStep || 1, a = qi(e, t);
   if (a) return a;
   const i = o === "ArrowLeft" ? { dx: -s, dy: 0, dw: -r, dh: 0 } : o === "ArrowRight" ? { dx: s, dy: 0, dw: r, dh: 0 } : o === "ArrowUp" ? { dx: 0, dy: -s, dw: 0, dh: -r } : o === "ArrowDown" ? { dx: 0, dy: s, dw: 0, dh: r } : null;
   return !i || e.ctrlKey || e.metaKey ? null : e.altKey ? {
@@ -61,7 +61,7 @@ const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigato
       mergeWindowMs: 650
     }
   };
-}, ms = (e) => {
+}, hs = (e) => {
   var o, s, r, a, i;
   return e.status !== "blocked" && e.status !== "error" && e.status !== "timeout" ? null : {
     code: ((o = e.blocked) == null ? void 0 : o.reason) || ((s = e.error) == null ? void 0 : s.message) || "editor-command",
@@ -70,7 +70,7 @@ const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigato
     itemIds: (i = e.blocked) == null ? void 0 : i.itemIds,
     recoverable: e.status !== "error"
   };
-}, qi = (e, t = {}) => {
+}, Zi = (e, t = {}) => {
   if (t.enabled === !1) return () => {
   };
   const o = t.target || (typeof window != "undefined" ? window : null);
@@ -83,7 +83,7 @@ const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigato
   const r = (a) => {
     var d, c;
     const i = a;
-    if (!Ys(i, t) && e.placementSession.value) {
+    if (!Us(i, t) && e.placementSession.value) {
       if (i.key === "Escape") {
         i.preventDefault(), e.cancelPlacement("keyboard-escape"), (d = t.ariaMessage) == null || d.call(t, {
           code: "grid-editor.placement.cancelled",
@@ -96,7 +96,7 @@ const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigato
       if (i.key === "Enter") {
         i.preventDefault(), e.commitPlacement({ source: "keyboard" }).then((p) => {
           var v;
-          const m = ms(p);
+          const m = hs(p);
           (v = t.ariaMessage) == null || v.call(t, m || {
             code: "grid-editor.placement.commit",
             level: "info",
@@ -121,7 +121,7 @@ const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigato
         return;
       }
     }
-    const f = Wi(i, t);
+    const f = Vi(i, t);
     if (f) {
       if (i.preventDefault(), f.type === "paste" && t.pasteMode === "interactive") {
         e.beginPlacement({
@@ -150,7 +150,7 @@ const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigato
       }
       e.execute(f).then((y) => {
         var p;
-        const u = ms(y);
+        const u = hs(y);
         u && ((p = t.ariaMessage) == null || p.call(t, u));
       });
     }
@@ -158,24 +158,24 @@ const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigato
   return s.addEventListener("keydown", r), () => {
     s.removeEventListener("keydown", r);
   };
-}, Vi = 2, Zi = 1, Ji = 0.5, Qi = 1, er = 500, tr = 0.01, or = {
+}, Ji = 2, Qi = 1, er = 0.5, tr = 1, or = 500, sr = 0.01, ir = {
   drag: 3,
   drop: 3,
   placement: 3,
   resize: 2,
   keyboard: 3,
   api: 3
-}, gs = () => {
+}, vs = () => {
   const e = typeof performance != "undefined" ? performance : null;
   return e && typeof e.now == "function" ? e.now() : Date.now();
-}, hs = (e) => [
+}, bs = (e) => [
   { kind: "left", axis: "x", position: e.x, priority: 10, edge: "left" },
   { kind: "right", axis: "x", position: e.x + e.w, priority: 11, edge: "right" },
   { kind: "center-x", axis: "x", position: e.x + e.w / 2, priority: 20, edge: "center-x" },
   { kind: "top", axis: "y", position: e.y, priority: 10, edge: "top" },
   { kind: "bottom", axis: "y", position: e.y + e.h, priority: 11, edge: "bottom" },
   { kind: "center-y", axis: "y", position: e.y + e.h / 2, priority: 20, edge: "center-y" }
-], sr = (e, t) => {
+], rr = (e, t) => {
   const o = [], s = e.x + e.w, r = t.x + t.w, a = e.y + e.h, i = t.y + t.h, f = Math.max(e.y, t.y), d = Math.min(a, i), c = Math.max(e.x, t.x), y = Math.min(s, r), u = f + Math.max(0, d - f) / 2, p = c + Math.max(0, y - c) / 2;
   if (d > f && s < t.x) {
     const m = t.x - s;
@@ -230,11 +230,11 @@ const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigato
     });
   }
   return o;
-}, _s = (e, t, o) => {
+}, Ws = (e, t, o) => {
   var s, r;
   return !(e.static && o.includeStatic === !1 || (s = t[e.i]) != null && s.locked && o.includeLocked === !1 || ((r = t[e.i]) == null ? void 0 : r.visible) === !1 && o.includeHidden !== !0);
-}, ir = (e, t) => e.y === t.y || e.y + e.h === t.y + t.h || e.x === t.x || e.x + e.w === t.x + t.w, rr = (e, t, o, s, r, a, i, f) => {
-  const d = s.axis === "x" ? Math.min(t.y, o.y) : Math.min(t.x, o.x), c = s.axis === "x" ? Math.max(t.y + t.h, o.y + o.h) : Math.max(t.x + t.w, o.x + o.w), y = Math.abs(s.position - r.position), u = a > 0 ? Math.max(0, Math.min(1, 1 - y / a)) : y === 0 ? 1 : 0, p = y <= i, m = f && ir(t, o) ? 20 : 0;
+}, nr = (e, t) => e.y === t.y || e.y + e.h === t.y + t.h || e.x === t.x || e.x + e.w === t.x + t.w, ar = (e, t, o, s, r, a, i, f) => {
+  const d = s.axis === "x" ? Math.min(t.y, o.y) : Math.min(t.x, o.x), c = s.axis === "x" ? Math.max(t.y + t.h, o.y + o.h) : Math.max(t.x + t.w, o.x + o.w), y = Math.abs(s.position - r.position), u = a > 0 ? Math.max(0, Math.min(1, 1 - y / a)) : y === 0 ? 1 : 0, p = y <= i, m = f && nr(t, o) ? 20 : 0;
   return {
     id: `${e}:${s.kind}:${t.i}:${r.kind}`,
     kind: s.kind,
@@ -257,10 +257,10 @@ const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigato
       sourceIds: [t.i]
     }
   };
-}, yt = (e) => e.kind === "spacing-x" || e.kind === "spacing-y", nr = (e) => e.debug === !0 || e.debug === "layer" || e.debug === "panel", ar = (e) => e.debug === "panel" ? "panel" : e.debug === !0 || e.debug === "layer" ? "layer" : !1, cr = (e, t) => {
+}, ft = (e) => e.kind === "spacing-x" || e.kind === "spacing-y", cr = (e) => e.debug === !0 || e.debug === "layer" || e.debug === "panel", dr = (e) => e.debug === "panel" ? "panel" : e.debug === !0 || e.debug === "layer" ? "layer" : !1, lr = (e, t) => {
   const o = e.maxVisibleGuides;
-  return typeof o == "number" ? Math.max(0, o) : o && typeof o[t] == "number" ? Math.max(0, o[t] || 0) : or[t];
-}, dr = (e) => !!(e.display && Number.isFinite(e.display.start) && Number.isFinite(e.display.end) && e.display.end > e.display.start), vs = (e, t) => (t.includes(e.id) ? -1e3 : 0) + (e.isSnapped ? -500 : 0) + (yt(e) ? 20 : 0) - Math.round((e.proximity || 0) * 50), lr = (e, t) => {
+  return typeof o == "number" ? Math.max(0, o) : o && typeof o[t] == "number" ? Math.max(0, o[t] || 0) : ir[t];
+}, ur = (e) => !!(e.display && Number.isFinite(e.display.start) && Number.isFinite(e.display.end) && e.display.end > e.display.start), Is = (e, t) => (t.includes(e.id) ? -1e3 : 0) + (e.isSnapped ? -500 : 0) + (ft(e) ? 20 : 0) - Math.round((e.proximity || 0) * 50), fr = (e, t) => {
   const o = Array.from(/* @__PURE__ */ new Set([...e.sourceIds, ...t.sourceIds])), s = e.anchorIds || t.anchorIds ? Array.from(/* @__PURE__ */ new Set([...e.anchorIds || [], ...t.anchorIds || []])) : void 0;
   return {
     ...e,
@@ -268,22 +268,22 @@ const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigato
     anchorIds: s,
     display: e.display ? { ...e.display, sourceIds: o } : e.display
   };
-}, ur = (e, t = {}, o = []) => {
+}, yr = (e, t = {}, o = []) => {
   var y, u, p, m;
-  const s = t.interaction || "drag", r = cr(t, s);
+  const s = t.interaction || "drag", r = lr(t, s);
   if (r <= 0) return [];
-  const a = e.filter(dr).slice().sort(
-    (v, C) => vs(v, o) - vs(C, o) || v.distance - C.distance || v.priority - C.priority || v.id.localeCompare(C.id)
+  const a = e.filter(ur).slice().sort(
+    (v, C) => Is(v, o) - Is(C, o) || v.distance - C.distance || v.priority - C.priority || v.id.localeCompare(C.id)
   ), i = /* @__PURE__ */ new Map(), f = [];
   for (let v = 0; v < a.length; v += 1) {
-    const C = a[v], S = yt(C) ? `s:${C.kind}:${C.position}:${(u = (y = C.display) == null ? void 0 : y.start) != null ? u : ""}:${(m = (p = C.display) == null ? void 0 : p.end) != null ? m : ""}` : `a:${C.kind}:${C.axis}:${C.position}`, k = i.get(S);
-    k ? yt(C) || i.set(S, lr(k, C)) : (i.set(S, C), f.push(S));
+    const C = a[v], S = ft(C) ? `s:${C.kind}:${C.position}:${(u = (y = C.display) == null ? void 0 : y.start) != null ? u : ""}:${(m = (p = C.display) == null ? void 0 : p.end) != null ? m : ""}` : `a:${C.kind}:${C.axis}:${C.position}`, k = i.get(S);
+    k ? ft(C) || i.set(S, fr(k, C)) : (i.set(S, C), f.push(S));
   }
   const d = f.slice(0, r).map((v) => i.get(v)).filter(Boolean);
   let c = !1;
   return d.map((v) => {
     if (!v.display) return v;
-    const C = t.showSpacingLabels !== !1 && yt(v) && !c;
+    const C = t.showSpacingLabels !== !1 && ft(v) && !c;
     return C && (c = !0), {
       ...v,
       display: {
@@ -292,12 +292,12 @@ const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigato
       }
     };
   });
-}, qt = (e, t, o, s, r) => {
+}, Wt = (e, t, o, s, r) => {
   const a = t.x + t.w, i = t.y + t.h;
   let f = null;
   for (let d = 0; d < o.length; d += 1) {
     const c = o[d];
-    if (c.i === t.i || !_s(c, s, r)) continue;
+    if (c.i === t.i || !Ws(c, s, r)) continue;
     const y = c.x + c.w, u = c.y + c.h;
     if (e === "left" || e === "right") {
       const p = Math.max(t.y, c.y), m = Math.min(i, u);
@@ -342,15 +342,15 @@ const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigato
     }
   }
   return f;
-}, fr = (e) => e === "left" || e === "right" ? "x" : "y", yr = (e) => e === "left" || e === "right" ? "col" : "row", pr = (e, t, o, s) => {
+}, pr = (e) => e === "left" || e === "right" ? "x" : "y", mr = (e) => e === "left" || e === "right" ? "col" : "row", gr = (e, t, o, s) => {
   var p;
   if (s.showSpacingChips === !1) return [];
-  const r = (p = s.spacingChipMinDistance) != null ? p : Qi, a = ["top", "right", "bottom", "left"], i = {
-    top: qt("top", e, t, o, s),
-    right: qt("right", e, t, o, s),
-    bottom: qt("bottom", e, t, o, s),
-    left: qt("left", e, t, o, s)
-  }, f = (m, v) => !!(m && v && Math.abs(m.distance - v.distance) <= tr), d = s.detectEqualSpacing !== !1, c = d && f(i.left, i.right), y = d && f(i.top, i.bottom), u = [];
+  const r = (p = s.spacingChipMinDistance) != null ? p : tr, a = ["top", "right", "bottom", "left"], i = {
+    top: Wt("top", e, t, o, s),
+    right: Wt("right", e, t, o, s),
+    bottom: Wt("bottom", e, t, o, s),
+    left: Wt("left", e, t, o, s)
+  }, f = (m, v) => !!(m && v && Math.abs(m.distance - v.distance) <= sr), d = s.detectEqualSpacing !== !1, c = d && f(i.left, i.right), y = d && f(i.top, i.bottom), u = [];
   for (let m = 0; m < a.length; m += 1) {
     const v = a[m], C = i[v];
     if (!C || C.distance < r) continue;
@@ -358,18 +358,18 @@ const Ni = (e = "auto") => e === "mac" || e === "standard" ? e : typeof navigato
     u.push({
       id: `chip:${e.i}:${v}:${C.id}`,
       side: v,
-      axis: fr(v),
+      axis: pr(v),
       position: C.position,
       span: C.span,
       distance: C.distance,
-      unit: yr(v),
+      unit: mr(v),
       isEqual: S,
       neighborId: C.id
     });
   }
   return u;
 };
-function mr(e, t, o) {
+function hr(e, t, o) {
   var i, f, d, c;
   if (t.showMeasurementHud === !1) return null;
   const s = t.itemLabels || {}, r = {
@@ -386,11 +386,11 @@ function mr(e, t, o) {
     dh: e.h - a.h
   }), (f = t.blocked) != null && f.reason && (r.blocked = t.blocked.reason), (d = t.blocked) != null && d.message && (r.blockedMessage = t.blocked.message), (c = t.blocked) != null && c.itemIds && (r.blockedItemIds = t.blocked.itemIds), typeof t.selectionCount == "number" && (r.selectionCount = t.selectionCount), r;
 }
-const gr = (e, t, o) => {
+const vr = (e, t, o) => {
   if (o.highlightAlignmentTargets === !1) return [];
   if (!t) return [];
   const s = e.filter(
-    (c) => !yt(c) && c.targetEdge && c.sourceEdge
+    (c) => !ft(c) && c.targetEdge && c.sourceEdge
   ), r = s.filter((c) => c.isSnapped), a = r.length > 0 ? r : s.slice().sort((c, y) => (y.proximity || 0) - (c.proximity || 0)).slice(0, 1), i = /* @__PURE__ */ new Map(), f = /* @__PURE__ */ new Map();
   for (let c = 0; c < a.length; c += 1) {
     const y = a[c];
@@ -416,9 +416,9 @@ const gr = (e, t, o) => {
       role: "source"
     });
   }), d;
-}, hr = (e, t, o, s = {}, r = {}) => {
-  var E, me, Oe, ze;
-  const a = gs(), i = r.interaction || "drag";
+}, br = (e, t, o, s = {}, r = {}) => {
+  var E, ge, De, ze;
+  const a = vs(), i = r.interaction || "drag";
   if (r.enabled === !1)
     return {
       activeId: t.i,
@@ -434,27 +434,27 @@ const gr = (e, t, o) => {
       debug: !1,
       debugMode: !1
     };
-  const f = (E = r.maxItems) != null ? E : er, d = typeof r.thresholdPx == "number" ? r.thresholdPx : null, c = (me = r.predictRadiusX) != null ? me : d !== null ? d : Vi, y = (Oe = r.predictRadiusY) != null ? Oe : d !== null ? d : Zi, u = (ze = r.snapThresholdCells) != null ? ze : d !== null ? d : Ji, p = r.sectionSnap !== !1, m = e.filter(
-    (W) => W.i !== t.i && _s(W, s, r)
-  ), v = m.length > f, C = v ? m.slice(0, f) : m, S = hs(o), k = [];
+  const f = (E = r.maxItems) != null ? E : or, d = typeof r.thresholdPx == "number" ? r.thresholdPx : null, c = (ge = r.predictRadiusX) != null ? ge : d !== null ? d : Ji, y = (De = r.predictRadiusY) != null ? De : d !== null ? d : Qi, u = (ze = r.snapThresholdCells) != null ? ze : d !== null ? d : er, p = r.sectionSnap !== !1, m = e.filter(
+    (W) => W.i !== t.i && Ws(W, s, r)
+  ), v = m.length > f, C = v ? m.slice(0, f) : m, S = bs(o), k = [];
   C.forEach((W) => {
-    const ve = hs(W);
+    const ve = bs(W);
     S.forEach((ie) => {
       ve.forEach((J) => {
         if (ie.axis !== J.axis) return;
-        const We = Math.abs(ie.position - J.position), qe = ie.axis === "x" ? c : y;
-        We <= qe && k.push(rr(
+        const _e = Math.abs(ie.position - J.position), Ue = ie.axis === "x" ? c : y;
+        _e <= Ue && k.push(ar(
           t.i,
           W,
           o,
           ie,
           J,
-          qe,
+          Ue,
           u,
           p
         ));
       });
-    }), sr(W, o).forEach((ie) => {
+    }), rr(W, o).forEach((ie) => {
       k.push({
         id: `${t.i}:${ie.kind}:${W.i}`,
         kind: ie.kind,
@@ -480,24 +480,24 @@ const gr = (e, t, o) => {
   }), k.sort(
     (W, ve) => W.distance - ve.distance || W.priority - ve.priority || W.id.localeCompare(ve.id)
   );
-  const F = k.filter((W) => !yt(W) && W.isSnapped), K = r.snap === !1 || F.length === 0 ? [] : [F[0].id], A = ur(k, r, K), ae = ar(r), L = nr(r), w = A.filter((W) => {
+  const F = k.filter((W) => !ft(W) && W.isSnapped), X = r.snap === !1 || F.length === 0 ? [] : [F[0].id], A = yr(k, r, X), ce = dr(r), L = cr(r), w = A.filter((W) => {
     var ve;
     return (ve = W.display) == null ? void 0 : ve.showLabel;
-  }).map((W) => W.id), R = pr(o, e, s, r), T = mr(o, r, i), M = gr(A, t.i, r), O = k.filter((W) => W.isPredictive && !yt(W)).length, G = F.length, z = gs() - a, q = typeof r.maxDurationMs == "number" && z > r.maxDurationMs;
+  }).map((W) => W.id), R = gr(o, e, s, r), D = hr(o, r, i), M = vr(A, t.i, r), T = k.filter((W) => W.isPredictive && !ft(W)).length, G = F.length, z = vs() - a, q = typeof r.maxDurationMs == "number" && z > r.maxDurationMs;
   return {
     activeId: t.i,
     interaction: i,
     guides: k,
     displayGuides: A,
     debugGuides: L ? k : void 0,
-    snappedGuideIds: K,
+    snappedGuideIds: X,
     spacingLabelGuideIds: w,
     spacingChips: R,
-    measurementHud: T,
+    measurementHud: D,
     anchorEdges: M,
     showGrid: r.showGrid !== !1,
     debug: L,
-    debugMode: ae,
+    debugMode: ce,
     diagnostics: {
       durationMs: z,
       itemCount: m.length,
@@ -506,13 +506,13 @@ const gr = (e, t, o) => {
       fullGuideCount: k.length,
       displayGuideCount: A.length,
       spacingLabelCount: w.length,
-      predictCount: O,
+      predictCount: T,
       snappedCount: G,
       anchorEdgeCount: M.length,
       spacingChipCount: R.length
     }
   };
-}, Qn = (e, t, o, s = {}, r = {}) => Ao({
+}, ta = (e, t, o, s = {}, r = {}) => Ao({
   layout: e,
   activeItem: t,
   candidateItem: o,
@@ -525,15 +525,15 @@ const gr = (e, t, o) => {
   interaction: r.interaction || "drag",
   startGeometry: r.startGeometry,
   options: r
-}).guideState, ea = (e, t) => {
+}).guideState, oa = (e, t) => {
   const o = t.snappedGuideIds[0];
   if (!o) return e;
   const s = t.guides.find((r) => r.id === o);
-  return !s || yt(s) ? e : s.axis === "x" ? s.kind === "right" ? { ...e, x: s.position - e.w } : s.kind === "center-x" ? { ...e, x: s.position - e.w / 2 } : { ...e, x: s.position } : s.kind === "bottom" ? { ...e, y: s.position - e.h } : s.kind === "center-y" ? { ...e, y: s.position - e.h / 2 } : { ...e, y: s.position };
-}, vr = 500, br = 160, Ir = 16, bs = 240, Is = () => {
+  return !s || ft(s) ? e : s.axis === "x" ? s.kind === "right" ? { ...e, x: s.position - e.w } : s.kind === "center-x" ? { ...e, x: s.position - e.w / 2 } : { ...e, x: s.position } : s.kind === "bottom" ? { ...e, y: s.position - e.h } : s.kind === "center-y" ? { ...e, y: s.position - e.h / 2 } : { ...e, y: s.position };
+}, Ir = 500, xr = 160, wr = 16, xs = 240, ws = () => {
   const e = typeof performance != "undefined" ? performance : null;
   return e && typeof e.now == "function" ? e.now() : Date.now();
-}, xr = (e, t, o) => ({
+}, kr = (e, t, o) => ({
   activeId: e,
   interaction: t,
   guides: [],
@@ -576,7 +576,7 @@ const gr = (e, t, o) => {
   area: e.w * e.h,
   sectionId: t == null ? void 0 : t.sectionId,
   rowId: t == null ? void 0 : t.rowId
-}), wr = (e) => {
+}), Mr = (e) => {
   const t = Object.keys(e).sort(), o = {}, s = {};
   return t.forEach((r) => {
     const a = e[r], i = Math.floor(a.top), f = Math.max(i, Math.floor(a.bottom - 1)), d = Math.floor(a.left), c = Math.max(d, Math.floor(a.right - 1));
@@ -585,9 +585,9 @@ const gr = (e, t, o) => {
     for (let y = d; y <= c; y++)
       s[y] || (s[y] = []), s[y].push(r);
   }), Object.keys(o).forEach((r) => o[Number(r)].sort()), Object.keys(s).forEach((r) => s[Number(r)].sort()), { byId: e, ids: t, rows: o, columns: s };
-}, ao = (e, t, o, s) => Math.max(0, Math.min(t, s) - Math.max(e, o)), xs = (e, t, o) => {
+}, no = (e, t, o, s) => Math.max(0, Math.min(t, s) - Math.max(e, o)), ks = (e, t, o) => {
   if (o === "x") {
-    const i = ao(e.top, e.bottom, t.top, t.bottom);
+    const i = no(e.top, e.bottom, t.top, t.bottom);
     if (i <= 0) return null;
     const f = t.left >= e.right ? t.left - e.right : e.left >= t.right ? e.left - t.right : 0, d = t.left >= e.right ? "after" : e.left >= t.right ? "before" : "overlap";
     return {
@@ -603,7 +603,7 @@ const gr = (e, t, o) => {
       rowId: e.rowId === t.rowId ? e.rowId : void 0
     };
   }
-  const s = ao(e.left, e.right, t.left, t.right);
+  const s = no(e.left, e.right, t.left, t.right);
   if (s <= 0) return null;
   const r = t.top >= e.bottom ? t.top - e.bottom : e.top >= t.bottom ? e.top - t.bottom : 0, a = t.top >= e.bottom ? "after" : e.top >= t.bottom ? "before" : "overlap";
   return {
@@ -618,17 +618,17 @@ const gr = (e, t, o) => {
     sectionId: e.sectionId === t.sectionId ? e.sectionId : void 0,
     rowId: e.rowId === t.rowId ? e.rowId : void 0
   };
-}, kr = (e) => {
+}, Sr = (e) => {
   const t = Object.keys(e).sort(), o = [];
   for (let s = 0; s < t.length; s++)
     for (let r = s + 1; r < t.length; r++) {
-      const a = e[t[s]], i = e[t[r]], f = xs(a, i, "x"), d = xs(a, i, "y");
+      const a = e[t[s]], i = e[t[r]], f = ks(a, i, "x"), d = ks(a, i, "y");
       f && o.push(f), d && o.push(d);
     }
   return o.sort(
     (s, r) => s.priority - r.priority || s.axis.localeCompare(r.axis) || s.sourceId.localeCompare(r.sourceId) || s.targetId.localeCompare(r.targetId)
   );
-}, Mr = (e) => e.axis === "x" ? e.direction === "before" ? "left" : "right" : e.direction === "before" ? "top" : "bottom", Sr = (e, t, o) => {
+}, Cr = (e) => e.axis === "x" ? e.direction === "before" ? "left" : "right" : e.direction === "before" ? "top" : "bottom", Rr = (e, t, o) => {
   const s = t.filter((a) => a.gap > 0).map((a) => {
     const i = e[a.sourceId], f = e[a.targetId], d = a.axis, c = d === "x" ? i.right <= f.left : i.bottom <= f.top, y = d === "x" ? c ? i.right : f.right : c ? i.bottom : f.bottom, u = d === "x" ? c ? f.left : i.left : c ? f.top : i.top, p = d === "x" ? Math.max(i.top, f.top) + a.overlap / 2 : Math.max(i.left, f.left) + a.overlap / 2;
     return {
@@ -636,7 +636,7 @@ const gr = (e, t, o) => {
       axis: d,
       sourceId: a.sourceId,
       targetId: a.targetId,
-      side: Mr(a),
+      side: Cr(a),
       start: y,
       end: u,
       position: p,
@@ -660,7 +660,7 @@ const gr = (e, t, o) => {
   }).sort(
     (a, i) => a.distance - i.distance || a.axis.localeCompare(i.axis) || a.sourceId.localeCompare(i.sourceId) || a.targetId.localeCompare(i.targetId)
   ).slice(0, o);
-}, ws = (e) => e === "x" ? "horizontal" : "vertical", ks = (e) => e === "x" ? "spacing-x" : "spacing-y", Vt = (e, t, o, s) => {
+}, Ms = (e) => e === "x" ? "horizontal" : "vertical", Ss = (e) => e === "x" ? "spacing-x" : "spacing-y", qt = (e, t, o, s) => {
   if (e.length < 3) return null;
   const r = e.slice().sort(
     (m, v) => t === "x" ? m.left - v.left || m.i.localeCompare(v.i) : m.top - v.top || m.i.localeCompare(v.i)
@@ -689,18 +689,18 @@ const gr = (e, t, o) => {
     sectionId: u.length === 1 ? u[0] : void 0,
     rowId: p.length === 1 ? p[0] : void 0
   };
-}, Cr = (e) => {
+}, Er = (e) => {
   var i, f;
-  const t = He(e.sectionRows, e.layout), o = new Set(e.selectionIds || []), s = e.layout.filter((d) => o.size === 0 || o.has(d.i)).map((d) => Mo(d, t.itemMembership[d.i]));
+  const t = Le(e.sectionRows, e.layout), o = new Set(e.selectionIds || []), s = e.layout.filter((d) => o.size === 0 || o.has(d.i)).map((d) => Mo(d, t.itemMembership[d.i]));
   if (s.length < 3) return [];
   const r = [
-    Vt(s, "x", "edge-to-edge", ws("x")),
-    Vt(s, "y", "edge-to-edge", ws("y")),
-    Vt(s, "x", "center-to-center", ks("x")),
-    Vt(s, "y", "center-to-center", ks("y"))
-  ].filter(Boolean), a = (f = (i = e.options) == null ? void 0 : i.maxDistributionCandidates) != null ? f : Ir;
+    qt(s, "x", "edge-to-edge", Ms("x")),
+    qt(s, "y", "edge-to-edge", Ms("y")),
+    qt(s, "x", "center-to-center", Ss("x")),
+    qt(s, "y", "center-to-center", Ss("y"))
+  ].filter(Boolean), a = (f = (i = e.options) == null ? void 0 : i.maxDistributionCandidates) != null ? f : wr;
   return r.sort((d, c) => d.deviation - c.deviation || d.id.localeCompare(c.id)).slice(0, a);
-}, Rr = (e, t, o, s) => {
+}, Pr = (e, t, o, s) => {
   const r = { x: t.x, y: t.y, w: t.w, h: t.h };
   if (e.kind === "spacing-x" || e.kind === "spacing-y") return r;
   const a = s === "w" || s === "sw" || s === "nw", i = s === "n" || s === "ne" || s === "nw";
@@ -717,7 +717,7 @@ const gr = (e, t, o) => {
     }
   }
   return e.axis === "x" ? e.kind === "right" ? { ...r, x: e.position - t.w } : e.kind === "center-x" ? { ...r, x: e.position - t.w / 2 } : { ...r, x: e.position } : e.kind === "bottom" ? { ...r, y: e.position - t.h } : e.kind === "center-y" ? { ...r, y: e.position - t.h / 2 } : { ...r, y: e.position };
-}, Us = (e) => {
+}, qs = (e) => {
   var o, s, r;
   const t = (r = (o = e.options) == null ? void 0 : o.snapThresholdCells) != null ? r : (s = e.options) == null ? void 0 : s.thresholdPx;
   return typeof t == "number" && Number.isFinite(t) ? t : 0.5;
@@ -734,21 +734,21 @@ const gr = (e, t, o) => {
     return (i == null ? void 0 : i.crossScopePolicy) !== "allow" && (f == null ? void 0 : f.crossScopePolicy) !== "allow";
   }
   return !1;
-}, Er = (e, t, o, s, r) => {
+}, Br = (e, t, o, s, r) => {
   if (!t) return [];
-  const a = Us(e), i = e.layout.filter((u) => u.i !== t.i).sort((u, p) => u.i.localeCompare(p.i)), f = o.filter((u) => u.sourceId !== t.i && u.targetId !== t.i && u.distance > 0).sort((u, p) => u.distance - p.distance || u.id.localeCompare(p.id)), d = [], c = t.x + t.w, y = t.y + t.h;
+  const a = qs(e), i = e.layout.filter((u) => u.i !== t.i).sort((u, p) => u.i.localeCompare(p.i)), f = o.filter((u) => u.sourceId !== t.i && u.targetId !== t.i && u.distance > 0).sort((u, p) => u.distance - p.distance || u.id.localeCompare(p.id)), d = [], c = t.x + t.w, y = t.y + t.h;
   return i.forEach((u) => {
-    const p = u.x + u.w, m = u.y + u.h, v = ao(t.y, y, u.y, m) > 0, C = ao(t.x, c, u.x, p) > 0, S = p <= t.x, k = c <= u.x, F = m <= t.y, K = y <= u.y;
+    const p = u.x + u.w, m = u.y + u.h, v = no(t.y, y, u.y, m) > 0, C = no(t.x, c, u.x, p) > 0, S = p <= t.x, k = c <= u.x, F = m <= t.y, X = y <= u.y;
     f.forEach((A) => {
-      var ae, L, w, R, T, M;
+      var ce, L, w, R, D, M;
       if (A.axis === "x" && v && (S || k)) {
-        const O = S ? t.x - p : u.x - c, G = Math.abs(O - A.distance);
+        const T = S ? t.x - p : u.x - c, G = Math.abs(T - A.distance);
         if (G <= a) {
           const z = S ? p + A.distance : u.x - A.distance - t.w, q = So(
             s,
             u.i,
             t.i,
-            (ae = e.options) == null ? void 0 : ae.allowCrossSectionRow
+            (ce = e.options) == null ? void 0 : ce.allowCrossSectionRow
           ) ? "section-row-policy" : void 0;
           d.push({
             id: `snap:spacing:x:${t.i}:${u.i}:${A.id}`,
@@ -770,8 +770,8 @@ const gr = (e, t, o) => {
           });
         }
       }
-      if (A.axis === "y" && C && (F || K)) {
-        const O = F ? t.y - m : u.y - y, G = Math.abs(O - A.distance);
+      if (A.axis === "y" && C && (F || X)) {
+        const T = F ? t.y - m : u.y - y, G = Math.abs(T - A.distance);
         if (G <= a) {
           const z = F ? m + A.distance : u.y - A.distance - t.h, q = So(
             s,
@@ -793,7 +793,7 @@ const gr = (e, t, o) => {
             snapped: !q,
             geometry: { x: t.x, y: z, w: t.w, h: t.h },
             guideIds: [],
-            sectionId: (T = s.itemMembership[t.i]) == null ? void 0 : T.sectionId,
+            sectionId: (D = s.itemMembership[t.i]) == null ? void 0 : D.sectionId,
             rowId: (M = s.itemMembership[t.i]) == null ? void 0 : M.rowId,
             blocked: q
           });
@@ -803,9 +803,9 @@ const gr = (e, t, o) => {
   }), d.sort(
     (u, p) => u.priority - p.priority || p.proximity - u.proximity || u.distance - p.distance || u.id.localeCompare(p.id)
   ).slice(0, r);
-}, Pr = (e, t, o, s) => {
+}, $r = (e, t, o, s) => {
   if (!t) return [];
-  const r = Us(e), a = [], i = [
+  const r = qs(e), a = [], i = [
     { axis: "x", edge: "left", position: t.x },
     { axis: "x", edge: "right", position: t.x + t.w },
     { axis: "x", edge: "center-x", position: t.x + t.w / 2 },
@@ -852,7 +852,7 @@ const gr = (e, t, o) => {
   }), a.sort(
     (d, c) => d.priority - c.priority || c.proximity - d.proximity || d.distance - c.distance || d.id.localeCompare(c.id)
   ).slice(0, s);
-}, Br = (e, t, o, s, r, a, i, f) => t ? e.guides.map((d) => {
+}, Gr = (e, t, o, s, r, a, i, f) => t ? e.guides.map((d) => {
   const c = d.kind === "spacing-x" || d.kind === "spacing-y" ? "spacing" : d.kind === "center-x" || d.kind === "center-y" ? "center" : "edge", y = r.itemMembership[t.i], u = d.sourceIds.some(
     (p) => So(r, p, t.i, f)
   );
@@ -868,7 +868,7 @@ const gr = (e, t, o) => {
     proximity: d.proximity || 0,
     priority: d.priority,
     snapped: o && d.isSnapped === !0 && c !== "spacing" && !u,
-    geometry: Rr(d, t, a, i),
+    geometry: Pr(d, t, a, i),
     guideIds: [d.id],
     sectionId: y == null ? void 0 : y.sectionId,
     rowId: y == null ? void 0 : y.rowId,
@@ -876,15 +876,15 @@ const gr = (e, t, o) => {
   };
 }).sort(
   (d, c) => (d.snapped === c.snapped ? 0 : d.snapped ? -1 : 1) || d.distance - c.distance || d.priority - c.priority || d.id.localeCompare(c.id)
-).slice(0, s) : [], $r = (e, t) => {
+).slice(0, s) : [], zr = (e, t) => {
   const o = [];
   return e.forEach((s) => {
     const r = t[s.i];
     (r == null ? void 0 : r.visible) === !1 && o.push({ code: "grid-editor.intelligence.filtered.hidden", itemIds: [s.i], reason: "hidden" }), r != null && r.locked && o.push({ code: "grid-editor.intelligence.filtered.locked", itemIds: [s.i], reason: "locked" }), s.static && o.push({ code: "grid-editor.intelligence.filtered.static", itemIds: [s.i], reason: "static-item" });
   }), o;
 }, Ao = (e) => {
-  var E, me, Oe, ze, W, ve, ie, J, We, qe, pt, Je, et, st, it, Ye;
-  const t = Is(), o = (me = (E = e.options) == null ? void 0 : E.maxItems) != null ? me : vr, s = (ze = (Oe = e.options) == null ? void 0 : Oe.maxSnapCandidates) != null ? ze : br, r = ((W = e.options) != null && W.maxVisibleGuides, bs), a = e.metaById || {}, i = He(e.sectionRows, e.layout), f = e.layout.length > o ? e.layout.slice(0, o) : e.layout.slice(), c = Ti().build(f, {
+  var E, ge, De, ze, W, ve, ie, J, _e, Ue, yt, Ve, et, ot, st, Xe;
+  const t = ws(), o = (ge = (E = e.options) == null ? void 0 : E.maxItems) != null ? ge : Ir, s = (ze = (De = e.options) == null ? void 0 : De.maxSnapCandidates) != null ? ze : xr, r = ((W = e.options) != null && W.maxVisibleGuides, xs), a = e.metaById || {}, i = Le(e.sectionRows, e.layout), f = e.layout.length > o ? e.layout.slice(0, o) : e.layout.slice(), c = Li().build(f, {
     cols: e.cols,
     maxRows: e.maxRows,
     compactType: e.compactType,
@@ -897,10 +897,10 @@ const gr = (e, t, o) => {
     e.candidateItem,
     i.itemMembership[e.candidateItem.i]
   ));
-  const u = wr(y), p = kr(y), m = Sr(y, p, r), v = Cr(e), C = e.interaction === "toolbar" ? "api" : e.interaction, S = e.activeItem && e.candidateItem ? hr(e.layout, e.activeItem, e.candidateItem, a, {
+  const u = Mr(y), p = Sr(y), m = Rr(y, p, r), v = Er(e), C = e.interaction === "toolbar" ? "api" : e.interaction, S = e.activeItem && e.candidateItem ? br(e.layout, e.activeItem, e.candidateItem, a, {
     ...e.options,
     interaction: C
-  }) : xr(((ve = e.activeItem) == null ? void 0 : ve.i) || null, C), k = ((ie = e.options) == null ? void 0 : ie.snap) !== !1, F = Br(
+  }) : kr(((ve = e.activeItem) == null ? void 0 : ve.i) || null, C), k = ((ie = e.options) == null ? void 0 : ie.snap) !== !1, F = Gr(
     S,
     e.candidateItem,
     k,
@@ -908,42 +908,42 @@ const gr = (e, t, o) => {
     i,
     e.interaction,
     (J = e.options) == null ? void 0 : J.resizeHandle,
-    (We = e.options) == null ? void 0 : We.allowCrossSectionRow
-  ), K = Er(
+    (_e = e.options) == null ? void 0 : _e.allowCrossSectionRow
+  ), X = Br(
     e,
     e.candidateItem,
     m,
     i,
     s
-  ), ae = [
-    ...Pr(
+  ), ce = [
+    ...$r(
       e,
       e.candidateItem,
       i,
       s
     ),
-    ...K,
+    ...X,
     ...F
   ].map((we) => k ? we : { ...we, snapped: !1 }).sort(
-    (we, rt) => we.priority - rt.priority || rt.proximity - we.proximity || we.distance - rt.distance || we.id.localeCompare(rt.id)
-  ).slice(0, s), L = Is() - t, w = typeof ((qe = e.options) == null ? void 0 : qe.maxDurationMs) == "number" && L > e.options.maxDurationMs, R = e.layout.length > o || w || !!((pt = S.diagnostics) != null && pt.degraded), T = e.layout.length > o ? "max-items" : w ? "max-duration" : ((Je = S.diagnostics) == null ? void 0 : Je.reason) === "max-items" || ((et = S.diagnostics) == null ? void 0 : et.reason) === "max-duration" ? S.diagnostics.reason : void 0, M = $r(e.layout, a), O = ["grid-editor.intelligence.computed"];
-  e.layout.length > o && O.push("grid-editor.intelligence.degraded.max-items"), w && O.push("grid-editor.intelligence.degraded.max-duration"), v.some((we) => we.isEqual) ? O.push("grid-editor.distribution.equal") : v.length > 0 && O.push("grid-editor.distribution.unequal"), i.warnings.forEach((we) => O.push(we.code)), M.forEach((we) => O.push(we.code));
+    (we, it) => we.priority - it.priority || it.proximity - we.proximity || we.distance - it.distance || we.id.localeCompare(it.id)
+  ).slice(0, s), L = ws() - t, w = typeof ((Ue = e.options) == null ? void 0 : Ue.maxDurationMs) == "number" && L > e.options.maxDurationMs, R = e.layout.length > o || w || !!((yt = S.diagnostics) != null && yt.degraded), D = e.layout.length > o ? "max-items" : w ? "max-duration" : ((Ve = S.diagnostics) == null ? void 0 : Ve.reason) === "max-items" || ((et = S.diagnostics) == null ? void 0 : et.reason) === "max-duration" ? S.diagnostics.reason : void 0, M = zr(e.layout, a), T = ["grid-editor.intelligence.computed"];
+  e.layout.length > o && T.push("grid-editor.intelligence.degraded.max-items"), w && T.push("grid-editor.intelligence.degraded.max-duration"), v.some((we) => we.isEqual) ? T.push("grid-editor.distribution.equal") : v.length > 0 && T.push("grid-editor.distribution.unequal"), i.warnings.forEach((we) => T.push(we.code)), M.forEach((we) => T.push(we.code));
   const G = {
     durationMs: L,
     itemCount: e.layout.length,
-    selectedCount: ((st = e.selectionIds) == null ? void 0 : st.length) || 0,
-    candidateCount: ae.length + v.length,
-    snapCandidateCount: ae.length,
+    selectedCount: ((ot = e.selectionIds) == null ? void 0 : ot.length) || 0,
+    candidateCount: ce.length + v.length,
+    snapCandidateCount: ce.length,
     distributionCandidateCount: v.length,
     spacingRelationCount: m.length,
     sectionRowCount: Object.keys(i.items).length,
-    snapSource: ((it = ae.find((we) => we.snapped)) == null ? void 0 : it.kind) || "none",
-    distributionMode: ((Ye = v[0]) == null ? void 0 : Ye.mode) || "none",
+    snapSource: ((st = ce.find((we) => we.snapped)) == null ? void 0 : st.kind) || "none",
+    distributionMode: ((Xe = v[0]) == null ? void 0 : Xe.mode) || "none",
     sectionRowSource: Object.keys(i.items).length > 0 ? "metadata" : "none",
     degraded: R,
-    reason: T,
+    reason: D,
     filtered: M,
-    codes: O
+    codes: T
   }, z = S.measurementHud, q = {
     ...S,
     diagnostics: {
@@ -958,7 +958,7 @@ const gr = (e, t, o) => {
     itemRects: y,
     geometryIndex: u,
     neighbors: p,
-    snapCandidates: ae,
+    snapCandidates: ce,
     spacingRelations: m,
     distributionCandidates: v,
     sectionRows: i,
@@ -971,7 +971,7 @@ const gr = (e, t, o) => {
   degraded: e.degraded || !!o,
   reason: o || e.reason,
   codes: e.codes.includes(t) ? e.codes : [...e.codes, t]
-}), Gr = (e) => e === "collision" ? "grid-editor.snap.blocked.collision" : e === "bounds" ? "grid-editor.snap.blocked.bounds" : e === "maxRows" ? "grid-editor.snap.blocked.maxRows" : e === "section-row-policy" ? "grid-editor.snap.blocked.section-row-policy" : `grid-editor.snap.blocked.${e}`, zr = (e, t, o, s) => {
+}), Ar = (e) => e === "collision" ? "grid-editor.snap.blocked.collision" : e === "bounds" ? "grid-editor.snap.blocked.bounds" : e === "maxRows" ? "grid-editor.snap.blocked.maxRows" : e === "section-row-policy" ? "grid-editor.snap.blocked.section-row-policy" : `grid-editor.snap.blocked.${e}`, Or = (e, t, o, s) => {
   var i, f;
   const r = (i = s.validate) == null ? void 0 : i.call(s, e, o);
   if (r) return r;
@@ -985,10 +985,10 @@ const gr = (e, t, o) => {
     return "maxRows";
   if (s.allowOverlap !== !0 && s.layout) {
     const d = { ...t, ...e };
-    if (s.layout.find((y) => y.i !== t.i && Ri(y, d))) return "collision";
+    if (s.layout.find((y) => y.i !== t.i && Pi(y, d))) return "collision";
   }
   return null;
-}, Ar = (e, t, o = {}) => {
+}, Dr = (e, t, o = {}) => {
   const s = {
     x: t.x,
     y: t.y,
@@ -1016,7 +1016,7 @@ const gr = (e, t, o) => {
     };
   const a = [];
   for (let d = 0; d < r.length; d++) {
-    const c = r[d], y = zr(c.geometry, t, c, o);
+    const c = r[d], y = Or(c.geometry, t, c, o);
     if (y) {
       a.push({ candidate: c, reason: y });
       continue;
@@ -1046,7 +1046,7 @@ const gr = (e, t, o) => {
     },
     diagnostics: vo(
       e.diagnostics,
-      Gr(f),
+      Ar(f),
       f === "bounds" || f === "collision" || f === "maxRows" ? f : void 0
     )
   };
@@ -1059,7 +1059,7 @@ const gr = (e, t, o) => {
     mode: o.length > 1 ? "multiple" : "single",
     source: t
   };
-}, Dr = (e) => {
+}, Tr = (e) => {
   const t = Array.from(new Set(e.selectedIds.filter(Boolean))), o = e.activeId && t.includes(e.activeId) ? e.activeId : t[t.length - 1] || null, s = e.anchorId && t.includes(e.anchorId) ? e.anchorId : t[0] || null;
   return {
     ...e,
@@ -1068,35 +1068,35 @@ const gr = (e, t, o) => {
     anchorId: s,
     mode: t.length > 1 ? "multiple" : "single"
   };
-}, Tr = (e) => e.map((t) => t.i), Or = (e, t) => to(e, t[e.i]).editable, Lr = (e, t, o, s) => {
+}, Lr = (e) => e.map((t) => t.i), Hr = (e, t) => eo(e, t[e.i]).editable, Fr = (e, t, o, s) => {
   if (e.length <= 1) return e;
   const r = e.filter((i) => {
     const f = o.get(i);
-    return f ? Or(f, s) : !1;
+    return f ? Hr(f, s) : !1;
   });
   if (r.length > 0) return r;
   const a = t && e.includes(t) ? t : e[e.length - 1];
   return a ? [a] : [];
-}, Ve = (e, t, o = {}, s = e.source) => {
+}, We = (e, t, o = {}, s = e.source) => {
   const r = t.filter((f) => {
     var d;
     return ((d = o[f.i]) == null ? void 0 : d.visible) !== !1;
-  }), a = new Map(r.map((f) => [f.i, f])), i = Lr(
+  }), a = new Map(r.map((f) => [f.i, f])), i = Fr(
     e.selectedIds.filter((f) => a.has(f)),
     e.activeId,
     a,
     o
   );
-  return Dr({
+  return Tr({
     ...e,
     selectedIds: i,
     source: s
   });
-}, Hr = (e, t, o = "api") => Ge(t, o), Co = (e = "api") => Ge([], e), Ms = (e, t, o) => {
+}, jr = (e, t, o = "api") => Ge(t, o), Co = (e = "api") => Ge([], e), Cs = (e, t, o) => {
   const s = o.source || "api";
-  if (o.ids) return Hr(t, o.ids, s);
+  if (o.ids) return jr(t, o.ids, s);
   if (!o.id) return Co(s);
-  const r = Tr(e);
+  const r = Lr(e);
   if (!r.includes(o.id)) return t;
   if (o.range && t.anchorId) {
     const a = r.indexOf(t.anchorId), i = r.indexOf(o.id);
@@ -1110,14 +1110,14 @@ const gr = (e, t, o) => {
     return a.has(o.id) ? a.delete(o.id) : a.add(o.id), Ge(Array.from(a), s);
   }
   return Ge([o.id], s);
-}, Ss = (e, t, o = {}) => {
+}, Rs = (e, t, o = {}) => {
   const s = new Set(t), r = e.filter((a) => {
     var i;
     return !s.has(a.i) && ((i = o[a.i]) == null ? void 0 : i.visible) !== !1;
   });
   return r.length > 0 ? r[0].i : null;
-}, ta = (e, t, o, s) => {
-  const r = s || $i(e, t), a = new Set(o.selectedIds);
+}, sa = (e, t, o, s) => {
+  const r = s || zi(e, t), a = new Set(o.selectedIds);
   return e.map((i) => {
     var c;
     const f = r[i.i], d = ["select", "copy"];
@@ -1130,32 +1130,32 @@ const gr = (e, t, o) => {
       commands: d
     };
   });
-}, Fr = 100, jr = 650, wt = (e) => e.kind === "layout" ? {
+}, Nr = 100, Kr = 650, wt = (e) => e.kind === "layout" ? {
   ...e,
-  layout: de(e.layout),
-  editorMetaById: Cs(e.editorMetaById),
-  sectionRows: Rs(e.sectionRows),
+  layout: le(e.layout),
+  editorMetaById: Es(e.editorMetaById),
+  sectionRows: Ps(e.sectionRows),
   selection: {
     ...e.selection,
     selectedIds: e.selection.selectedIds.slice()
   }
 } : {
   ...e,
-  layouts: io(e.layouts),
-  editorMetaById: Cs(e.editorMetaById),
-  sectionRows: Rs(e.sectionRows),
+  layouts: so(e.layouts),
+  editorMetaById: Es(e.editorMetaById),
+  sectionRows: Ps(e.sectionRows),
   selection: {
     ...e.selection,
     selectedIds: e.selection.selectedIds.slice()
   }
-}, Cs = (e) => Object.keys(e || {}).reduce((t, o) => {
+}, Es = (e) => Object.keys(e || {}).reduce((t, o) => {
   const s = e[o];
   return t[o] = {
     ...s,
     resizeHandles: s.resizeHandles ? s.resizeHandles.slice() : void 0,
     data: s.data ? { ...s.data } : void 0
   }, t;
-}, {}), Rs = (e) => ({
+}, {}), Ps = (e) => ({
   version: 1,
   items: Object.keys(e.items || {}).reduce((t, o) => {
     const s = e.items[o];
@@ -1170,14 +1170,14 @@ const gr = (e, t, o) => {
     var s;
     return t[o] = { ...((s = e.itemMembership) == null ? void 0 : s[o]) || {} }, t;
   }, {})
-}), Lt = (e) => ({
+}), Dt = (e) => ({
   ...e,
   before: wt(e.before),
   after: wt(e.after),
   targetIds: e.targetIds ? e.targetIds.slice() : void 0,
   affectedIds: e.affectedIds ? e.affectedIds.slice() : void 0
-}), Nr = (e = {}) => {
-  const t = Math.max(1, Math.floor(e.maxSize || Fr)), o = e.mergeWindowMs || jr, s = Ee(!1), r = Ee(!1);
+}), Xr = (e = {}) => {
+  const t = Math.max(1, Math.floor(e.maxSize || Nr)), o = e.mergeWindowMs || Kr, s = Ee(!1), r = Ee(!1);
   let a = [], i = [];
   const f = () => {
     s.value = a.length > 0, r.value = i.length > 0;
@@ -1189,9 +1189,9 @@ const gr = (e, t, o) => {
     const m = Date.parse(u.createdAt), v = Date.parse(p.createdAt);
     return Number.isFinite(m) && Number.isFinite(v) && v - m <= o;
   }, y = (u, p = {}) => {
-    if (Ke(u.before, u.after)) return;
+    if (Ne(u.before, u.after)) return;
     const m = {
-      ...Lt(u)
+      ...Dt(u)
     }, v = a[a.length - 1];
     c(v, m) ? a[a.length - 1] = {
       ...v,
@@ -1241,17 +1241,17 @@ const gr = (e, t, o) => {
       return {
         id: `editor-history-checkpoint:${Date.now()}:${Math.random().toString(36).slice(2)}`,
         kind: "grid-editor-history-checkpoint",
-        past: a.map(Lt),
-        future: i.map(Lt),
+        past: a.map(Dt),
+        future: i.map(Dt),
         canUndo: s.value,
         canRedo: r.value
       };
     },
     restore(u) {
-      a = u.past.map(Lt), i = u.future.map(Lt), f();
+      a = u.past.map(Dt), i = u.future.map(Dt), f();
     }
   };
-}, Kr = (e) => ({
+}, Yr = (e) => ({
   id: e.id || `editor-history:${Date.now()}:${Math.random().toString(36).slice(2)}`,
   commandId: e.commandId,
   commandType: e.commandType,
@@ -1265,17 +1265,17 @@ const gr = (e, t, o) => {
   affectedIds: e.affectedIds,
   historyMode: e.historyMode
 });
-class ut extends Error {
+class lt extends Error {
   constructor(t, o, s) {
     super(o), this.name = "GridEditorClipboardError", this.code = t, this.cause = s;
   }
 }
-const jt = (e) => typeof e == "number" && Number.isFinite(e), Ro = (e) => jt(e) && e > 0 ? Math.floor(e) : void 0, bo = (e) => typeof e == "string" && e.length > 0 ? e : void 0, Eo = (e) => ({
+const Ht = (e) => typeof e == "number" && Number.isFinite(e), Ro = (e) => Ht(e) && e > 0 ? Math.floor(e) : void 0, bo = (e) => typeof e == "string" && e.length > 0 ? e : void 0, Eo = (e) => ({
   x: e.x,
   y: e.y,
   w: e.w,
   h: e.h
-}), Ws = (e) => e.reduce((t, o) => (t[o.i] = Eo(o), t), {}), Do = (e) => {
+}), Vs = (e) => e.reduce((t, o) => (t[o.i] = Eo(o), t), {}), Oo = (e) => {
   if (!e || typeof e != "object") return;
   const t = e, o = {}, s = Ro(t.cols);
   s && (o.cols = s);
@@ -1285,15 +1285,15 @@ const jt = (e) => typeof e == "number" && Number.isFinite(e), Ro = (e) => jt(e) 
   a && (o.layoutId = a);
   const i = bo(t.viewFormat);
   return i && (o.viewFormat = i), Object.keys(o).length > 0 ? o : void 0;
-}, To = (e, t) => {
-  const o = Ws(t);
+}, Do = (e, t) => {
+  const o = Vs(t);
   if (!e || typeof e != "object") return o;
   const s = {};
   return Object.keys(e).forEach((r) => {
     const a = e[r];
     if (!a || typeof a != "object") return;
     const i = a;
-    !jt(i.x) || !jt(i.y) || !jt(i.w) || !jt(i.h) || (s[r] = {
+    !Ht(i.x) || !Ht(i.y) || !Ht(i.w) || !Ht(i.h) || (s[r] = {
       x: i.x,
       y: i.y,
       w: i.w,
@@ -1303,8 +1303,8 @@ const jt = (e) => typeof e == "number" && Number.isFinite(e), Ro = (e) => jt(e) 
     ...o,
     ...s
   };
-}, qs = (e, t) => To(e, t), Po = (e) => {
-  const t = de(e.items), o = {
+}, Zs = (e, t) => Do(e, t), Po = (e) => {
+  const t = le(e.items), o = {
     sourceId: e.sourceId,
     copiedAt: e.copiedAt,
     items: t,
@@ -1313,41 +1313,41 @@ const jt = (e) => typeof e == "number" && Number.isFinite(e), Ro = (e) => jt(e) 
   return e.version === 2 ? {
     version: 2,
     ...o,
-    source: Do(e.source),
-    originalGeometryById: qs(e.originalGeometryById, t)
+    source: Oo(e.source),
+    originalGeometryById: Zs(e.originalGeometryById, t)
   } : {
     version: 1,
     ...o
   };
 };
-let Zt = null;
+let Vt = null;
 const bt = {
   read() {
-    return Zt ? Po(Zt) : null;
+    return Vt ? Po(Vt) : null;
   },
   write(e) {
-    Zt = Po(e);
+    Vt = Po(e);
   },
   clear() {
-    Zt = null;
+    Vt = null;
   }
-}, Es = (e) => {
+}, Bs = (e) => {
   if (!e || typeof e != "object") return !1;
   const t = e.name;
   return t === "NotAllowedError" || t === "SecurityError";
-}, Xr = (e) => {
+}, _r = (e) => {
   if (!e || typeof e != "object") return null;
   const t = e;
   if (t.version !== 1 && t.version !== 2 || typeof t.sourceId != "string" || typeof t.copiedAt != "string" || !Array.isArray(t.items)) return null;
-  const o = de(t.items), s = Me(t.editorMetaById);
+  const o = le(t.items), s = Me(t.editorMetaById);
   return t.version === 2 ? {
     version: 2,
     sourceId: t.sourceId,
     copiedAt: t.copiedAt,
     items: o,
     editorMetaById: s,
-    source: Do(t.source),
-    originalGeometryById: To(t.originalGeometryById, o)
+    source: Oo(t.source),
+    originalGeometryById: Do(t.originalGeometryById, o)
   } : {
     version: 1,
     sourceId: t.sourceId,
@@ -1355,26 +1355,26 @@ const bt = {
     items: o,
     editorMetaById: s
   };
-}, Yr = () => ({
+}, Ur = () => ({
   async read() {
     if (typeof navigator == "undefined" || !navigator.clipboard || typeof navigator.clipboard.readText != "function")
-      throw new ut(
+      throw new lt(
         "clipboard-unavailable",
         "System clipboard is not available."
       );
     try {
       const e = await navigator.clipboard.readText();
       if (!e) return null;
-      const t = JSON.parse(e), o = Xr(t);
+      const t = JSON.parse(e), o = _r(t);
       if (!o)
-        throw new ut(
+        throw new lt(
           "clipboard-invalid",
           "Clipboard does not contain a grid editor payload."
         );
       return o;
     } catch (e) {
-      throw e instanceof ut ? e : new ut(
-        Es(e) ? "clipboard-permission" : "clipboard-invalid",
+      throw e instanceof lt ? e : new lt(
+        Bs(e) ? "clipboard-permission" : "clipboard-invalid",
         "Failed to read grid editor payload from system clipboard.",
         e
       );
@@ -1382,22 +1382,22 @@ const bt = {
   },
   async write(e) {
     if (typeof navigator == "undefined" || !navigator.clipboard || typeof navigator.clipboard.writeText != "function")
-      throw new ut(
+      throw new lt(
         "clipboard-unavailable",
         "System clipboard is not available."
       );
     try {
       await navigator.clipboard.writeText(JSON.stringify(Po(e)));
     } catch (t) {
-      throw new ut(
-        Es(t) ? "clipboard-permission" : "clipboard-unavailable",
+      throw new lt(
+        Bs(t) ? "clipboard-permission" : "clipboard-unavailable",
         "Failed to write grid editor payload to system clipboard.",
         t
       );
     }
   }
-}), _r = (e) => {
-  const t = de(e.items), o = {
+}), Wr = (e) => {
+  const t = le(e.items), o = {
     sourceId: e.sourceId,
     copiedAt: e.copiedAt || (/* @__PURE__ */ new Date()).toISOString(),
     items: t,
@@ -1411,20 +1411,20 @@ const bt = {
   } : {
     version: 2,
     ...o,
-    source: Do(e.source),
-    originalGeometryById: qs(e.originalGeometryById, t)
+    source: Oo(e.source),
+    originalGeometryById: Zs(e.originalGeometryById, t)
   };
 }, Io = (e, t = {}) => {
   var f, d, c, y, u, p;
   const o = Ro(t.cols), s = "version" in e && e.version === 2 ? Ro((f = e.source) == null ? void 0 : f.cols) : void 0;
   if (!o || !s || t.scale === !1 || o === s)
     return {
-      items: de(e.items),
+      items: le(e.items),
       scaled: !1,
       sourceCols: s,
       targetCols: o
     };
-  const r = o / s, a = "version" in e && e.version === 2 ? To(e.originalGeometryById, e.items) : Ws(e.items), i = e.items.reduce((m, v) => {
+  const r = o / s, a = "version" in e && e.version === 2 ? Do(e.originalGeometryById, e.items) : Vs(e.items), i = e.items.reduce((m, v) => {
     const C = a[v.i] || Eo(v);
     return Math.min(m, C.x);
   }, (p = (u = (c = a[(d = e.items[0]) == null ? void 0 : d.i]) == null ? void 0 : c.x) != null ? u : (y = e.items[0]) == null ? void 0 : y.x) != null ? p : 0);
@@ -1456,7 +1456,7 @@ const bt = {
 }), $e = { mode: "record" }, It = {
   mode: "ignore",
   preserveRedoStack: !0
-}, Jt = (e) => !e.payload || typeof e.payload != "object" ? { ok: !1, message: `${e.type} requires an object payload.` } : { ok: !0 }, Vs = [
+}, Zt = (e) => !e.payload || typeof e.payload != "object" ? { ok: !1, message: `${e.type} requires an object payload.` } : { ok: !0 }, Js = [
   he("select", {
     defaultSource: "api",
     defaultHistory: It,
@@ -1474,14 +1474,14 @@ const bt = {
     defaultHistory: $e,
     affects: { layout: !0, layouts: !0 },
     mutualExclusionScope: "layout",
-    validatePayload: Jt
+    validatePayload: Zt
   }),
   he("resize", {
     defaultSource: "api",
     defaultHistory: $e,
     affects: { layout: !0, layouts: !0 },
     mutualExclusionScope: "layout",
-    validatePayload: Jt
+    validatePayload: Zt
   }),
   he("add", {
     defaultSource: "api",
@@ -1519,14 +1519,14 @@ const bt = {
     defaultHistory: $e,
     affects: { layout: !0, layouts: !0 },
     mutualExclusionScope: "layout",
-    validatePayload: Jt
+    validatePayload: Zt
   }),
   he("distribute", {
     defaultSource: "toolbar",
     defaultHistory: $e,
     affects: { layout: !0, layouts: !0 },
     mutualExclusionScope: "layout",
-    validatePayload: Jt
+    validatePayload: Zt
   }),
   he("tidy", {
     defaultSource: "toolbar",
@@ -1625,38 +1625,38 @@ const bt = {
     affects: { sectionRows: !0 },
     mutualExclusionScope: "layout"
   })
-], Ur = new Map(
-  Vs.map((e) => [e.type, e])
-), Zs = (e) => Ur.get(e), oa = () => Vs.slice(), ro = (e) => {
-  const t = Zs(e);
+], qr = new Map(
+  Js.map((e) => [e.type, e])
+), Qs = (e) => qr.get(e), ia = () => Js.slice(), io = (e) => {
+  const t = Qs(e);
   return t || he(e, {
     defaultSource: "api",
     defaultHistory: It,
     affects: {},
     mutualExclusionScope: "global"
   });
-}, Wr = (e) => {
+}, Vr = (e) => {
   const t = /* @__PURE__ */ new Map(), o = e.now || (() => {
     const a = typeof performance != "undefined" ? performance : null;
     return a && typeof a.now == "function" ? a.now() : Date.now();
   });
   return {
     execute: async (a) => {
-      var L, w, R, T, M, O, G, z, q;
-      const i = ro(a.type), f = {
+      var L, w, R, D, M, T, G, z, q;
+      const i = io(a.type), f = {
         source: i.defaultSource,
         ...a,
         history: a.history || i.defaultHistory
-      }, d = Ks(f), c = Ft(
+      }, d = Ys(f), c = Lt(
         d.history,
-        i.defaultHistory.mode || oo(d.type)
+        i.defaultHistory.mode || to(d.type)
       );
       d.history = c;
       const y = d.source || i.defaultSource || "api";
       d.source = y;
       const u = i.mutualExclusionScope || "global", p = o(), m = t.get(u);
       if (m && !m.signal.aborted) {
-        const E = so(d, "command-pending", {
+        const E = oo(d, "command-pending", {
           targetIds: d.targetIds,
           blocked: {
             reason: "command-pending",
@@ -1686,7 +1686,7 @@ const bt = {
         }, e.finalize(d, S.result, p);
       const k = (R = i.validatePayload) == null ? void 0 : R.call(i, d);
       if (k && !k.ok) {
-        const E = so(d, "invalid-input", {
+        const E = oo(d, "invalid-input", {
           targetIds: S.targetIds,
           blocked: {
             reason: "invalid-input",
@@ -1703,23 +1703,23 @@ const bt = {
         });
         return e.finalize(d, E, p);
       }
-      const F = ((T = e.buildPreview) == null ? void 0 : T.call(e, d, S, v)) || {
+      const F = ((D = e.buildPreview) == null ? void 0 : D.call(e, d, S, v)) || {
         layoutPatches: [],
         metadataPatches: [],
         affectedIds: [],
         beforeSummary: {},
         afterSummary: {}
-      }, K = new AbortController();
-      t.set(u, K);
-      const A = await Gi(
+      }, X = new AbortController();
+      t.set(u, X);
+      const A = await Ai(
         e.beforeCommand,
         d,
-        e.getGuardContext(d, S, F, K.signal),
+        e.getGuardContext(d, S, F, X.signal),
         e.guardTimeoutMs
       );
-      if (t.delete(u), (M = e.isStopped) != null && M.call(e) || K.signal.aborted) {
-        (O = e.cleanupInteraction) == null || O.call(e, "guard-aborted");
-        const E = Ie(d, "cancelled", {
+      if (t.delete(u), (M = e.isStopped) != null && M.call(e) || X.signal.aborted) {
+        (T = e.cleanupInteraction) == null || T.call(e, "guard-aborted");
+        const E = xe(d, "cancelled", {
           targetIds: S.targetIds,
           blocked: {
             reason: "guard-aborted",
@@ -1748,10 +1748,10 @@ const bt = {
           source: y,
           origin: d.origin
         }, e.finalize(d, A.result, p, A.guardMs);
-      const ae = e.getStateRevision();
-      if (ae !== C) {
+      const ce = e.getStateRevision();
+      if (ce !== C) {
         (q = e.cleanupInteraction) == null || q.call(e, "stale-command");
-        const E = so(d, "stale-command", {
+        const E = oo(d, "stale-command", {
           targetIds: S.targetIds,
           blocked: {
             reason: "stale-command",
@@ -1762,7 +1762,7 @@ const bt = {
             durationMs: 0,
             guardMs: A.guardMs,
             pendingScope: u,
-            stateRevision: ae,
+            stateRevision: ce,
             stale: !0,
             historyMode: c.mode,
             source: y,
@@ -1798,8 +1798,8 @@ const bt = {
   } : void 0,
   error: s ? { message: s.message, cause: s } : void 0,
   diagnostics: { durationMs: 0 }
-}), co = (e, t, o = (/* @__PURE__ */ new Date()).toISOString()) => {
-  const s = typeof t == "string" ? void 0 : t, r = typeof t == "string" ? t : o, a = s ? He(s) : null;
+}), ao = (e, t, o = (/* @__PURE__ */ new Date()).toISOString()) => {
+  const s = typeof t == "string" ? void 0 : t, r = typeof t == "string" ? t : o, a = s ? Le(s) : null;
   return {
     version: s ? 2 : 1,
     editorMetaById: Me(e),
@@ -1810,13 +1810,13 @@ const bt = {
     } : void 0,
     updatedAt: r
   };
-}, no = (e) => {
+}, ro = (e) => {
   var a, i;
   const t = (a = e == null ? void 0 : e.meta) == null ? void 0 : a.editor;
   if (t == null)
     return {
       ok: !0,
-      envelope: co({})
+      envelope: ao({})
     };
   if (!t || typeof t != "object")
     return { ok: !1, error: "meta.editor must be an object." };
@@ -1824,15 +1824,15 @@ const bt = {
   if (o.version !== 1 && o.version !== 2)
     return {
       ok: !0,
-      envelope: co({})
+      envelope: ao({})
     };
-  const s = zi(o.editorMetaById);
+  const s = Oi(o.editorMetaById);
   if (!s.ok)
     return {
       ok: !1,
       error: ((i = s.errors[0]) == null ? void 0 : i.message) || "Invalid editor metadata."
     };
-  const r = o.version === 2 && o.sectionRows ? He(
+  const r = o.version === 2 && o.sectionRows ? Le(
     o.sectionRows,
     (e == null ? void 0 : e.kind) === "layout" ? e.data.layout : []
   ) : null;
@@ -1845,14 +1845,14 @@ const bt = {
         version: 1,
         items: r.items,
         itemMembership: r.itemMembership
-      } : Xs(),
+      } : _s(),
       updatedAt: typeof o.updatedAt == "string" ? o.updatedAt : (/* @__PURE__ */ new Date()).toISOString()
     }
   };
-}, qr = (e) => {
+}, Zr = (e) => {
   const t = () => ({ ...(typeof e.baseMeta == "function" ? e.baseMeta() : e.baseMeta) || {} }), o = (s, r) => {
     var i, f, d;
-    const a = no(s);
+    const a = ro(s);
     if (!a.ok || !a.envelope) {
       (i = e.onError) == null || i.call(
         e,
@@ -1864,7 +1864,7 @@ const bt = {
     }
     (f = e.setEditorMetaById) == null || f.call(e, a.envelope.editorMetaById, r), a.envelope.sectionRows && ((d = e.setSectionRows) == null || d.call(
       e,
-      He(
+      Le(
         a.envelope.sectionRows,
         s.kind === "layout" ? s.data.layout : []
       ),
@@ -1876,7 +1876,7 @@ const bt = {
       var s;
       return {
         ...t(),
-        editor: co(
+        editor: ao(
           e.getEditorMetaById(),
           (s = e.getSectionRows) == null ? void 0 : s.call(e)
         )
@@ -1885,7 +1885,7 @@ const bt = {
     onPersistenceEvent(s) {
       var r, a, i, f, d, c, y;
       if ((s.type === "load-success" || s.type === "external-apply") && o(s.document, s.type), s.type === "save-success" && o(s.document, "save-success"), s.type === "conflict") {
-        const u = no(s.conflict.localDocument), p = no(s.conflict.externalDocument);
+        const u = ro(s.conflict.localDocument), p = ro(s.conflict.externalDocument);
         (i = e.onConflict) == null || i.call(e, {
           key: s.key,
           reason: s.conflict.reason,
@@ -1929,16 +1929,16 @@ const bt = {
       });
     }
   };
-}, fo = () => {
+}, uo = () => {
   const e = typeof performance != "undefined" ? performance : null;
   return e && typeof e.now == "function" ? e.now() : Date.now();
-}, Kt = (e) => typeof e == "number" && Number.isFinite(e), Js = (e) => e === "left" || e === "center-x" || e === "right" ? "x" : "y", Vr = (e) => e === "horizontal" || e === "spacing-x" ? "x" : "y", lo = (e) => de(e), Zr = (e) => Array.from(new Set(e.flatMap((t) => t.type === "add" ? [t.item.i] : t.type === "compact" ? t.affectedIds : [t.id]))), Qs = (e, t) => {
+}, jt = (e) => typeof e == "number" && Number.isFinite(e), ei = (e) => e === "left" || e === "center-x" || e === "right" ? "x" : "y", Jr = (e) => e === "horizontal" || e === "spacing-x" ? "x" : "y", co = (e) => le(e), Qr = (e) => Array.from(new Set(e.flatMap((t) => t.type === "add" ? [t.item.i] : t.type === "compact" ? t.affectedIds : [t.id]))), ti = (e, t) => {
   var s, r;
   const o = (s = t.targetIds) != null && s.length ? t.targetIds : (r = t.selectedIds) != null && r.length ? t.selectedIds : e.map((a) => a.i);
   return Array.from(new Set(o.filter(Boolean)));
 }, kt = (e, t, o, s, r, a, i) => ({
   status: "blocked",
-  layout: lo(t),
+  layout: co(t),
   layoutPatches: [],
   affectedIds: [],
   skippedIds: i,
@@ -1949,7 +1949,7 @@ const bt = {
     skippedIds: i
   },
   diagnostics: {
-    durationMs: fo() - e,
+    durationMs: uo() - e,
     computed: a,
     messages: [{
       code: `grid-editor.geometry.${o}`,
@@ -1959,14 +1959,14 @@ const bt = {
       recoverable: !0
     }]
   }
-}), ei = (e, t) => {
+}), oi = (e, t) => {
   const o = [], s = [];
   return t.forEach((r) => {
     const a = Pe(e, r);
     a ? o.push(a) : s.push(r);
   }), { items: o, missingIds: s };
 }, Bo = (e, t, o) => {
-  const s = Kt(o.cols) ? o.cols : 12, r = Kt(o.maxRows) ? o.maxRows : 1 / 0;
+  const s = jt(o.cols) ? o.cols : 12, r = jt(o.maxRows) ? o.maxRows : 1 / 0;
   for (let a = 0; a < t.length; a++) {
     const i = Pe(e, t[a]);
     if (i) {
@@ -1986,7 +1986,7 @@ const bt = {
     }
   }
   return { ok: !0 };
-}, Jr = (e, t) => t === "right" ? e.x + e.w : t === "center-x" ? e.x + e.w / 2 : t === "bottom" ? e.y + e.h : t === "center-y" ? e.y + e.h / 2 : t === "top" ? e.y : e.x, Ps = (e) => {
+}, en = (e, t) => t === "right" ? e.x + e.w : t === "center-x" ? e.x + e.w / 2 : t === "bottom" ? e.y + e.h : t === "center-y" ? e.y + e.h / 2 : t === "top" ? e.y : e.x, $s = (e) => {
   const t = Math.min(...e.map((a) => a.x)), o = Math.max(...e.map((a) => a.x + a.w)), s = Math.min(...e.map((a) => a.y)), r = Math.max(...e.map((a) => a.y + a.h));
   return {
     left: t,
@@ -1996,17 +1996,17 @@ const bt = {
     centerX: t + (o - t) / 2,
     centerY: s + (r - s) / 2
   };
-}, Qr = (e, t, o, s) => {
+}, tn = (e, t, o, s) => {
   var f;
   const r = t.mode, a = t.target || { type: "selection-bounds" };
-  if (a.type === "explicit-line" && a.axis === Js(r))
+  if (a.type === "explicit-line" && a.axis === ei(r))
     return { position: a.position, source: "explicit" };
   if (a.type === "active-item" || a.type === "last-selected") {
     const d = s.selectedIds || s.targetIds || o.map((u) => u.i), c = a.type === "active-item" ? a.id || s.activeId || d[0] : d[d.length - 1], y = o.find((u) => u.i === c) || o[0];
-    return { position: Jr(y, r), source: a.type };
+    return { position: en(y, r), source: a.type };
   }
   if (a.type === "section-row") {
-    const c = (f = He(s.sectionRows, e).items[a.id]) == null ? void 0 : f.bounds, y = a.bounds || c;
+    const c = (f = Le(s.sectionRows, e).items[a.id]) == null ? void 0 : f.bounds, y = a.bounds || c;
     if (y) {
       const p = {
         left: y.x,
@@ -2018,22 +2018,22 @@ const bt = {
       };
       return r === "right" ? { position: p.right, source: "section-row" } : r === "center-x" ? { position: p.centerX, source: "section-row" } : r === "bottom" ? { position: p.bottom, source: "section-row" } : r === "center-y" ? { position: p.centerY, source: "section-row" } : r === "top" ? { position: p.top, source: "section-row" } : { position: p.left, source: "section-row" };
     }
-    const u = Ps(o);
+    const u = $s(o);
     return r === "right" ? { position: u.right, source: "section-row" } : r === "center-x" ? { position: u.centerX, source: "section-row" } : r === "bottom" ? { position: u.bottom, source: "section-row" } : r === "center-y" ? { position: u.centerY, source: "section-row" } : r === "top" ? { position: u.top, source: "section-row" } : { position: u.left, source: "section-row" };
   }
-  const i = Ps(o);
+  const i = $s(o);
   return r === "right" ? { position: i.right, source: "selection" } : r === "center-x" ? { position: i.centerX, source: "selection" } : r === "bottom" ? { position: i.bottom, source: "selection" } : r === "center-y" ? { position: i.centerY, source: "selection" } : r === "top" ? { position: i.top, source: "selection" } : { position: i.left, source: "selection" };
-}, en = (e, t, o) => t === "right" ? { ...e, x: Math.round(o - e.w) } : t === "center-x" ? { ...e, x: Math.round(o - e.w / 2) } : t === "top" ? { ...e, y: Math.round(o) } : t === "bottom" ? { ...e, y: Math.round(o - e.h) } : t === "center-y" ? { ...e, y: Math.round(o - e.h / 2) } : { ...e, x: Math.round(o) }, ti = (e, t) => e.slice().sort(
+}, on = (e, t, o) => t === "right" ? { ...e, x: Math.round(o - e.w) } : t === "center-x" ? { ...e, x: Math.round(o - e.w / 2) } : t === "top" ? { ...e, y: Math.round(o) } : t === "bottom" ? { ...e, y: Math.round(o - e.h) } : t === "center-y" ? { ...e, y: Math.round(o - e.h / 2) } : { ...e, x: Math.round(o) }, si = (e, t) => e.slice().sort(
   (o, s) => t === "x" ? o.x - s.x || o.i.localeCompare(s.i) : o.y - s.y || o.i.localeCompare(s.i)
-), tn = (e, t, o) => {
+), sn = (e, t, o) => {
   const s = [];
   for (let r = 1; r < e.length; r++) {
     const a = e[r - 1], i = e[r];
     s.push(o === "center-to-center" ? t === "x" ? i.x + i.w / 2 - (a.x + a.w / 2) : i.y + i.h / 2 - (a.y + a.h / 2) : t === "x" ? i.x - (a.x + a.w) : i.y - (a.y + a.h));
   }
   return s;
-}, on = (e) => e.length === 0 ? 0 : e.reduce((t, o) => t + o, 0) / e.length, sn = (e, t, o, s) => {
-  const r = Math.max(0, e.findIndex((y) => y.i === s)), a = e[r], i = Math.max(0, on(tn(e, t, o))), f = /* @__PURE__ */ new Map([[a.i, a]]);
+}, rn = (e) => e.length === 0 ? 0 : e.reduce((t, o) => t + o, 0) / e.length, nn = (e, t, o, s) => {
+  const r = Math.max(0, e.findIndex((y) => y.i === s)), a = e[r], i = Math.max(0, rn(sn(e, t, o))), f = /* @__PURE__ */ new Map([[a.i, a]]);
   if (o === "center-to-center") {
     const y = t === "x" ? a.x + a.w / 2 : a.y + a.h / 2;
     for (let u = r - 1; u >= 0; u--) {
@@ -2057,18 +2057,18 @@ const bt = {
     f.set(u.i, t === "x" ? { ...u, x: Math.round(c + i) } : { ...u, y: Math.round(c + i) }), c = c + i + (t === "x" ? u.w : u.h);
   }
   return { items: e.map((y) => f.get(y.i) || y), spacing: i };
-}, rn = (e, t, o, s) => {
-  const r = Vr(o.mode), a = o.strategy || "edge-to-edge", i = ti(t, r);
+}, an = (e, t, o, s) => {
+  const r = Jr(o.mode), a = o.strategy || "edge-to-edge", i = si(t, r);
   if (i.length < 3) return null;
-  const f = He(s.sectionRows, e), d = i.reduce((F, K) => {
-    const A = f.itemMembership[K.i] || {};
+  const f = Le(s.sectionRows, e), d = i.reduce((F, X) => {
+    const A = f.itemMembership[X.i] || {};
     return F === null ? { ...A } : {
       sectionId: F.sectionId && F.sectionId === A.sectionId ? F.sectionId : void 0,
       rowId: F.rowId && F.rowId === A.rowId ? F.rowId : void 0
     };
   }, null), c = o.sectionRowId || (o.bounds === "section-row" ? (d == null ? void 0 : d.rowId) || (d == null ? void 0 : d.sectionId) : void 0), y = c ? f.items[c] : void 0;
   if (o.bounds === "active-item") {
-    const F = sn(i, r, a, s.activeId);
+    const F = nn(i, r, a, s.activeId);
     return {
       axis: r,
       spacing: F.spacing,
@@ -2079,21 +2079,21 @@ const bt = {
   }
   const u = y != null && y.bounds ? r === "x" ? { start: y.bounds.x, end: y.bounds.x + y.bounds.w } : { start: y.bounds.y, end: y.bounds.y + y.bounds.h } : null, p = o.bounds === "explicit" && o.explicitBounds ? o.explicitBounds : null, m = p ? p.start : u ? u.start : r === "x" ? i[0].x : i[0].y, v = p ? p.end : u ? u.end : r === "x" ? i[i.length - 1].x + i[i.length - 1].w : i[i.length - 1].y + i[i.length - 1].h;
   if (a === "center-to-center") {
-    const F = !!(p || u), K = F ? m + (r === "x" ? i[0].w : i[0].h) / 2 : r === "x" ? i[0].x + i[0].w / 2 : i[0].y + i[0].h / 2, ae = ((F ? v - (r === "x" ? i[i.length - 1].w : i[i.length - 1].h) / 2 : r === "x" ? i[i.length - 1].x + i[i.length - 1].w / 2 : i[i.length - 1].y + i[i.length - 1].h / 2) - K) / (i.length - 1);
+    const F = !!(p || u), X = F ? m + (r === "x" ? i[0].w : i[0].h) / 2 : r === "x" ? i[0].x + i[0].w / 2 : i[0].y + i[0].h / 2, ce = ((F ? v - (r === "x" ? i[i.length - 1].w : i[i.length - 1].h) / 2 : r === "x" ? i[i.length - 1].x + i[i.length - 1].w / 2 : i[i.length - 1].y + i[i.length - 1].h / 2) - X) / (i.length - 1);
     return {
       axis: r,
-      spacing: ae,
+      spacing: ce,
       sectionId: (y == null ? void 0 : y.kind) === "section" ? y.id : y == null ? void 0 : y.parentId,
       rowId: (y == null ? void 0 : y.kind) === "row" ? y.id : void 0,
       items: i.map((L, w) => {
         if (w === 0 || w === i.length - 1) return L;
-        const R = K + ae * w;
+        const R = X + ce * w;
         return r === "x" ? { ...L, x: Math.round(R - L.w / 2) } : { ...L, y: Math.round(R - L.h / 2) };
       })
     };
   }
   const C = i.reduce(
-    (F, K) => F + (r === "x" ? K.w : K.h),
+    (F, X) => F + (r === "x" ? X.w : X.h),
     0
   ), S = (v - m - C) / (i.length - 1);
   if (!Number.isFinite(S) || S < 0) return null;
@@ -2104,12 +2104,12 @@ const bt = {
     sectionId: (y == null ? void 0 : y.kind) === "section" ? y.id : y == null ? void 0 : y.parentId,
     rowId: (y == null ? void 0 : y.kind) === "row" ? y.id : void 0,
     items: i.map((F) => {
-      const K = r === "x" ? { ...F, x: Math.round(k) } : { ...F, y: Math.round(k) };
-      return k += (r === "x" ? F.w : F.h) + S, K;
+      const X = r === "x" ? { ...F, x: Math.round(k) } : { ...F, y: Math.round(k) };
+      return k += (r === "x" ? F.w : F.h) + S, X;
     })
   };
-}, nn = (e, t, o, s) => {
-  const r = o === "x" ? "y" : "x", a = He(s.sectionRows, e), i = (c) => {
+}, cn = (e, t, o, s) => {
+  const r = o === "x" ? "y" : "x", a = Le(s.sectionRows, e), i = (c) => {
     const y = a.itemMembership[c.i] || {};
     return `${y.sectionId || ""}:${y.rowId || ""}`;
   }, f = t.slice().sort(
@@ -2123,13 +2123,13 @@ const bt = {
     }));
     p ? p.push(c) : d.push([c]);
   }), d;
-}, Bs = (e, t, o, s) => {
-  const r = Kt(o.minSpacing) ? Math.max(0, o.minSpacing) : 1, a = o.axis === "both" ? ["x", "y"] : [o.axis === "y" ? "y" : "x"];
+}, Gs = (e, t, o, s) => {
+  const r = jt(o.minSpacing) ? Math.max(0, o.minSpacing) : 1, a = o.axis === "both" ? ["x", "y"] : [o.axis === "y" ? "y" : "x"];
   let i = t.slice();
   return a.forEach((f) => {
-    const d = nn(e, i, f, s), c = /* @__PURE__ */ new Map();
+    const d = cn(e, i, f, s), c = /* @__PURE__ */ new Map();
     d.forEach((y) => {
-      const u = ti(y, f);
+      const u = si(y, f);
       if (u.length < 2) {
         u.forEach((m) => c.set(m.i, m));
         return;
@@ -2149,26 +2149,26 @@ const bt = {
     spacing: r,
     items: i
   };
-}, oi = (e, t, o) => Ao({
+}, ii = (e, t, o) => Ao({
   layout: e,
   activeItem: t.find((s) => s.i === o.activeId) || t[0],
   candidateItem: t.find((s) => s.i === o.activeId) || t[0],
   selectionIds: t.map((s) => s.i),
   metaById: o.metaById,
   sectionRows: o.sectionRows,
-  cols: Kt(o.cols) ? o.cols : 12,
+  cols: jt(o.cols) ? o.cols : 12,
   maxRows: o.maxRows,
   compactType: o.compactType,
   allowOverlap: o.allowOverlap,
   preventCollision: o.preventCollision,
   interaction: "toolbar",
   options: {
-    cols: Kt(o.cols) ? o.cols : 12,
+    cols: jt(o.cols) ? o.cols : 12,
     maxRows: o.maxRows,
     allowCrossSectionRow: !1
   }
-}), si = (e, t, o, s, r) => {
-  const a = Nt(t, o), i = Zr(a);
+}), ri = (e, t, o, s, r) => {
+  const a = Ft(t, o), i = Qr(a);
   return {
     status: i.length > 0 ? "changed" : "noop",
     layout: o,
@@ -2177,20 +2177,20 @@ const bt = {
     skippedIds: r,
     diagnostics: {
       ...s,
-      durationMs: fo() - e
+      durationMs: uo() - e
     }
   };
-}, $s = (e, t, o = {}) => {
-  const s = fo(), r = Qs(e, o), { items: a, missingIds: i } = ei(e, r);
+}, zs = (e, t, o = {}) => {
+  const s = uo(), r = ti(e, o), { items: a, missingIds: i } = oi(e, r);
   if (i.length > 0)
     return kt(s, e, "missing-item", i, "Align command referenced missing layout items.", void 0, o.skippedIds);
   if (a.length < 2)
     return kt(s, e, "selection-count", r, "Align requires at least 2 items.", void 0, o.skippedIds);
-  const f = Qr(e, t, a, o), d = lo(e).map(
-    (p) => r.includes(p.i) ? en(p, t.mode, f.position) : p
-  ), c = Bo(d, r, o), y = oi(e, a, o), u = {
+  const f = tn(e, t, a, o), d = co(e).map(
+    (p) => r.includes(p.i) ? on(p, t.mode, f.position) : p
+  ), c = Bo(d, r, o), y = ii(e, a, o), u = {
     targetLine: {
-      axis: Js(t.mode),
+      axis: ei(t.mode),
       position: f.position,
       mode: t.mode
     },
@@ -2200,7 +2200,7 @@ const bt = {
       source: f.source === "section-row" ? "metadata" : "none"
     }
   };
-  return c.ok ? si(s, e, d, {
+  return c.ok ? ri(s, e, d, {
     durationMs: 0,
     intelligence: y.diagnostics,
     computed: u
@@ -2213,27 +2213,27 @@ const bt = {
     u,
     o.skippedIds
   );
-}, ii = (e, t, o, s) => {
-  const r = fo(), a = Qs(e, o), { items: i, missingIds: f } = ei(e, a);
+}, ni = (e, t, o, s) => {
+  const r = uo(), a = ti(e, o), { items: i, missingIds: f } = oi(e, a);
   if (f.length > 0)
     return kt(r, e, "missing-item", f, `${s} command referenced missing layout items.`, void 0, o.skippedIds);
   if (i.length < 3)
     return kt(r, e, "selection-count", a, `${s} requires at least 3 items.`, void 0, o.skippedIds);
-  let d = s === "distribute" ? rn(e, i, t, o) : Bs(e, i, t, o);
-  const c = oi(e, i, o);
+  let d = s === "distribute" ? an(e, i, t, o) : Gs(e, i, t, o);
+  const c = ii(e, i, o);
   if (!d)
     return kt(r, e, "invalid-input", a, "Spacing command could not compute a valid spacing result.", {
       affectedIds: a,
       skippedIds: o.skippedIds
     }, o.skippedIds);
-  let y = !1, u = new Map(d.items.map((k) => [k.i, k])), p = lo(e).map((k) => u.get(k.i) || k), m = Bo(p, a, o);
+  let y = !1, u = new Map(d.items.map((k) => [k.i, k])), p = co(e).map((k) => u.get(k.i) || k), m = Bo(p, a, o);
   if (!m.ok) {
-    const k = Bs(e, i, {
+    const k = Gs(e, i, {
       axis: d.axis,
       minSpacing: 0,
       strategy: t.strategy
     }, o);
-    k && (y = !0, d = k, u = new Map(d.items.map((F) => [F.i, F])), p = lo(e).map((F) => u.get(F.i) || F), m = Bo(p, a, o));
+    k && (y = !0, d = k, u = new Map(d.items.map((F) => [F.i, F])), p = co(e).map((F) => u.get(F.i) || F), m = Bo(p, a, o));
   }
   const v = t, C = t, S = {
     targetSpacing: {
@@ -2251,7 +2251,7 @@ const bt = {
     },
     fallback: y ? "tidy-min-spacing" : void 0
   };
-  return m.ok ? si(r, e, p, {
+  return m.ok ? ri(r, e, p, {
     durationMs: 0,
     intelligence: c.diagnostics,
     computed: S
@@ -2264,24 +2264,24 @@ const bt = {
     S,
     o.skippedIds
   );
-}, Gs = (e, t, o = {}) => ii(e, t, o, "distribute"), zs = (e, t, o = {}) => ii(e, t, o, "tidy"), De = (e) => typeof e == "number" && Number.isFinite(e), an = (e) => De(e) && e > 0 ? Math.floor(e) : 12, cn = (e) => De(e) && e > 0 ? Math.floor(e) : 1 / 0, dn = (e) => e === "vertical" || e === "horizontal" || e === null ? e : "vertical", ln = (e) => e === "layout" ? "layout" : "block", As = (e) => e === !0, ot = (e) => ({
+}, As = (e, t, o = {}) => ni(e, t, o, "distribute"), Os = (e, t, o = {}) => ni(e, t, o, "tidy"), Ae = (e) => typeof e == "number" && Number.isFinite(e), dn = (e) => Ae(e) && e > 0 ? Math.floor(e) : 12, ln = (e) => Ae(e) && e > 0 ? Math.floor(e) : 1 / 0, un = (e) => e === "vertical" || e === "horizontal" || e === null ? e : "vertical", fn = (e) => e === "layout" ? "layout" : "block", Ds = (e) => e === !0, tt = (e) => ({
   id: e.i,
   x: e.x,
   y: e.y,
   w: e.w,
   h: e.h
-}), Oo = (e) => ({
+}), To = (e) => ({
   ...e,
-  x: De(e.x) ? Math.max(0, Math.floor(e.x)) : 0,
-  y: De(e.y) ? Math.max(0, Math.floor(e.y)) : 0,
-  w: De(e.w) ? Math.floor(e.w) : 1,
-  h: De(e.h) ? Math.floor(e.h) : 1
-}), Xe = (e, t, o, s = {}) => ({
+  x: Ae(e.x) ? Math.max(0, Math.floor(e.x)) : 0,
+  y: Ae(e.y) ? Math.max(0, Math.floor(e.y)) : 0,
+  w: Ae(e.w) ? Math.floor(e.w) : 1,
+  h: Ae(e.h) ? Math.floor(e.h) : 1
+}), Ke = (e, t, o, s = {}) => ({
   code: e,
   level: t,
   message: o,
   ...s
-}), Xt = (e, t, o, s, r = {}) => {
+}), Nt = (e, t, o, s, r = {}) => {
   for (const a of t) {
     const i = e.find((f) => f.i === a);
     if (i) {
@@ -2301,16 +2301,16 @@ const bt = {
     }
   }
   return { ok: !0 };
-}, Lo = (e, t, o) => e.w <= 0 || e.h <= 0 || e.w > t ? "bounds" : Number.isFinite(o) && e.h > o ? "maxRows" : null, Yt = (e, t, o) => Math.max(t, Math.min(e, o)), ri = (e) => e.reduce((t, o) => Math.max(t, o.y + o.h), 0), un = (e, t, o, s, r, a) => {
-  if (!De(o) || !De(s)) return null;
+}, Lo = (e, t, o) => e.w <= 0 || e.h <= 0 || e.w > t ? "bounds" : Number.isFinite(o) && e.h > o ? "maxRows" : null, Kt = (e, t, o) => Math.max(t, Math.min(e, o)), ai = (e) => e.reduce((t, o) => Math.max(t, o.y + o.h), 0), yn = (e, t, o, s, r, a) => {
+  if (!Ae(o) || !Ae(s)) return null;
   const i = {
     x: Math.floor(o),
     y: Math.floor(s)
-  }, f = Yt(i.x, 0, Math.max(0, r - t.w)), d = Math.max(0, i.y), c = Number.isFinite(a) ? Math.floor(a) - t.h : Math.max(ri(e), d);
+  }, f = Kt(i.x, 0, Math.max(0, r - t.w)), d = Math.max(0, i.y), c = Number.isFinite(a) ? Math.floor(a) - t.h : Math.max(ai(e), d);
   if (c < d) return null;
   for (let y = d; y <= c; y++) {
     const u = { ...t, x: f, y };
-    if (Xt([...e, u], [u.i], r, a).ok)
+    if (Nt([...e, u], [u.i], r, a).ok)
       return {
         x: f,
         y,
@@ -2320,35 +2320,35 @@ const bt = {
       };
   }
   return null;
-}, fn = (e) => {
+}, pn = (e) => {
   for (const t of e)
     t.moved && (t.moved = !1);
   return e;
-}, Ds = (e, t, o) => {
+}, Ts = (e, t, o) => {
   const s = new Set(o), r = new Map(t.map((a) => [a.i, a]));
   return e.filter((a) => {
     if (s.has(a.i)) return !1;
     const i = r.get(a.i);
     return !!(i && (a.x !== i.x || a.y !== i.y || a.w !== i.w || a.h !== i.h));
   }).map((a) => a.i);
-}, yn = (e, t, o, s, r, a, i) => {
-  var A, ae;
+}, mn = (e, t, o, s, r, a, i) => {
+  var A, ce;
   const f = s.placementAnchor === "top-left" || s.placementIntent === "here" ? "top-left" : "nearest";
   if (o !== "cursor" || f !== "top-left") return null;
-  const d = dn(s.compactType), c = As(s.allowOverlap), y = As(s.preventCollision), u = t.map(Oo), p = u.reduce((L, w) => ({
+  const d = un(s.compactType), c = Ds(s.allowOverlap), y = Ds(s.preventCollision), u = t.map(To), p = u.reduce((L, w) => ({
     x: Math.min(L.x, w.x),
     y: Math.min(L.y, w.y)
-  }), { x: ((A = u[0]) == null ? void 0 : A.x) || 0, y: ((ae = u[0]) == null ? void 0 : ae.y) || 0 });
-  let m = de(e);
-  const v = [], C = [], S = (L, w, R, T) => {
-    const M = v.concat(w.filter((O) => u.some((G) => G.i === O)));
-    return C.push(Xe(
+  }), { x: ((A = u[0]) == null ? void 0 : A.x) || 0, y: ((ce = u[0]) == null ? void 0 : ce.y) || 0 });
+  let m = le(e);
+  const v = [], C = [], S = (L, w, R, D) => {
+    const M = v.concat(w.filter((T) => u.some((G) => G.i === T)));
+    return C.push(Ke(
       L === "collision" || L === "static-item" ? "grid-editor.placement.layout-collision-blocked" : L === "maxRows" ? "grid-editor.placement.layout-max-rows-blocked" : "grid-editor.placement.layout-bounds-blocked",
       "warning",
       R,
       { reason: L, itemIds: w, details: { collisionPolicy: "layout", compactType: d, allowOverlap: c, preventCollision: y } }
     )), {
-      layout: T,
+      layout: D,
       failed: !0,
       blocked: { reason: L, itemIds: w, message: R },
       summary: {
@@ -2356,43 +2356,43 @@ const bt = {
         placementSource: o,
         collisionPolicy: "layout",
         insertedIds: M,
-        shiftedIds: Ds(e, T, M),
-        before: e.map(ot),
-        after: T.map(ot),
+        shiftedIds: Ts(e, D, M),
+        before: e.map(tt),
+        after: D.map(tt),
         diagnostics: C
       }
     };
-  }, k = De(i == null ? void 0 : i.x) ? i.x : p.x, F = De(i == null ? void 0 : i.y) ? i.y : p.y, K = u.map((L) => {
+  }, k = Ae(i == null ? void 0 : i.x) ? i.x : p.x, F = Ae(i == null ? void 0 : i.y) ? i.y : p.y, X = u.map((L) => {
     const w = Math.floor(k + L.x - p.x), R = Math.floor(F + L.y - p.y);
     return {
       ...L,
-      x: Yt(w, 0, Math.max(0, r - L.w)),
-      y: Number.isFinite(a) ? Yt(R, 0, Math.max(0, Math.floor(a) - L.h)) : Math.max(0, R)
+      x: Kt(w, 0, Math.max(0, r - L.w)),
+      y: Number.isFinite(a) ? Kt(R, 0, Math.max(0, Math.floor(a) - L.h)) : Math.max(0, R)
     };
   });
   if (!c) {
-    const L = K.find((w) => $t(K, w).length > 0);
+    const L = X.find((w) => $t(X, w).length > 0);
     if (L)
       return S(
         "collision",
-        [L.i, ...$t(K, L).map((w) => w.i)],
+        [L.i, ...$t(X, L).map((w) => w.i)],
         "Placement group contains overlapping items.",
         e
       );
   }
-  for (let L = 0; L < K.length; L++) {
-    const w = K[L], R = u[L], T = Lo(R, r, a);
-    if (T)
-      return C.push(Xe(
+  for (let L = 0; L < X.length; L++) {
+    const w = X[L], R = u[L], D = Lo(R, r, a);
+    if (D)
+      return C.push(Ke(
         "grid-editor.placement.invalid-item",
         "error",
         "Item size or bounds are not valid for the current grid.",
-        { reason: T, itemIds: [R.i] }
+        { reason: D, itemIds: [R.i] }
       )), {
         layout: e,
         failed: !0,
         blocked: {
-          reason: T,
+          reason: D,
           itemIds: [R.i],
           message: "One or more items could not fit in the current layout."
         },
@@ -2402,22 +2402,22 @@ const bt = {
           collisionPolicy: "layout",
           insertedIds: v,
           shiftedIds: [],
-          before: e.map(ot),
+          before: e.map(tt),
           after: [],
           diagnostics: C
         }
       };
-    const M = m.concat(w), O = Xt(
+    const M = m.concat(w), T = Nt(
       M,
       [w.i],
       r,
       a,
       { allowOverlap: c }
     ), G = c ? [] : $t(m, w).filter((ie) => ie.i !== w.i);
-    if (!O.ok && O.reason !== "collision")
+    if (!T.ok && T.reason !== "collision")
       return S(
-        O.reason,
-        O.itemIds,
+        T.reason,
+        T.itemIds,
         "Placement target is outside the current grid constraints.",
         M
       );
@@ -2441,13 +2441,13 @@ const bt = {
       m = M, v.push(w.i);
       continue;
     }
-    const z = Math.max(ri(m), w.y) + w.h + L + 1, q = {
+    const z = Math.max(ai(m), w.y) + w.h + L + 1, q = {
       ...w,
       y: z,
       static: !1
-    }, E = m.concat(q), me = E[E.length - 1], ze = Pi(
+    }, E = m.concat(q), ge = E[E.length - 1], ze = $i(
       E,
-      me,
+      ge,
       d,
       r,
       c,
@@ -2457,9 +2457,9 @@ const bt = {
       y
     ).map(
       (ie) => ie.i === w.i ? { ...ie, static: w.static === !0 } : ie
-    ), W = d == null ? ze : Bi(ze, d, r, c);
-    m = fn(W), v.push(w.i);
-    const ve = Xt(
+    ), W = d == null ? ze : Gi(ze, d, r, c);
+    m = pn(W), v.push(w.i);
+    const ve = Nt(
       m,
       m.map((ie) => ie.i),
       r,
@@ -2474,7 +2474,7 @@ const bt = {
         m
       );
   }
-  return C.push(Xe(
+  return C.push(Ke(
     "grid-editor.placement.layout-collision-policy",
     "info",
     `Placed ${v.length} item${v.length === 1 ? "" : "s"} using existing layout collision rules.`,
@@ -2490,27 +2490,27 @@ const bt = {
       placementSource: o,
       collisionPolicy: "layout",
       insertedIds: v,
-      shiftedIds: Ds(e, m, v),
-      before: e.map(ot),
-      after: m.map(ot),
+      shiftedIds: Ts(e, m, v),
+      before: e.map(tt),
+      after: m.map(tt),
       diagnostics: C
     }
   };
-}, pn = (e, t, o, s, r, a) => {
+}, gn = (e, t, o, s, r, a) => {
   var v, C;
-  const i = De(s.offset) ? s.offset : 1, f = s.cursor && typeof s.cursor == "object" ? s.cursor : null, d = s.placementAnchor === "top-left" || s.placementIntent === "here" ? "top-left" : "nearest";
-  if (ln(s.collisionPolicy) === "layout") {
-    const S = yn(e, t, o, s, r, a, f);
+  const i = Ae(s.offset) ? s.offset : 1, f = s.cursor && typeof s.cursor == "object" ? s.cursor : null, d = s.placementAnchor === "top-left" || s.placementIntent === "here" ? "top-left" : "nearest";
+  if (fn(s.collisionPolicy) === "layout") {
+    const S = mn(e, t, o, s, r, a, f);
     if (S) return S;
   }
-  const c = de(e), y = [], u = [], p = t.map(Oo), m = p.reduce((S, k) => ({
+  const c = le(e), y = [], u = [], p = t.map(To), m = p.reduce((S, k) => ({
     x: Math.min(S.x, k.x),
     y: Math.min(S.y, k.y)
   }), { x: ((v = p[0]) == null ? void 0 : v.x) || 0, y: ((C = p[0]) == null ? void 0 : C.y) || 0 });
   for (let S = 0; S < p.length; S++) {
     const k = p[S], F = Lo(k, r, a);
     if (F)
-      return u.push(Xe(
+      return u.push(Ke(
         "grid-editor.placement.invalid-item",
         "error",
         "Item size or bounds are not valid for the current grid.",
@@ -2533,13 +2533,13 @@ const bt = {
           diagnostics: u
         }
       };
-    let K = k.x, A = k.y;
-    const ae = o === "cursor" && d === "top-left" && typeof s.placementSessionId == "string";
+    let X = k.x, A = k.y;
+    const ce = o === "cursor" && d === "top-left" && typeof s.placementSessionId == "string";
     if (o === "offset")
-      K += i * (S + 1), A += i * (S + 1);
-    else if (ae) {
-      const R = De(f == null ? void 0 : f.x) ? f.x : K, T = De(f == null ? void 0 : f.y) ? f.y : A, M = k.x - m.x, O = k.y - m.y, G = Math.floor(R + M), z = Math.floor(T + O);
-      K = Yt(G, 0, Math.max(0, r - k.w)), A = Number.isFinite(a) ? Yt(z, 0, Math.max(0, Math.floor(a) - k.h)) : Math.max(0, z), u.push(Xe(
+      X += i * (S + 1), A += i * (S + 1);
+    else if (ce) {
+      const R = Ae(f == null ? void 0 : f.x) ? f.x : X, D = Ae(f == null ? void 0 : f.y) ? f.y : A, M = k.x - m.x, T = k.y - m.y, G = Math.floor(R + M), z = Math.floor(D + T);
+      X = Kt(G, 0, Math.max(0, r - k.w)), A = Number.isFinite(a) ? Kt(z, 0, Math.max(0, Math.floor(a) - k.h)) : Math.max(0, z), u.push(Ke(
         "grid-editor.placement.cursor-anchor",
         "info",
         "Placed item from an explicit top-left cursor anchor.",
@@ -2547,29 +2547,29 @@ const bt = {
           itemIds: [k.i],
           details: {
             target: { x: G, y: z },
-            placed: { x: K, y: A },
-            clamped: K !== G || A !== z,
+            placed: { x: X, y: A },
+            clamped: X !== G || A !== z,
             shiftedDown: !1
           }
         }
       ));
     } else if (o === "nearest-fit" || o === "cursor") {
-      const R = o === "cursor" && d === "top-left" ? un(
+      const R = o === "cursor" && d === "top-left" ? yn(
         c,
         k,
-        De(f == null ? void 0 : f.x) ? f.x : K,
-        De(f == null ? void 0 : f.y) ? f.y : A,
+        Ae(f == null ? void 0 : f.x) ? f.x : X,
+        Ae(f == null ? void 0 : f.y) ? f.y : A,
         r,
         a
-      ) : null, T = R || Ei(
+      ) : null, D = R || Bi(
         c,
         k,
         r,
-        De(f == null ? void 0 : f.x) ? f.x : K,
-        De(f == null ? void 0 : f.y) ? f.y : A,
+        Ae(f == null ? void 0 : f.x) ? f.x : X,
+        Ae(f == null ? void 0 : f.y) ? f.y : A,
         a
       );
-      T && (K = T.x, A = T.y, R && u.push(Xe(
+      D && (X = D.x, A = D.y, R && u.push(Ke(
         "grid-editor.placement.cursor-anchor",
         "info",
         "Placed item from an explicit top-left cursor anchor.",
@@ -2584,54 +2584,54 @@ const bt = {
         }
       )));
     } else {
-      const R = ns(c, k, r, a);
-      R && (K = R.x, A = R.y);
+      const R = cs(c, k, r, a);
+      R && (X = R.x, A = R.y);
     }
     const L = {
       ...k,
-      x: Math.max(0, Math.floor(K)),
+      x: Math.max(0, Math.floor(X)),
       y: Math.max(0, Math.floor(A))
-    }, w = Xt([...c, L], [L.i], r, a);
+    }, w = Nt([...c, L], [L.i], r, a);
     if (!w.ok) {
-      if (ae) {
-        const T = (w.reason === "maxRows" || Number.isFinite(a), w.reason), M = [...c, L], O = y.concat(L.i);
-        return u.push(Xe(
-          T === "collision" ? "grid-editor.placement.collision-blocked" : T === "maxRows" ? "grid-editor.placement.max-rows-blocked" : "grid-editor.placement.bounds-blocked",
+      if (ce) {
+        const D = (w.reason === "maxRows" || Number.isFinite(a), w.reason), M = [...c, L], T = y.concat(L.i);
+        return u.push(Ke(
+          D === "collision" ? "grid-editor.placement.collision-blocked" : D === "maxRows" ? "grid-editor.placement.max-rows-blocked" : "grid-editor.placement.bounds-blocked",
           "warning",
           "Placement target is blocked at the current cursor position.",
-          { reason: T, itemIds: w.itemIds }
+          { reason: D, itemIds: w.itemIds }
         )), {
           layout: M,
           failed: !0,
           blocked: {
-            reason: T,
+            reason: D,
             itemIds: w.itemIds,
             message: "Placement target is blocked at the current cursor position."
           },
           summary: {
             strategy: o,
             placementSource: o,
-            insertedIds: O,
+            insertedIds: T,
             shiftedIds: [],
             before: [],
-            after: M.filter((G) => O.includes(G.i)).map(ot),
+            after: M.filter((G) => T.includes(G.i)).map(tt),
             diagnostics: u
           }
         };
       }
-      const R = ns(c, k, r, a);
+      const R = cs(c, k, r, a);
       if (!R) {
-        const T = w.reason === "maxRows" || Number.isFinite(a) ? "maxRows" : w.reason;
-        return u.push(Xe(
-          T === "maxRows" ? "grid-editor.placement.max-rows-blocked" : "grid-editor.placement.collision-unresolved",
+        const D = w.reason === "maxRows" || Number.isFinite(a) ? "maxRows" : w.reason;
+        return u.push(Ke(
+          D === "maxRows" ? "grid-editor.placement.max-rows-blocked" : "grid-editor.placement.collision-unresolved",
           "warning",
           "No legal placement was available for the item.",
-          { reason: T, itemIds: w.itemIds }
+          { reason: D, itemIds: w.itemIds }
         )), {
           layout: e,
           failed: !0,
           blocked: {
-            reason: T,
+            reason: D,
             itemIds: w.itemIds,
             message: "One or more items could not fit in the current layout."
           },
@@ -2650,7 +2650,7 @@ const bt = {
     }
     c.push(L), y.push(L.i);
   }
-  return u.push(Xe(
+  return u.push(Ke(
     o === "first-fit" ? "grid-editor.placement.first-fit" : `grid-editor.placement.${o}`,
     "info",
     `Placed ${y.length} item${y.length === 1 ? "" : "s"} using ${o}.`,
@@ -2664,14 +2664,14 @@ const bt = {
       insertedIds: y,
       shiftedIds: [],
       before: [],
-      after: c.filter((S) => y.includes(S.i)).map(ot),
+      after: c.filter((S) => y.includes(S.i)).map(tt),
       diagnostics: u
     }
   };
-}, mn = (e, t, o, s) => {
-  const r = de(e), a = t.map(Oo), i = a.map((k) => k.i), f = r.map((k) => k.i), d = r.map(ot), c = [];
+}, hn = (e, t, o, s) => {
+  const r = le(e), a = t.map(To), i = a.map((k) => k.i), f = r.map((k) => k.i), d = r.map(tt), c = [];
   if (a.length === 0)
-    return c.push(Xe(
+    return c.push(Ke(
       "grid-editor.placement.invalid-item",
       "error",
       "No items were provided for placement.",
@@ -2698,7 +2698,7 @@ const bt = {
   for (const k of p) {
     const F = Lo(k, o, s);
     if (F)
-      return c.push(Xe(
+      return c.push(Ke(
         "grid-editor.placement.invalid-item",
         "error",
         "Inserted item cannot fit within the current grid bounds.",
@@ -2725,8 +2725,8 @@ const bt = {
   const v = r.map((k) => ({
     ...k,
     y: k.y + m
-  })), C = [...p, ...v], S = Xt(C, C.map((k) => k.i), o, s);
-  return S.ok ? (c.push(Xe(
+  })), C = [...p, ...v], S = Nt(C, C.map((k) => k.i), o, s);
+  return S.ok ? (c.push(Ke(
     "grid-editor.placement.insert-top-shift",
     "info",
     f.length > 0 ? `Inserted at the top-left and shifted ${f.length} existing item${f.length === 1 ? "" : "s"}.` : "Inserted at the top-left without shifting existing items.",
@@ -2741,10 +2741,10 @@ const bt = {
       shiftedIds: f,
       delta: { dx: 0, dy: m },
       before: d,
-      after: C.map(ot),
+      after: C.map(tt),
       diagnostics: c
     }
-  }) : (c.push(Xe(
+  }) : (c.push(Ke(
     S.reason === "maxRows" ? "grid-editor.placement.max-rows-blocked" : "grid-editor.placement.collision-unresolved",
     "warning",
     "Top insert shift could not produce a valid layout.",
@@ -2768,28 +2768,28 @@ const bt = {
     }
   });
 }, xt = (e, t, o, s = {}) => {
-  const r = o === "offset" || o === "cursor" || o === "nearest-fit" || o === "first-fit" || o === "insert-top-shift" ? o : "first-fit", a = an(s.cols), i = cn(s.maxRows);
-  return r === "insert-top-shift" ? mn(e, t, a, i) : pn(e, t, r, s, a, i);
+  const r = o === "offset" || o === "cursor" || o === "nearest-fit" || o === "first-fit" || o === "insert-top-shift" ? o : "first-fit", a = dn(s.cols), i = ln(s.maxRows);
+  return r === "insert-top-shift" ? hn(e, t, a, i) : gn(e, t, r, s, a, i);
 };
-let gn = 0;
+let vn = 0;
 const Ho = () => {
   const e = typeof performance != "undefined" ? performance : null;
   return e && typeof e.now == "function" ? e.now() : Date.now();
-}, ft = (e) => typeof e == "number" && Number.isFinite(e), ni = (e) => ft(e) && e > 0 ? Math.floor(e) : 12, ai = (e) => ft(e) && e > 0 ? Math.floor(e) : 1 / 0, ci = (e, t = "first-fit") => e === "offset" || e === "cursor" || e === "nearest-fit" || e === "first-fit" || e === "insert-top-shift" ? e : t, di = (e, t = "block") => e === "layout" ? "layout" : t, li = (e, t) => e === "vertical" || e === "horizontal" || e === null ? e : t, uo = (e, t) => typeof e == "boolean" ? e : t, ui = (e) => {
-  if (!(!e || !ft(e.x) || !ft(e.y)))
+}, ut = (e) => typeof e == "number" && Number.isFinite(e), ci = (e) => ut(e) && e > 0 ? Math.floor(e) : 12, di = (e) => ut(e) && e > 0 ? Math.floor(e) : 1 / 0, li = (e, t = "first-fit") => e === "offset" || e === "cursor" || e === "nearest-fit" || e === "first-fit" || e === "insert-top-shift" ? e : t, ui = (e, t = "block") => e === "layout" ? "layout" : t, fi = (e, t) => e === "vertical" || e === "horizontal" || e === null ? e : t, lo = (e, t) => typeof e == "boolean" ? e : t, yi = (e) => {
+  if (!(!e || !ut(e.x) || !ut(e.y)))
     return {
       ...e,
       x: Math.max(0, Math.floor(e.x)),
       y: Math.max(0, Math.floor(e.y))
     };
-}, hn = (e, t) => ({
+}, bn = (e, t) => ({
   ...e,
   i: typeof e.i == "string" && e.i.length > 0 ? e.i : `placement-item-${t + 1}`,
-  x: ft(e.x) ? Math.max(0, Math.floor(e.x)) : 0,
-  y: ft(e.y) ? Math.max(0, Math.floor(e.y)) : 0,
-  w: ft(e.w) ? Math.max(1, Math.floor(e.w)) : 1,
-  h: ft(e.h) ? Math.max(1, Math.floor(e.h)) : 1
-}), vn = (e) => (Array.isArray(e.items) ? e.items : e.item ? [e.item] : []).filter((o) => o && typeof o == "object").map((o, s) => hn(o, s)), Pt = (e) => ({
+  x: ut(e.x) ? Math.max(0, Math.floor(e.x)) : 0,
+  y: ut(e.y) ? Math.max(0, Math.floor(e.y)) : 0,
+  w: ut(e.w) ? Math.max(1, Math.floor(e.w)) : 1,
+  h: ut(e.h) ? Math.max(1, Math.floor(e.h)) : 1
+}), In = (e) => (Array.isArray(e.items) ? e.items : e.item ? [e.item] : []).filter((o) => o && typeof o == "object").map((o, s) => bn(o, s)), Pt = (e) => ({
   x: e.x,
   y: e.y,
   w: e.w,
@@ -2799,7 +2799,7 @@ const Ho = () => {
   level: t,
   message: o,
   ...s
-}), fi = (e, t, o, s) => {
+}), pi = (e, t, o, s) => {
   const r = t || e, a = new Map(o.before.map((c) => [c.id, c])), i = new Map(o.after.map((c) => [c.id, c])), f = [], d = /* @__PURE__ */ new Set();
   return o.shiftedIds.slice().sort().forEach((c) => {
     const y = a.get(c) || Pe(e, c), u = i.get(c) || Pe(r, c);
@@ -2828,7 +2828,7 @@ const Ho = () => {
       kind: "collision"
     }));
   }), f;
-}, sa = (e, t, o, s) => fi(e, t, o, s), ia = (e = [], t) => {
+}, ra = (e, t, o, s) => pi(e, t, o, s), na = (e = [], t) => {
   const o = e.slice();
   return t && !o.some((s) => s.reason === t.reason) && o.push(Fo(
     `grid-editor.placement.blocked.${t.reason}`,
@@ -2836,7 +2836,7 @@ const Ho = () => {
     t.message || `Placement blocked by ${t.reason}.`,
     { reason: t.reason, itemIds: t.itemIds }
   )), o;
-}, ra = (e) => de(e), bn = (e, t, o, s) => {
+}, aa = (e) => le(e), xn = (e, t, o, s) => {
   const r = new Map(e.items.map((a, i) => [o[i], a.i]));
   return o.map((a) => {
     const i = Pe(t || e.items, a) || Pe(e.items, r.get(a) || a);
@@ -2848,8 +2848,8 @@ const Ho = () => {
     } : null;
   }).filter(Boolean);
 }, $o = (e, t = {}, o = {}) => {
-  var S, k, F, K, A;
-  const s = ui(t.cursor) || e.cursor, r = ci(t.strategy || e.strategy, e.strategy), a = di(t.collisionPolicy, e.collisionPolicy), i = li(t.compactType, e.compactType), f = uo(t.allowOverlap, e.allowOverlap), d = uo(t.preventCollision, e.preventCollision), c = ni((S = t.cols) != null ? S : e.cols), y = ai((k = t.maxRows) != null ? k : e.maxRows), u = {
+  var S, k, F, X, A;
+  const s = yi(t.cursor) || e.cursor, r = li(t.strategy || e.strategy, e.strategy), a = ui(t.collisionPolicy, e.collisionPolicy), i = fi(t.compactType, e.compactType), f = lo(t.allowOverlap, e.allowOverlap), d = lo(t.preventCollision, e.preventCollision), c = ci((S = t.cols) != null ? S : e.cols), y = di((k = t.maxRows) != null ? k : e.maxRows), u = {
     collisionPolicy: a,
     cursor: s,
     cols: c,
@@ -2868,7 +2868,7 @@ const Ho = () => {
     u
   ), m = p.failed && p.summary.insertedIds.length === 0 ? void 0 : p.layout, v = p.failed ? {
     reason: ((F = p.blocked) == null ? void 0 : F.reason) || "bounds",
-    itemIds: (K = p.blocked) == null ? void 0 : K.itemIds,
+    itemIds: (X = p.blocked) == null ? void 0 : X.itemIds,
     message: ((A = p.blocked) == null ? void 0 : A.message) || "Placement could not produce a valid candidate.",
     recoverable: !0
   } : void 0, C = p.summary.diagnostics.slice();
@@ -2889,27 +2889,27 @@ const Ho = () => {
     cols: c,
     maxRows: y,
     candidateLayout: m,
-    ghostItems: bn(
+    ghostItems: xn(
       e,
       m,
-      p.summary.insertedIds.length ? p.summary.insertedIds : e.items.map((ae) => ae.i),
+      p.summary.insertedIds.length ? p.summary.insertedIds : e.items.map((ce) => ce.i),
       v ? "blocked" : "preview"
     ),
-    affectedOutlines: fi(e.baseLayout, m, p.summary, v),
+    affectedOutlines: pi(e.baseLayout, m, p.summary, v),
     diagnostics: C,
     blocked: v,
     updatedAt: (o.now || Ho)(),
     previewSeq: e.previewSeq + 1
   };
-}, In = (e, t) => {
+}, wn = (e, t) => {
   var i, f, d;
-  const o = (t.now || Ho)(), s = e.commandType || (e.source === "paste" ? "paste" : "add"), r = e.resolvedClipboardPayload ? de(e.resolvedClipboardPayload.items) : vn(e), a = {
-    id: t.id || `grid-editor-placement:${++gn}`,
+  const o = (t.now || Ho)(), s = e.commandType || (e.source === "paste" ? "paste" : "add"), r = e.resolvedClipboardPayload ? le(e.resolvedClipboardPayload.items) : In(e), a = {
+    id: t.id || `grid-editor-placement:${++vn}`,
     phase: "starting",
     source: e.source,
     commandType: s,
     baseRevision: t.baseRevision,
-    baseLayout: de(t.baseLayout),
+    baseLayout: le(t.baseLayout),
     items: r,
     editorMetaById: Me(
       ((i = e.resolvedClipboardPayload) == null ? void 0 : i.editorMetaById) || e.editorMetaById,
@@ -2917,23 +2917,23 @@ const Ho = () => {
     ),
     resolvedClipboardPayload: e.resolvedClipboardPayload ? {
       ...e.resolvedClipboardPayload,
-      items: de(e.resolvedClipboardPayload.items),
+      items: le(e.resolvedClipboardPayload.items),
       editorMetaById: Me(e.resolvedClipboardPayload.editorMetaById, {
         layout: e.resolvedClipboardPayload.items
       })
     } : void 0,
-    strategy: ci(e.strategy, t.defaultStrategy || "first-fit"),
-    collisionPolicy: di(e.collisionPolicy),
+    strategy: li(e.strategy, t.defaultStrategy || "first-fit"),
+    collisionPolicy: ui(e.collisionPolicy),
     placementIntent: e.placementIntent,
     placementAnchor: e.placementAnchor,
-    compactType: li(e.compactType),
-    allowOverlap: uo(e.allowOverlap),
-    preventCollision: uo(e.preventCollision),
-    cursor: ui(e.cursor),
+    compactType: fi(e.compactType),
+    allowOverlap: lo(e.allowOverlap),
+    preventCollision: lo(e.preventCollision),
+    cursor: yi(e.cursor),
     size: r[0] ? { w: r[0].w, h: r[0].h } : void 0,
     origin: e.origin,
-    cols: ni((f = e.cols) != null ? f : t.cols),
-    maxRows: ai((d = e.maxRows) != null ? d : t.maxRows),
+    cols: ci((f = e.cols) != null ? f : t.cols),
+    maxRows: di((d = e.maxRows) != null ? d : t.maxRows),
     ghostItems: [],
     affectedOutlines: [],
     diagnostics: [],
@@ -2961,14 +2961,14 @@ const Ho = () => {
     };
   }
   return $o(a, {}, { now: () => o });
-}, xn = (e, t = {}) => {
+}, kn = (e, t = {}) => {
   var s, r, a, i;
   const o = {
-    items: e.commandType === "add" ? de(e.items) : void 0,
+    items: e.commandType === "add" ? le(e.items) : void 0,
     item: e.commandType === "add" && e.items.length === 1 ? zo(e.items[0]) : void 0,
     editorMetaById: e.commandType === "add" ? Me(e.editorMetaById) : void 0,
     resolvedClipboardPayload: e.commandType === "paste" ? {
-      items: de(e.items),
+      items: le(e.items),
       editorMetaById: Me(e.editorMetaById, { layout: e.items }),
       sourceId: (s = e.resolvedClipboardPayload) == null ? void 0 : s.sourceId,
       source: (r = e.resolvedClipboardPayload) == null ? void 0 : r.source,
@@ -2993,7 +2993,7 @@ const Ho = () => {
       affectedIds: e.affectedOutlines.map((f) => f.id),
       diagnostics: e.diagnostics
     },
-    placementCandidateLayout: e.candidateLayout ? de(e.candidateLayout) : void 0
+    placementCandidateLayout: e.candidateLayout ? le(e.candidateLayout) : void 0
   };
   return {
     type: e.commandType,
@@ -3001,7 +3001,7 @@ const Ho = () => {
     source: t.source || "api",
     origin: e.origin
   };
-}, wn = (e, t = "cancelled", o = {}) => ({
+}, Mn = (e, t = "cancelled", o = {}) => ({
   status: "cancelled",
   session: {
     ...e,
@@ -3016,7 +3016,7 @@ const Ho = () => {
     },
     updatedAt: (o.now || Ho)()
   }
-}), kn = [
+}), Sn = [
   { type: "select" },
   { type: "clearSelection" },
   { type: "move" },
@@ -3035,12 +3035,12 @@ const Ho = () => {
   { type: "align", payload: { mode: "left" } },
   { type: "distribute", payload: { mode: "horizontal" } },
   { type: "tidy", payload: { axis: "both" } }
-], Mn = (e) => {
+], Cn = (e) => {
   if (e === "align") return 2;
   if (e === "distribute" || e === "tidy") return 3;
-}, Sn = (e, t) => {
+}, Rn = (e, t) => {
   var r, a, i, f, d;
-  const o = Zs(t.type), s = e.canExecute({
+  const o = Qs(t.type), s = e.canExecute({
     source: (o == null ? void 0 : o.defaultSource) || "toolbar",
     ...t
   });
@@ -3048,15 +3048,15 @@ const Ho = () => {
     command: t.type,
     enabled: s.status !== "blocked" && s.status !== "cancelled" && s.status !== "timeout" && s.status !== "error",
     reason: (r = s.blocked) == null ? void 0 : r.reason,
-    requiredSelectionCount: ((a = s.blocked) == null ? void 0 : a.reason) === "selection-count" ? Mn(t.type) : void 0,
+    requiredSelectionCount: ((a = s.blocked) == null ? void 0 : a.reason) === "selection-count" ? Cn(t.type) : void 0,
     blockedIds: ((i = s.blocked) == null ? void 0 : i.itemIds) || ((f = s.blocked) == null ? void 0 : f.skippedIds),
     labelKey: o == null ? void 0 : o.labelKey,
     shortcuts: o == null ? void 0 : o.shortcuts,
     messageKey: (d = s.blocked) != null && d.reason ? `grid-editor.toolbar.${t.type}.${s.blocked.reason}` : void 0
   };
-}, Cn = (e) => {
+}, En = (e) => {
   var v, C;
-  const t = e.selection.value, o = e.editorMetaById.value, s = He(e.sectionRows.value), r = t.selectedIds, a = Array.from(new Set(r.flatMap((S) => {
+  const t = e.selection.value, o = e.editorMetaById.value, s = Le(e.sectionRows.value), r = t.selectedIds, a = Array.from(new Set(r.flatMap((S) => {
     const k = s.itemMembership[S];
     return [
       (k == null ? void 0 : k.sectionId) || null,
@@ -3064,14 +3064,14 @@ const Ho = () => {
     ].filter(Boolean);
   }))), i = (v = Object.values(s.items).slice().sort((S, k) => S.order - k.order || S.id.localeCompare(k.id))[0]) == null ? void 0 : v.id, f = a[0] || i, d = {}, c = f ? { id: f } : {};
   [
-    ...kn,
+    ...Sn,
     { type: "section-row-collapse", payload: c },
     { type: "section-row-expand", payload: c },
     { type: "section-row-move", payload: f ? { id: f, dy: 1 } : {} },
     { type: "section-row-delete", payload: c },
     { type: "section-row-reorder", payload: c }
   ].forEach((S) => {
-    d[S.type] = Sn(e, S);
+    d[S.type] = Rn(e, S);
   });
   const u = r.filter((S) => {
     var k;
@@ -3097,14 +3097,14 @@ const Ho = () => {
       reason: m.reason
     } : void 0
   };
-}, Go = (e) => e.kind === "layout" ? e.layout : e.layouts[e.breakpoint] || [], Ts = (e) => ({
+}, Go = (e) => e.kind === "layout" ? e.layout : e.layouts[e.breakpoint] || [], Ls = (e) => ({
   layoutSize: Go(e).length,
   layoutCount: e.kind === "responsive" ? Object.keys(e.layouts).length : 1,
   metadataCount: Object.keys(e.editorMetaById || {}).length,
   sectionRowCount: Object.keys(e.sectionRows.items || {}).length,
   selectionCount: e.selection.selectedIds.length,
   focusId: e.focusId
-}), Rn = (e, t) => {
+}), Pn = (e, t) => {
   const o = [];
   return (/* @__PURE__ */ new Set([...Object.keys(e || {}), ...Object.keys(t || {})])).forEach((r) => {
     const a = e[r], i = t[r];
@@ -3112,9 +3112,9 @@ const Ho = () => {
       o.push({ type: "remove", id: r, previous: a });
       return;
     }
-    i && !Ke(a, i) && o.push({ type: "set", id: r, previous: a, next: i });
+    i && !Ne(a, i) && o.push({ type: "set", id: r, previous: a, next: i });
   }), o;
-}, En = (e, t) => {
+}, Bn = (e, t) => {
   const o = [], s = e.items || {}, r = t.items || {};
   return (/* @__PURE__ */ new Set([...Object.keys(s), ...Object.keys(r)])).forEach((i) => {
     const f = s[i], d = r[i];
@@ -3122,20 +3122,20 @@ const Ho = () => {
       o.push({ type: "remove", id: i, previous: f });
       return;
     }
-    d && !Ke(f, d) && o.push({ type: "set", id: i, previous: f, next: d });
+    d && !Ne(f, d) && o.push({ type: "set", id: i, previous: f, next: d });
   }), o;
-}, Os = (e, t, o = {}) => {
-  const s = Nt(
+}, Hs = (e, t, o = {}) => {
+  const s = Ft(
     Go(e),
     Go(t)
-  ), r = o.metadataPatches || Rn(e.editorMetaById, t.editorMetaById), a = o.sectionRowPatches || En(e.sectionRows, t.sectionRows), i = wo(s, r);
+  ), r = o.metadataPatches || Pn(e.editorMetaById, t.editorMetaById), a = o.sectionRowPatches || Bn(e.sectionRows, t.sectionRows), i = wo(s, r);
   return a.forEach((f) => i.push(f.id)), {
     layoutPatches: s,
     metadataPatches: r,
     sectionRowPatches: a,
     affectedIds: Array.from(new Set(i)),
-    beforeSummary: Ts(e),
-    afterSummary: Ts(t),
+    beforeSummary: Ls(e),
+    afterSummary: Ls(t),
     risk: o.risk
   };
 }, xo = {
@@ -3146,13 +3146,13 @@ const Ho = () => {
   spacingChips: [],
   measurementHud: null,
   anchorEdges: []
-}, Ls = () => {
+}, Fs = () => {
   const e = typeof performance != "undefined" ? performance : null;
   return e && typeof e.now == "function" ? e.now() : Date.now();
-}, Bt = (e) => Me(e), Ze = (e) => ({
+}, Bt = (e) => Me(e), qe = (e) => ({
   ...e,
   selectedIds: e.selectedIds.slice()
-}), ct = (e) => ({
+}), at = (e) => ({
   version: 1,
   items: Object.keys(e.items || {}).reduce((t, o) => {
     const s = e.items[o];
@@ -3167,12 +3167,12 @@ const Ho = () => {
     var s;
     return t[o] = { ...((s = e.itemMembership) == null ? void 0 : s[o]) || {} }, t;
   }, {})
-}), dt = (e, t) => {
+}), ct = (e, t) => {
   let o = 1, s = `${e}-copy`;
   for (; t.has(s); )
     o += 1, s = `${e}-copy-${o}`;
   return t.add(s), s;
-}, Pn = (e) => !!(e && typeof e == "object" && "save" in e && "commit" in e), U = (e) => typeof e == "number" && Number.isFinite(e), Ne = (e, t) => Math.max(1, Math.floor(U(e) ? e : t)), Qt = (e) => e.payload && typeof e.payload == "object" ? e.payload : {}, Bn = (e) => e === "vertical" || e === "horizontal" || e === null, Hs = (e) => e === "offset" || e === "cursor" || e === "nearest-fit" || e === "first-fit" || e === "insert-top-shift", Fs = (e) => e === "s" || e === "w" || e === "e" || e === "n" || e === "sw" || e === "nw" || e === "se" || e === "ne", js = (e) => e || "invalid-input", $n = (e, t, o) => {
+}, $n = (e) => !!(e && typeof e == "object" && "save" in e && "commit" in e), U = (e) => typeof e == "number" && Number.isFinite(e), Fe = (e, t) => Math.max(1, Math.floor(U(e) ? e : t)), Jt = (e) => e.payload && typeof e.payload == "object" ? e.payload : {}, Gn = (e) => e === "vertical" || e === "horizontal" || e === null, js = (e) => e === "offset" || e === "cursor" || e === "nearest-fit" || e === "first-fit" || e === "insert-top-shift", Ns = (e) => e === "s" || e === "w" || e === "e" || e === "n" || e === "sw" || e === "nw" || e === "se" || e === "ne", Ks = (e) => e || "invalid-input", zn = (e, t, o) => {
   const s = o.type === "groupMove" ? o.ids.slice() : "id" in o ? [o.id] : [];
   return {
     id: e,
@@ -3197,36 +3197,36 @@ const Ho = () => {
       durationMs: 0
     }
   };
-}, Ht = (e, t, o, s) => {
+}, Tt = (e, t, o, s) => {
   const r = {};
   return { items: e.map((i) => {
     const f = s(i.i, o);
     return t[i.i] && (r[f] = { ...t[i.i] }), { ...zo(i), i: f };
   }), metaById: r };
-}, yi = (e) => {
+}, mi = (e) => {
   var Uo;
   const t = e.kind || (e.layouts ? "responsive" : "layout"), o = Ee([]), s = Ee({}), r = e.layout || o, a = e.layouts || s, i = e.breakpoint || Ee("default"), f = !e.mode && !e.defaultMode, d = Ee(e.defaultMode || "view"), c = e.mode || d, y = Ee(
     Me(e.defaultEditorMetaById)
   ), u = e.editorMetaById || y, p = Ee(
-    e.defaultSectionRows || Xs()
+    e.defaultSectionRows || _s()
   ), m = e.sectionRows || p, v = Ee(
     Ge(
       ((Uo = e.selectedIds) == null ? void 0 : Uo.value) || e.defaultSelectedIds || [],
       e.selectedIds ? "external" : "api"
     )
-  ), C = Ee(null), S = Ee({ ...xo }), k = Ee(null), F = Ee(null), K = Ee(null), A = Ee(!1), ae = Ee(!1), L = Ee(v.value.activeId), w = Ee(!1), R = [], T = /* @__PURE__ */ new Set();
-  let M = 0, O = 0;
-  e.onEvent && T.add(e.onEvent);
+  ), C = Ee(null), S = Ee({ ...xo }), k = Ee(null), F = Ee(null), X = Ee(null), A = Ee(!1), ce = Ee(!1), L = Ee(v.value.activeId), w = Ee(!1), R = [], D = /* @__PURE__ */ new Set();
+  let M = 0, T = 0;
+  e.onEvent && D.add(e.onEvent);
   const G = (n) => {
-    O += 1;
+    T += 1;
     try {
       return n();
     } finally {
-      O -= 1;
+      T -= 1;
     }
   }, z = (n) => {
     const l = [];
-    for (const h of Array.from(T))
+    for (const h of Array.from(D))
       try {
         h(n);
       } catch (x) {
@@ -3239,60 +3239,60 @@ const Ho = () => {
       message: "Grid editor event listener failed.",
       details: l.length === 1 ? l[0] : l
     };
-    for (const h of Array.from(T))
+    for (const h of Array.from(D))
       try {
         h(I);
       } catch (x) {
       }
   }, q = (n) => {
     let l = !0;
-    return w.value || T.add(n), () => {
-      l && (l = !1, T.delete(n));
+    return w.value || D.add(n), () => {
+      l && (l = !1, D.delete(n));
     };
-  }, E = () => t === "responsive" ? de(a.value[i.value] || []) : de(r.value), me = (n) => {
+  }, E = () => t === "responsive" ? le(a.value[i.value] || []) : le(r.value), ge = (n) => {
     M += 1, G(() => {
       t === "responsive" ? (a.value = {
         ...a.value,
-        [i.value]: de(n)
-      }, e.layout && (r.value = de(n))) : r.value = de(n);
+        [i.value]: le(n)
+      }, e.layout && (r.value = le(n))) : r.value = le(n);
     });
-  }, Oe = () => t === "responsive" ? io(a.value) : { default: de(r.value) }, ze = (n, l = i.value) => {
+  }, De = () => t === "responsive" ? so(a.value) : { default: le(r.value) }, ze = (n, l = i.value) => {
     M += 1, G(() => {
-      a.value = io(n), i.value = l, e.layout && (r.value = de(n[l] || []));
+      a.value = so(n), i.value = l, e.layout && (r.value = le(n[l] || []));
     });
   }, W = () => t === "responsive" ? {
     kind: "responsive",
-    layouts: Oe(),
+    layouts: De(),
     breakpoint: i.value,
     editorMetaById: Bt(u.value),
-    sectionRows: ct(m.value),
-    selection: Ze(v.value),
+    sectionRows: at(m.value),
+    selection: qe(v.value),
     focusId: L.value
   } : {
     kind: "layout",
     layout: E(),
     editorMetaById: Bt(u.value),
-    sectionRows: ct(m.value),
-    selection: Ze(v.value),
+    sectionRows: at(m.value),
+    selection: qe(v.value),
     focusId: L.value
   }, ve = (n) => {
-    M += 1, n.kind === "responsive" ? ze(n.layouts, n.breakpoint) : me(n.layout), u.value = Bt(n.editorMetaById), m.value = ct(n.sectionRows), v.value = Ze(n.selection), L.value = n.focusId;
-  }, ie = Ee(W()), J = e.history === !1 ? null : e.history || Nr();
+    M += 1, n.kind === "responsive" ? ze(n.layouts, n.breakpoint) : ge(n.layout), u.value = Bt(n.editorMetaById), m.value = at(n.sectionRows), v.value = qe(n.selection), L.value = n.focusId;
+  }, ie = Ee(W()), J = e.history === !1 ? null : e.history || Xr();
   J == null || J.replacePresent(W());
-  const We = (n) => ({
+  const _e = (n) => ({
     id: `editor-rollback-checkpoint:${Date.now()}:${Math.random().toString(36).slice(2)}`,
     kind: "grid-editor-rollback-checkpoint",
     snapshot: W(),
     history: J == null ? void 0 : J.checkpoint(),
     revision: M,
     reason: n
-  }), qe = (n, l = n.reason || "rollback-checkpoint-restore") => {
-    mt.abortPending(l), K.value = null, Fe(l), ve(n.snapshot), J && n.history && J.restore(n.history), z({
+  }), Ue = (n, l = n.reason || "rollback-checkpoint-restore") => {
+    mt.abortPending(l), X.value = null, He(l), ve(n.snapshot), J && n.history && J.restore(n.history), z({
       type: "editor-state-change",
-      state: Je.value,
+      state: Ve.value,
       reason: l
     });
-  }, pt = ps(() => !Ke(W(), ie.value)), Je = ps(() => C.value ? "conflict" : ae.value ? "savePending" : A.value ? "saveFailed" : K.value ? K.value : k.value ? "placing" : c.value === "view" ? "viewing" : pt.value ? "editingDirty" : "editingClean"), et = Pn(e.persistence) ? e.persistence : null, st = qr({
+  }, yt = gs(() => !Ne(W(), ie.value)), Ve = gs(() => C.value ? "conflict" : ce.value ? "savePending" : A.value ? "saveFailed" : X.value ? X.value : k.value ? "placing" : c.value === "view" ? "viewing" : yt.value ? "editingDirty" : "editingClean"), et = $n(e.persistence) ? e.persistence : null, ot = Zr({
     getEditorMetaById: () => u.value,
     getSectionRows: () => m.value,
     setEditorMetaById: (n, l) => {
@@ -3307,7 +3307,7 @@ const Ho = () => {
     },
     persistence: et,
     onSaveStateChange: (n) => {
-      ae.value = n.status === "saving", A.value = n.status === "error", z({
+      ce.value = n.status === "saving", A.value = n.status === "error", z({
         type: "save-state-change",
         status: n.status,
         dirty: n.dirty,
@@ -3320,8 +3320,8 @@ const Ho = () => {
     onError: (n, l, I) => {
       z({ type: "editor-error", code: n, message: l, details: I });
     }
-  }), it = (n, l = !1) => {
-    const I = v.value, h = Ve(
+  }), st = (n, l = !1) => {
+    const I = v.value, h = We(
       n,
       E(),
       u.value,
@@ -3332,34 +3332,34 @@ const Ho = () => {
       selection: h,
       previous: I,
       requested: !0
-    }), I) : Ke(I, h) ? I : (M += 1, v.value = h, L.value = h.activeId, z({
+    }), I) : Ne(I, h) ? I : (M += 1, v.value = h, L.value = h.activeId, z({
       type: "selection-change",
       selection: h,
       previous: I,
       requested: l
     }), h);
-  }, Ye = (n, l, I, h = ((x) => (x = l.diagnostics) == null ? void 0 : x.guardMs)() || 0) => {
+  }, Xe = (n, l, I, h = ((x) => (x = l.diagnostics) == null ? void 0 : x.guardMs)() || 0) => {
     var B, H, be;
-    const g = Ft(
+    const g = Lt(
       n.history,
-      oo(n.type)
+      to(n.type)
     ), P = {
       ...l,
       diagnostics: {
         ...l.diagnostics,
-        durationMs: Ls() - I,
+        durationMs: Fs() - I,
         guardMs: h,
         historyMode: ((B = l.diagnostics) == null ? void 0 : B.historyMode) || g.mode,
         source: ((H = l.diagnostics) == null ? void 0 : H.source) || n.source,
         origin: ((be = l.diagnostics) == null ? void 0 : be.origin) || n.origin
       }
     };
-    return F.value = P, P.status === "blocked" || P.status === "cancelled" || P.status === "timeout" ? z({ type: "command-blocked", command: n, result: P }) : P.status === "error" ? z({ type: "command-error", command: n, result: P }) : z({ type: "command-commit", command: n, result: P }), K.value === "keyboardEditing" && n.source === "keyboard" && (K.value = null), P;
+    return F.value = P, P.status === "blocked" || P.status === "cancelled" || P.status === "timeout" ? z({ type: "command-blocked", command: n, result: P }) : P.status === "error" ? z({ type: "command-error", command: n, result: P }) : z({ type: "command-commit", command: n, result: P }), X.value === "keyboardEditing" && n.source === "keyboard" && (X.value = null), P;
   }, we = (n, l, I, h) => {
     var B, H;
-    const x = Ft(
+    const x = Lt(
       n.history,
-      oo(n.type)
+      to(n.type)
     );
     if (I.diagnostics = {
       durationMs: ((B = I.diagnostics) == null ? void 0 : B.durationMs) || 0,
@@ -3375,9 +3375,9 @@ const Ho = () => {
       return J.replacePresent(W(), {
         preserveRedoStack: x.preserveRedoStack
       }), I;
-    if (x.mode === "ignore" || !Di(n.type))
+    if (x.mode === "ignore" || !Ti(n.type))
       return I;
-    const g = h || W(), P = Kr({
+    const g = h || W(), P = Yr({
       commandId: n.id,
       commandType: n.type,
       before: l,
@@ -3392,50 +3392,50 @@ const Ho = () => {
     return J.push(P, {
       preserveRedoStack: x.preserveRedoStack || x.mode === "record-preserveRedoStack"
     }), I.undo = P, t === "layout" && ((H = e.legacyHistoryStore) == null || H.push(E())), I;
-  }, rt = (n) => ro(n.type).mutualExclusionScope || "global", yo = (n, l, I) => {
-    const h = ro(n.type);
+  }, it = (n) => io(n.type).mutualExclusionScope || "global", fo = (n, l, I) => {
+    const h = io(n.type);
     return {
       id: `${n.id}:transaction`,
       commandId: n.id,
       command: n,
       source: n.source || h.defaultSource || "api",
       origin: n.origin,
-      scope: rt(n),
+      scope: it(n),
       before: l,
       after: I,
-      preview: Os(l, I, {
+      preview: Hs(l, I, {
         risk: h.risk
       }),
-      history: Ft(
+      history: Lt(
         n.history,
-        h.defaultHistory.mode || oo(n.type)
+        h.defaultHistory.mode || to(n.type)
       )
     };
-  }, _t = (n, l, I) => {
+  }, Xt = (n, l, I) => {
     if (e.selectedIds) {
-      Ke(n.selection, l.selection) || z({
+      Ne(n.selection, l.selection) || z({
         type: "selection-change",
-        selection: Ze(l.selection),
-        previous: Ze(n.selection),
+        selection: qe(l.selection),
+        previous: qe(n.selection),
         requested: !0
       });
       return;
     }
-    Ke(n.selection, I.selection) || z({
+    Ne(n.selection, I.selection) || z({
       type: "selection-change",
-      selection: Ze(I.selection),
-      previous: Ze(n.selection)
+      selection: qe(I.selection),
+      previous: qe(n.selection)
     }), n.focusId !== I.focusId && z({
       type: "focus-change",
       from: n.focusId,
       to: I.focusId,
       reason: "transaction"
     });
-  }, nt = (n, l, I, h = {}) => {
-    const x = !!e.selectedIds, g = x ? at(I, {
+  }, rt = (n, l, I, h = {}) => {
+    const x = !!e.selectedIds, g = x ? nt(I, {
       selection: l.selection,
       focusId: l.focusId
-    }) : I, P = yo(n, l, g), B = !Ke(l, g), H = h.status || (B ? "changed" : "noop"), be = Ie(n, H, {
+    }) : I, P = fo(n, l, g), B = !Ne(l, g), H = h.status || (B ? "changed" : "noop"), be = xe(n, H, {
       ...h,
       targetIds: h.targetIds || P.preview.affectedIds,
       layoutPatches: h.layoutPatches || P.preview.layoutPatches,
@@ -3449,24 +3449,24 @@ const Ho = () => {
     });
     if (B)
       try {
-        ve(P.after), _t(l, I, P.after);
+        ve(P.after), Xt(l, I, P.after);
       } catch (j) {
         try {
           ve(P.before);
         } catch (V) {
         }
-        return ds(n, "Editor transaction apply failed.", j);
+        return us(n, "Editor transaction apply failed.", j);
       }
-    else x && _t(l, I, P.after);
+    else x && Xt(l, I, P.after);
     return we(n, l, be, P.after);
-  }, Mt = (n) => typeof e.layoutEngineOptions == "function" ? e.layoutEngineOptions() : e.layoutEngineOptions ? e.layoutEngineOptions : U(n.cols) ? {
+  }, pt = (n) => typeof e.layoutEngineOptions == "function" ? e.layoutEngineOptions() : e.layoutEngineOptions ? e.layoutEngineOptions : U(n.cols) ? {
     cols: Math.max(1, Math.floor(n.cols)),
     maxRows: U(n.maxRows) ? n.maxRows : 1 / 0,
-    compactType: Bn(n.compactType) ? n.compactType : "vertical",
+    compactType: Gn(n.compactType) ? n.compactType : "vertical",
     allowOverlap: n.allowOverlap === !0,
     preventCollision: n.preventCollision === !0
   } : null, b = (n) => {
-    const l = Mt(n);
+    const l = pt(n);
     return l ? l.cols : U(n.cols) && n.cols > 0 ? Math.floor(n.cols) : void 0;
   }, $ = (n) => {
     const l = {}, I = b(n);
@@ -3481,14 +3481,14 @@ const Ho = () => {
         phase: "commit",
         source: n.source || "api"
       });
-    const g = Mt(h);
+    const g = pt(h);
     return g ? await Promise.resolve(ko({
       id: x,
       phase: "commit",
       layout: l,
       operation: I,
       options: g
-    })) : $n(x, l, I);
+    })) : zn(x, l, I);
   }, ee = (n) => {
     var x, g, P, B;
     const l = (x = e.itemCapabilities) == null ? void 0 : x[n], I = ((g = e.resizeConstraints) == null ? void 0 : g[n]) || ((P = l == null ? void 0 : l.resizeConstraint) == null ? void 0 : P.aspectRatio), h = ((B = l == null ? void 0 : l.resizeConstraint) == null ? void 0 : B.handlePolicy) || (l != null && l.resizeHandles ? {
@@ -3497,7 +3497,7 @@ const Ho = () => {
     } : void 0);
     if (!(!I && !h))
       return { aspectRatio: I, handlePolicy: h };
-  }, oe = async (n) => {
+  }, se = async (n) => {
     try {
       return await n.read();
     } catch (l) {
@@ -3505,7 +3505,7 @@ const Ho = () => {
         return bt.read();
       throw l;
     }
-  }, ne = async (n, l) => {
+  }, ae = async (n, l) => {
     try {
       await n.write(l);
     } catch (I) {
@@ -3515,7 +3515,7 @@ const Ho = () => {
       }
       throw I;
     }
-  }, Se = () => !e.clipboard || e.clipboard === "internal" ? bt : e.clipboard === "system" ? Yr() : e.clipboard, ye = (n, l) => ({
+  }, Se = () => !e.clipboard || e.clipboard === "internal" ? bt : e.clipboard === "system" ? Ur() : e.clipboard, pe = (n, l) => ({
     durationMs: 0,
     computed: {
       placement: {
@@ -3561,7 +3561,7 @@ const Ho = () => {
       itemIds: l.itemIds,
       recoverable: l.level !== "error"
     }))
-  }), Te = (n, l, I, h = [], x) => ({
+  }), Oe = (n, l, I, h = [], x) => ({
     status: "blocked",
     blocked: {
       reason: l,
@@ -3578,19 +3578,19 @@ const Ho = () => {
         recoverable: l !== "invalid-input"
       }]
     }
-  }), Qe = (n) => {
+  }), Ze = (n) => {
     if (n.commandType && n.commandType !== "add" || n.source === "paste") return n;
     const l = Array.isArray(n.items) ? n.items : n.item ? [n.item] : [];
     if (l.length === 0) return n;
-    const I = new Set(E().map((B) => B.i)), h = e.idGenerator || dt, x = n.editorMetaById || {}, g = {}, P = l.filter((B) => B && typeof B == "object").map((B, H) => {
+    const I = new Set(E().map((B) => B.i)), h = e.idGenerator || ct, x = n.editorMetaById || {}, g = {}, P = l.filter((B) => B && typeof B == "object").map((B, H) => {
       const be = typeof B.i == "string" && B.i.length > 0 ? B.i : `item-${H + 1}`, j = I.has(be) ? h(be, I) : be;
       return I.add(j), x[be] && (g[j] = { ...x[be] }), {
         ...B,
         i: j,
         x: U(B.x) ? B.x : 0,
         y: U(B.y) ? B.y : 0,
-        w: Ne(B.w, 1),
-        h: Ne(B.h, 1)
+        w: Fe(B.w, 1),
+        h: Fe(B.h, 1)
       };
     });
     return {
@@ -3600,10 +3600,10 @@ const Ho = () => {
       items: P,
       editorMetaById: Me(g, { layout: P })
     };
-  }, Fe = (n) => {
+  }, He = (n) => {
     const l = k.value;
     return l ? (k.value = null, S.value = { ...xo }, z({ type: "placement-cancel", sessionId: l.id, reason: n }), l) : null;
-  }, Ut = (n, l, I, h) => {
+  }, Yt = (n, l, I, h) => {
     for (let x = 0; x < l.length; x++) {
       const g = Pe(n, l[x]);
       if (!g) continue;
@@ -3620,13 +3620,13 @@ const Ho = () => {
         };
     }
     return { ok: !0 };
-  }, po = (n, l) => {
-    const I = He(m.value, l), h = [], x = [];
+  }, yo = (n, l) => {
+    const I = Le(m.value, l), h = [], x = [];
     return n.forEach((g) => {
       const P = I.itemMembership[g], B = P != null && P.sectionId ? I.items[P.sectionId] : void 0, H = P != null && P.rowId ? I.items[P.rowId] : void 0;
       B != null && B.locked || H != null && H.locked ? h.push(g) : (B != null && B.collapsed || H != null && H.collapsed) && x.push(g);
     }), h.length > 0 ? { reason: "section-row-locked", itemIds: h } : x.length > 0 ? { reason: "section-row-collapsed", itemIds: x } : null;
-  }, St = (n, l) => {
+  }, Mt = (n, l) => {
     const I = new Set(l), h = /* @__PURE__ */ new Set();
     return Object.keys(n.itemMembership).forEach((x) => {
       const g = n.itemMembership[x];
@@ -3635,7 +3635,7 @@ const Ho = () => {
       var g, P;
       (P = (g = n.items[x]) == null ? void 0 : g.itemIds) == null || P.forEach((B) => h.add(B));
     }), Array.from(h).sort();
-  }, Wt = (n, l) => {
+  }, _t = (n, l) => {
     if (U(l.order)) return l.order;
     const I = Object.values(n.items).slice().sort((g, P) => g.order - P.order || g.id.localeCompare(P.id)), h = l.beforeId ? n.items[l.beforeId] : void 0, x = l.afterId ? n.items[l.afterId] : void 0;
     if (h) {
@@ -3647,13 +3647,13 @@ const Ho = () => {
       return g ? (x.order + g.order) / 2 : x.order + 1;
     }
     return I.length > 0 ? I[I.length - 1].order + 1 : 0;
-  }, mo = async (n, l, I, h) => {
+  }, po = async (n, l, I, h) => {
     var Re, Gt, zt, Wo, qo, Vo, Zo, Jo, Qo, es, ts, os, ss, is, rs;
-    const x = E(), g = Qt(n), P = [];
-    let B, H = de(x), be = Ze(h.selection), j = h.focusId;
-    const V = ho(n.type) ? po(l, x) : null;
+    const x = E(), g = Jt(n), P = [];
+    let B, H = le(x), be = qe(h.selection), j = h.focusId;
+    const V = ho(n.type) ? yo(l, x) : null;
     if (V)
-      return Ie(n, "blocked", {
+      return xe(n, "blocked", {
         targetIds: l,
         blocked: {
           reason: V.reason,
@@ -3673,37 +3673,37 @@ const Ho = () => {
       });
     const te = jo(n);
     if (te && ho(n.type)) {
-      const X = P.slice();
+      const K = P.slice();
       if (n.type === "add") {
         const Z = Me(g.editorMetaById, {
           layout: te
         });
-        Object.keys(Z).forEach((_e) => {
-          X.push({ type: "set", id: _e, next: Z[_e] });
+        Object.keys(Z).forEach((Ye) => {
+          K.push({ type: "set", id: Ye, next: Z[Ye] });
         });
       } else if (n.type === "paste") {
-        const Z = g.resolvedClipboardPayload && typeof g.resolvedClipboardPayload == "object" ? g.resolvedClipboardPayload : null, _e = Me(Z == null ? void 0 : Z.editorMetaById, {
+        const Z = g.resolvedClipboardPayload && typeof g.resolvedClipboardPayload == "object" ? g.resolvedClipboardPayload : null, Ye = Me(Z == null ? void 0 : Z.editorMetaById, {
           layout: te
         });
-        Object.keys(_e).forEach((Ct) => {
-          X.push({ type: "set", id: Ct, next: _e[Ct] });
+        Object.keys(Ye).forEach((St) => {
+          K.push({ type: "set", id: St, next: Ye[St] });
         });
       }
-      const Y = Nt(x, te), _ = Y.flatMap(
+      const Y = Ft(x, te), _ = Y.flatMap(
         (Z) => Z.type === "add" ? [Z.item.i] : []
-      ), se = Y.flatMap(
+      ), oe = Y.flatMap(
         (Z) => Z.type === "move" || Z.type === "resize" ? [Z.id] : []
-      ), le = wo(Y, X), re = typeof g.placementSessionId == "string" ? {
+      ), ue = wo(Y, K), ne = typeof g.placementSessionId == "string" ? {
         durationMs: 0,
         computed: {
           placement: {
-            strategy: Hs(g.strategy) ? g.strategy : "first-fit",
-            placementSource: Hs(g.strategy) ? g.strategy : "first-fit",
+            strategy: js(g.strategy) ? g.strategy : "first-fit",
+            placementSource: js(g.strategy) ? g.strategy : "first-fit",
             collisionPolicy: g.collisionPolicy === "layout" || g.collisionPolicy === "block" ? g.collisionPolicy : void 0,
             sessionId: g.placementSessionId,
             source: typeof g.placementSource == "string" ? g.placementSource : void 0,
             insertedIds: _,
-            shiftedIds: se,
+            shiftedIds: oe,
             before: x.map((Z) => ({
               id: Z.i,
               x: Z.x,
@@ -3721,39 +3721,39 @@ const Ho = () => {
             diagnostics: Array.isArray((Re = g.placementSummary) == null ? void 0 : Re.diagnostics) ? g.placementSummary.diagnostics : []
           }
         }
-      } : B, ue = ht(
-        Ot(h.editorMetaById, X),
+      } : B, fe = ht(
+        Ot(h.editorMetaById, K),
         te
-      ), Be = _.length > 0 && (n.type === "add" || n.type === "paste") ? Ge(_, "api") : Ve(
+      ), Be = _.length > 0 && (n.type === "add" || n.type === "paste") ? Ge(_, "api") : We(
         h.selection,
         te,
-        ue,
+        fe,
         "api"
       );
-      return nt(n, h, at(h, {
+      return rt(n, h, nt(h, {
         layout: te,
-        editorMetaById: ue,
+        editorMetaById: fe,
         selection: Be,
         focusId: Be.activeId
       }), {
-        status: le.length > 0 ? "changed" : "noop",
+        status: ue.length > 0 ? "changed" : "noop",
         targetIds: l.length > 0 ? l : n.targetIds,
         layoutPatches: Y,
-        metadataPatches: X,
-        affectedIds: le,
+        metadataPatches: K,
+        affectedIds: ue,
         selection: Be,
         blocked: I.length > 0 ? { reason: "capability", skippedIds: I, itemIds: I } : void 0,
-        diagnostics: re
+        diagnostics: ne
       });
     }
-    if (us(n.type)) {
-      const X = g, Y = He(m.value, x), _ = l.length > 0 ? l : X.id ? [X.id] : [], se = _.filter((ge) => !Y.items[ge]);
-      if (se.length > 0)
-        return Ie(n, "blocked", {
+    if (ys(n.type)) {
+      const K = g, Y = Le(m.value, x), _ = l.length > 0 ? l : K.id ? [K.id] : [], oe = _.filter((re) => !Y.items[re]);
+      if (oe.length > 0)
+        return xe(n, "blocked", {
           targetIds: _,
           blocked: {
             reason: "missing-item",
-            itemIds: se,
+            itemIds: oe,
             message: "Section/row command referenced missing metadata."
           },
           diagnostics: {
@@ -3762,21 +3762,21 @@ const Ho = () => {
               code: "grid-editor.sectionRows.missing",
               level: "warning",
               message: "Section/row command referenced missing metadata.",
-              itemIds: se,
+              itemIds: oe,
               recoverable: !0
             }]
           }
         });
-      const le = _.filter((ge) => {
-        var xe;
-        return (xe = Y.items[ge]) == null ? void 0 : xe.locked;
+      const ue = _.filter((re) => {
+        var Ie;
+        return (Ie = Y.items[re]) == null ? void 0 : Ie.locked;
       });
-      if (le.length > 0 && n.type !== "section-row-expand")
-        return Ie(n, "blocked", {
+      if (ue.length > 0 && n.type !== "section-row-expand")
+        return xe(n, "blocked", {
           targetIds: _,
           blocked: {
             reason: "section-row-locked",
-            itemIds: St(Y, le),
+            itemIds: Mt(Y, ue),
             message: "Section/row command blocked by locked metadata."
           },
           diagnostics: {
@@ -3785,102 +3785,102 @@ const Ho = () => {
               code: "grid-editor.sectionRows.locked",
               level: "warning",
               message: "Section/row command blocked by locked metadata.",
-              itemIds: le,
+              itemIds: ue,
               recoverable: !0
             }]
           }
         });
-      const re = ct({
+      const ne = at({
         items: Y.items,
         itemMembership: Y.itemMembership
-      }), ue = St(Y, _);
+      }), fe = Mt(Y, _);
       let Be = v.value.selectedIds.slice(), Z = L.value;
-      const _e = U(g.cols) ? g.cols : 12, Ct = U(g.maxRows) ? g.maxRows : 1 / 0;
+      const Ye = U(g.cols) ? g.cols : 12, St = U(g.maxRows) ? g.maxRows : 1 / 0;
       if (n.type === "section-row-collapse" || n.type === "section-row-expand") {
-        const ge = n.type === "section-row-collapse";
-        _.forEach((xe) => {
-          re.items[xe] = { ...re.items[xe], collapsed: ge };
-        }), ge && (Be = Be.filter((xe) => !ue.includes(xe)), Z && ue.includes(Z) && (Z = Be[0] || null));
+        const re = n.type === "section-row-collapse";
+        _.forEach((Ie) => {
+          ne.items[Ie] = { ...ne.items[Ie], collapsed: re };
+        }), re && (Be = Be.filter((Ie) => !fe.includes(Ie)), Z && fe.includes(Z) && (Z = Be[0] || null));
       } else if (n.type === "section-row-reorder")
-        _.forEach((ge) => {
-          re.items[ge] = {
-            ...re.items[ge],
-            order: Wt(Y, X)
+        _.forEach((re) => {
+          ne.items[re] = {
+            ...ne.items[re],
+            order: _t(Y, K)
           };
         });
       else if (n.type === "section-row-move") {
-        const ge = U(X.dy) ? Math.floor(X.dy) : 0;
+        const re = U(K.dy) ? Math.floor(K.dy) : 0;
         H = H.map(
-          (je) => ue.includes(je.i) ? { ...je, y: Math.max(0, je.y + ge) } : je
+          (je) => fe.includes(je.i) ? { ...je, y: Math.max(0, je.y + re) } : je
         ), _.forEach((je) => {
-          const Ue = re.items[je];
-          re.items[je] = {
-            ...Ue,
-            bounds: Ue.bounds ? { ...Ue.bounds, y: Math.max(0, Ue.bounds.y + ge) } : Ue.bounds
+          const Qe = ne.items[je];
+          ne.items[je] = {
+            ...Qe,
+            bounds: Qe.bounds ? { ...Qe.bounds, y: Math.max(0, Qe.bounds.y + re) } : Qe.bounds
           };
         });
-        const xe = Ut(H, ue, _e, Ct);
-        if (!xe.ok)
-          return Ie(n, "blocked", {
+        const Ie = Yt(H, fe, Ye, St);
+        if (!Ie.ok)
+          return xe(n, "blocked", {
             targetIds: _,
             blocked: {
-              reason: xe.reason,
-              itemIds: xe.itemIds,
-              message: `Section/row move blocked by ${xe.reason}.`
+              reason: Ie.reason,
+              itemIds: Ie.itemIds,
+              message: `Section/row move blocked by ${Ie.reason}.`
             },
             diagnostics: {
               durationMs: 0,
               messages: [{
-                code: `grid-editor.sectionRows.move.${xe.reason}`,
+                code: `grid-editor.sectionRows.move.${Ie.reason}`,
                 level: "warning",
-                message: `Section/row move blocked by ${xe.reason}.`,
-                itemIds: xe.itemIds,
+                message: `Section/row move blocked by ${Ie.reason}.`,
+                itemIds: Ie.itemIds,
                 recoverable: !0
               }]
             }
           });
-      } else n.type === "section-row-delete" && (_.forEach((ge) => {
-        delete re.items[ge];
-      }), Object.keys(re.itemMembership || {}).forEach((ge) => {
-        var Ue, Tt;
-        const xe = ((Ue = re.itemMembership) == null ? void 0 : Ue[ge]) || {}, je = {
-          sectionId: xe.sectionId && _.includes(xe.sectionId) ? void 0 : xe.sectionId,
-          rowId: xe.rowId && _.includes(xe.rowId) ? void 0 : xe.rowId
+      } else n.type === "section-row-delete" && (_.forEach((re) => {
+        delete ne.items[re];
+      }), Object.keys(ne.itemMembership || {}).forEach((re) => {
+        var Qe, At;
+        const Ie = ((Qe = ne.itemMembership) == null ? void 0 : Qe[re]) || {}, je = {
+          sectionId: Ie.sectionId && _.includes(Ie.sectionId) ? void 0 : Ie.sectionId,
+          rowId: Ie.rowId && _.includes(Ie.rowId) ? void 0 : Ie.rowId
         };
-        !je.sectionId && !je.rowId ? (Tt = re.itemMembership) == null || delete Tt[ge] : re.itemMembership && (re.itemMembership[ge] = je);
-      }), X.deleteItems === !0 && (H = H.filter((ge) => !ue.includes(ge.i)), ue.forEach((ge) => {
-        u.value[ge] && P.push({ type: "remove", id: ge, previous: u.value[ge] });
-      }), Be = Be.filter((ge) => !ue.includes(ge)), Z && ue.includes(Z) && (Z = Be[0] || null)));
-      const go = He(re, H), tt = Nt(x, H), At = {
+        !je.sectionId && !je.rowId ? (At = ne.itemMembership) == null || delete At[re] : ne.itemMembership && (ne.itemMembership[re] = je);
+      }), K.deleteItems === !0 && (H = H.filter((re) => !fe.includes(re.i)), fe.forEach((re) => {
+        u.value[re] && P.push({ type: "remove", id: re, previous: u.value[re] });
+      }), Be = Be.filter((re) => !fe.includes(re)), Z && fe.includes(Z) && (Z = Be[0] || null)));
+      const Ut = Le(ne, H), mo = Ft(x, H), ns = {
         version: 1,
-        items: go.items,
-        itemMembership: go.itemMembership
-      }, Rt = ht(
+        items: Ut.items,
+        itemMembership: Ut.itemMembership
+      }, Je = ht(
         Ot(h.editorMetaById, P),
         H
-      ), Ae = Ve(
+      ), Ct = We(
         Ge(Be, "api"),
         H,
-        Rt,
+        Je,
         "api"
-      ), Dt = Array.from(/* @__PURE__ */ new Set([..._, ...ue]));
-      return nt(n, h, at(h, {
+      ), Rt = Array.from(/* @__PURE__ */ new Set([..._, ...fe]));
+      return rt(n, h, nt(h, {
         layout: H,
-        editorMetaById: Rt,
-        sectionRows: At,
-        selection: Ae,
+        editorMetaById: Je,
+        sectionRows: ns,
+        selection: Ct,
         focusId: Z
       }), {
         status: "changed",
         targetIds: _,
-        layoutPatches: tt,
+        layoutPatches: mo,
         metadataPatches: P,
-        affectedIds: Dt,
-        selection: Ae,
+        affectedIds: Rt,
+        selection: Ct,
         diagnostics: {
           durationMs: 0,
           computed: {
-            affectedIds: Dt,
+            affectedIds: Rt,
             sectionRowContext: {
               source: "metadata"
             }
@@ -3889,246 +3889,246 @@ const Ho = () => {
             code: `grid-editor.sectionRows.${n.type.replace("section-row-", "")}`,
             level: "info",
             message: `Section/row command ${n.type} applied.`,
-            itemIds: ue,
+            itemIds: fe,
             recoverable: !0
           }]
         }
       });
     }
     if (n.type === "select") {
-      const X = v.value, Y = Ms(x, v.value, {
+      const K = v.value, Y = Cs(x, v.value, {
         id: typeof g.id == "string" ? g.id : void 0,
-        ids: Array.isArray(g.ids) ? g.ids.filter((le) => typeof le == "string") : typeof g.id == "string" ? void 0 : l,
+        ids: Array.isArray(g.ids) ? g.ids.filter((ue) => typeof ue == "string") : typeof g.id == "string" ? void 0 : l,
         toggle: g.toggle === !0,
         range: g.range === !0,
         source: n.source === "keyboard" ? "keyboard" : n.source === "pointer" ? "pointer" : "api"
-      }), _ = Ve(
+      }), _ = We(
         Y,
         x,
         h.editorMetaById,
         Y.source
-      ), se = e.selectedIds ? X : _;
-      return nt(n, h, at(h, {
+      ), oe = e.selectedIds ? K : _;
+      return rt(n, h, nt(h, {
         selection: _,
         focusId: _.activeId
       }), {
-        status: Ke(X, se) ? "noop" : "changed",
-        targetIds: se.selectedIds,
-        selection: se
+        status: Ne(K, oe) ? "noop" : "changed",
+        targetIds: oe.selectedIds,
+        selection: oe
       });
     }
     if (n.type === "clearSelection") {
-      const X = v.value, Y = Ve(
+      const K = v.value, Y = We(
         Co("api"),
         x,
         h.editorMetaById,
         "api"
-      ), _ = e.selectedIds ? X : Y;
-      return nt(n, h, at(h, {
+      ), _ = e.selectedIds ? K : Y;
+      return rt(n, h, nt(h, {
         selection: Y,
         focusId: Y.activeId
       }), {
-        status: Ke(X, _) ? "noop" : "changed",
+        status: Ne(K, _) ? "noop" : "changed",
         selection: _
       });
     }
     if (n.type === "move") {
-      const X = U(g.dx) ? g.dx : null, Y = U(g.dy) ? g.dy : null, _ = U(g.x), se = U(g.y), le = Array.from(/* @__PURE__ */ new Set([...l, ...I])), re = v.value.activeId && l.includes(v.value.activeId) ? v.value.activeId : l[0], ue = re ? Pe(x, re) : void 0, Be = (((Gt = n.targetIds) == null ? void 0 : Gt.filter(Boolean).length) || 0) > 1, Z = !n.targetIds && v.value.selectedIds.length > 1 && (X !== null || Y !== null), _e = Be || Z, Ct = l.length === 1 && !Be && (_ || se);
-      if (l.length > 0 && !Ct && (l.length > 1 || _e)) {
-        const tt = X !== null ? X : _ && ue ? g.x - ue.x : 0, At = Y !== null ? Y : se && ue ? g.y - ue.y : 0, Rt = {
+      const K = U(g.dx) ? g.dx : null, Y = U(g.dy) ? g.dy : null, _ = U(g.x), oe = U(g.y), ue = Array.from(/* @__PURE__ */ new Set([...l, ...I])), ne = v.value.activeId && l.includes(v.value.activeId) ? v.value.activeId : l[0], fe = ne ? Pe(x, ne) : void 0, Be = (((Gt = n.targetIds) == null ? void 0 : Gt.filter(Boolean).length) || 0) > 1, Z = !n.targetIds && v.value.selectedIds.length > 1 && (K !== null || Y !== null), Ye = Be || Z, St = l.length === 1 && !Be && (_ || oe), Ut = l.length > 0 && !St && (l.length > 1 || Ye), mo = !!(e.layoutOperationRunner || pt(g));
+      if (Ut || l.length === 1 && mo && (K !== null || Y !== null || _ || oe)) {
+        const Je = K !== null ? K : _ && fe ? g.x - fe.x : 0, Ct = Y !== null ? Y : oe && fe ? g.y - fe.y : 0, Rt = {
           type: "groupMove",
           ids: l,
-          activeId: re,
-          dx: tt,
-          dy: At,
+          activeId: ne,
+          dx: Je,
+          dy: Ct,
           userAction: n.source !== "api"
-        }, Ae = await N(n, x, Rt, g);
-        if (B = {
-          durationMs: 0,
-          layoutDiagnostics: Ae.diagnostics,
-          operationResult: Ae
-        }, Ae.status === "blocked") {
-          const Tt = js((zt = Ae.blocked) == null ? void 0 : zt.reason);
-          return Ie(n, "blocked", {
-            targetIds: le,
-            blocked: {
-              reason: Tt,
-              itemIds: ((Wo = Ae.blocked) == null ? void 0 : Wo.itemIds) || le,
-              skippedIds: I.length > 0 ? I : void 0,
-              message: `Move command blocked by ${Tt}.`
-            },
-            diagnostics: B
-          });
-        }
-        if (Ae.status === "error")
-          return Ie(n, "error", {
-            targetIds: le,
-            diagnostics: B,
-            error: Ae.error || { message: "Layout operation failed." }
-          });
-        const Dt = Ae.patches, ge = Ae.affectedIds, xe = Dt.length > 0 || Ae.status === "changed" || Ae.status === "fallback" ? "changed" : "noop", je = ht(
-          Ot(h.editorMetaById, P),
-          Ae.layout
-        ), Ue = Ve(
-          h.selection,
-          Ae.layout,
-          je,
-          "api"
-        );
-        return nt(n, h, at(h, {
-          layout: Ae.layout,
-          editorMetaById: je,
-          selection: Ue,
-          focusId: Ue.activeId
-        }), {
-          status: xe,
-          targetIds: le,
-          layoutPatches: Dt,
-          metadataPatches: P,
-          affectedIds: ge,
-          selection: Ue,
-          blocked: I.length > 0 ? { reason: "capability", skippedIds: I, itemIds: I } : void 0,
-          diagnostics: B
-        });
-      }
-      H = H.map((tt) => {
-        if (!l.includes(tt.i)) return tt;
-        const At = l.length === 1 && _ ? g.x : tt.x + (X || 0), Rt = l.length === 1 && se ? g.y : tt.y + (Y || 0);
-        return { ...tt, x: Math.max(0, Math.floor(At)), y: Math.max(0, Math.floor(Rt)) };
-      });
-    } else if (n.type === "resize") {
-      const X = l[0], Y = X ? Pe(H, X) : void 0, _ = X ? ee(X) : void 0;
-      if (Y && _) {
-        const se = U(g.w) ? g.w : Y.w + (U(g.dw) ? g.dw : 0), le = U(g.h) ? g.h : Y.h + (U(g.dh) ? g.dh : 0), re = await N(n, x, {
-          type: "resize",
-          id: X,
-          x: U(g.x) ? Math.max(0, Math.floor(g.x)) : void 0,
-          y: U(g.y) ? Math.max(0, Math.floor(g.y)) : void 0,
-          w: Ne(se, Y.w),
-          h: Ne(le, Y.h),
-          handle: Fs(g.handle) ? g.handle : "se",
-          constraint: _
-        }, g);
+        }, re = await N(n, x, Rt, g);
         if (B = {
           durationMs: 0,
           layoutDiagnostics: re.diagnostics,
           operationResult: re
         }, re.status === "blocked") {
-          const ue = js((qo = re.blocked) == null ? void 0 : qo.reason);
-          return Ie(n, "blocked", {
-            targetIds: l,
+          const as = Ks((zt = re.blocked) == null ? void 0 : zt.reason);
+          return xe(n, "blocked", {
+            targetIds: ue,
             blocked: {
-              reason: ue,
-              itemIds: ((Vo = re.blocked) == null ? void 0 : Vo.itemIds) || l,
-              message: `Resize command blocked by ${ue}.`
+              reason: as,
+              itemIds: ((Wo = re.blocked) == null ? void 0 : Wo.itemIds) || ue,
+              skippedIds: I.length > 0 ? I : void 0,
+              message: `Move command blocked by ${as}.`
             },
             diagnostics: B
           });
         }
         if (re.status === "error")
-          return Ie(n, "error", {
-            targetIds: l,
+          return xe(n, "error", {
+            targetIds: ue,
             diagnostics: B,
             error: re.error || { message: "Layout operation failed." }
           });
-        H = re.layout;
+        const Ie = re.patches, je = re.affectedIds, Qe = Ie.length > 0 || re.status === "changed" || re.status === "fallback" ? "changed" : "noop", At = ht(
+          Ot(h.editorMetaById, P),
+          re.layout
+        ), go = We(
+          h.selection,
+          re.layout,
+          At,
+          "api"
+        );
+        return rt(n, h, nt(h, {
+          layout: re.layout,
+          editorMetaById: At,
+          selection: go,
+          focusId: go.activeId
+        }), {
+          status: Qe,
+          targetIds: ue,
+          layoutPatches: Ie,
+          metadataPatches: P,
+          affectedIds: je,
+          selection: go,
+          blocked: I.length > 0 ? { reason: "capability", skippedIds: I, itemIds: I } : void 0,
+          diagnostics: B
+        });
+      }
+      H = H.map((Je) => {
+        if (!l.includes(Je.i)) return Je;
+        const Ct = l.length === 1 && _ ? g.x : Je.x + (K || 0), Rt = l.length === 1 && oe ? g.y : Je.y + (Y || 0);
+        return { ...Je, x: Math.max(0, Math.floor(Ct)), y: Math.max(0, Math.floor(Rt)) };
+      });
+    } else if (n.type === "resize") {
+      const K = l[0], Y = K ? Pe(H, K) : void 0, _ = K ? ee(K) : void 0;
+      if (Y && _) {
+        const oe = U(g.w) ? g.w : Y.w + (U(g.dw) ? g.dw : 0), ue = U(g.h) ? g.h : Y.h + (U(g.dh) ? g.dh : 0), ne = await N(n, x, {
+          type: "resize",
+          id: K,
+          x: U(g.x) ? Math.max(0, Math.floor(g.x)) : void 0,
+          y: U(g.y) ? Math.max(0, Math.floor(g.y)) : void 0,
+          w: Fe(oe, Y.w),
+          h: Fe(ue, Y.h),
+          handle: Ns(g.handle) ? g.handle : "se",
+          constraint: _
+        }, g);
+        if (B = {
+          durationMs: 0,
+          layoutDiagnostics: ne.diagnostics,
+          operationResult: ne
+        }, ne.status === "blocked") {
+          const fe = Ks((qo = ne.blocked) == null ? void 0 : qo.reason);
+          return xe(n, "blocked", {
+            targetIds: l,
+            blocked: {
+              reason: fe,
+              itemIds: ((Vo = ne.blocked) == null ? void 0 : Vo.itemIds) || l,
+              message: `Resize command blocked by ${fe}.`
+            },
+            diagnostics: B
+          });
+        }
+        if (ne.status === "error")
+          return xe(n, "error", {
+            targetIds: l,
+            diagnostics: B,
+            error: ne.error || { message: "Layout operation failed." }
+          });
+        H = ne.layout;
       } else
-        H = H.map((se) => {
-          if (se.i !== X) return se;
-          const le = U(g.w) ? g.w : se.w + (U(g.dw) ? g.dw : 0), re = U(g.h) ? g.h : se.h + (U(g.dh) ? g.dh : 0);
+        H = H.map((oe) => {
+          if (oe.i !== K) return oe;
+          const ue = U(g.w) ? g.w : oe.w + (U(g.dw) ? g.dw : 0), ne = U(g.h) ? g.h : oe.h + (U(g.dh) ? g.dh : 0);
           return {
-            ...se,
-            x: U(g.x) ? Math.max(0, Math.floor(g.x)) : se.x,
-            y: U(g.y) ? Math.max(0, Math.floor(g.y)) : se.y,
-            w: Ne(le, se.w),
-            h: Ne(re, se.h)
+            ...oe,
+            x: U(g.x) ? Math.max(0, Math.floor(g.x)) : oe.x,
+            y: U(g.y) ? Math.max(0, Math.floor(g.y)) : oe.y,
+            w: Fe(ue, oe.w),
+            h: Fe(ne, oe.h)
           };
         });
     } else if (n.type === "align") {
-      const X = U(g.cols) ? g.cols : 12, Y = U(g.maxRows) ? g.maxRows : 1 / 0, _ = $s(x, g, {
+      const K = U(g.cols) ? g.cols : 12, Y = U(g.maxRows) ? g.maxRows : 1 / 0, _ = zs(x, g, {
         targetIds: l,
         selectedIds: v.value.selectedIds,
         activeId: v.value.activeId,
         metaById: u.value,
         sectionRows: m.value,
-        cols: X,
+        cols: K,
         maxRows: Y,
         skippedIds: I
       });
       if (B = _.diagnostics, _.status === "blocked")
-        return Ie(n, "blocked", {
+        return xe(n, "blocked", {
           targetIds: l,
           blocked: _.blocked,
           diagnostics: B
         });
       H = _.layout;
     } else if (n.type === "distribute" || n.type === "tidy") {
-      const X = U(g.cols) ? g.cols : 12, Y = U(g.maxRows) ? g.maxRows : 1 / 0, _ = n.type === "distribute" ? Gs(x, g, {
+      const K = U(g.cols) ? g.cols : 12, Y = U(g.maxRows) ? g.maxRows : 1 / 0, _ = n.type === "distribute" ? As(x, g, {
         targetIds: l,
         selectedIds: v.value.selectedIds,
         activeId: v.value.activeId,
         metaById: u.value,
         sectionRows: m.value,
-        cols: X,
+        cols: K,
         maxRows: Y,
         skippedIds: I
-      }) : zs(x, g, {
+      }) : Os(x, g, {
         targetIds: l,
         selectedIds: v.value.selectedIds,
         activeId: v.value.activeId,
         metaById: u.value,
         sectionRows: m.value,
-        cols: X,
+        cols: K,
         maxRows: Y,
         skippedIds: I
       });
       if (B = _.diagnostics, _.status === "blocked")
-        return Ie(n, "blocked", {
+        return xe(n, "blocked", {
           targetIds: l,
           blocked: _.blocked,
           diagnostics: B
         });
       H = _.layout;
     } else if (n.type === "add") {
-      const X = Array.isArray(g.items) ? g.items : g.item ? [g.item] : [], Y = new Set(H.map((ue) => ue.i)), _ = e.idGenerator || dt, se = X.filter((ue) => ue && typeof ue == "object").map((ue, Be) => {
-        const Z = ue, _e = typeof Z.i == "string" && !Y.has(Z.i) ? Z.i : _(typeof Z.i == "string" ? Z.i : `item-${Be + 1}`, Y);
-        return Y.add(_e), {
+      const K = Array.isArray(g.items) ? g.items : g.item ? [g.item] : [], Y = new Set(H.map((fe) => fe.i)), _ = e.idGenerator || ct, oe = K.filter((fe) => fe && typeof fe == "object").map((fe, Be) => {
+        const Z = fe, Ye = typeof Z.i == "string" && !Y.has(Z.i) ? Z.i : _(typeof Z.i == "string" ? Z.i : `item-${Be + 1}`, Y);
+        return Y.add(Ye), {
           ...Z,
-          i: _e,
+          i: Ye,
           x: U(Z.x) ? Z.x : 0,
           y: U(Z.y) ? Z.y : 0,
-          w: Ne(Z.w, 1),
-          h: Ne(Z.h, 1)
+          w: Fe(Z.w, 1),
+          h: Fe(Z.h, 1)
         };
-      }), le = xt(H, se, String(g.strategy || "first-fit"), g);
-      if (B = ye(le, g), le.failed)
-        return Ie(n, "blocked", {
-          targetIds: le.summary.insertedIds,
+      }), ue = xt(H, oe, String(g.strategy || "first-fit"), g);
+      if (B = pe(ue, g), ue.failed)
+        return xe(n, "blocked", {
+          targetIds: ue.summary.insertedIds,
           blocked: {
-            reason: ((Zo = le.blocked) == null ? void 0 : Zo.reason) || "bounds",
-            itemIds: (Jo = le.blocked) == null ? void 0 : Jo.itemIds,
-            message: ((Qo = le.blocked) == null ? void 0 : Qo.message) || "One or more items could not fit in the current layout."
+            reason: ((Zo = ue.blocked) == null ? void 0 : Zo.reason) || "bounds",
+            itemIds: (Jo = ue.blocked) == null ? void 0 : Jo.itemIds,
+            message: ((Qo = ue.blocked) == null ? void 0 : Qo.message) || "One or more items could not fit in the current layout."
           },
           diagnostics: B
         });
-      const re = Me(g.editorMetaById, { layout: se });
-      Object.keys(re).forEach((ue) => {
-        se.some((Be) => Be.i === ue) && P.push({ type: "set", id: ue, next: re[ue] });
-      }), H = le.layout;
+      const ne = Me(g.editorMetaById, { layout: oe });
+      Object.keys(ne).forEach((fe) => {
+        oe.some((Be) => Be.i === fe) && P.push({ type: "set", id: fe, next: ne[fe] });
+      }), H = ue.layout;
     } else if (n.type === "delete") {
-      const X = new Set(l);
-      H = H.filter((Y) => !X.has(Y.i)), l.forEach((Y) => {
+      const K = new Set(l);
+      H = H.filter((Y) => !K.has(Y.i)), l.forEach((Y) => {
         u.value[Y] && P.push({ type: "remove", id: Y, previous: u.value[Y] });
-      }), j = Ss(H, l, u.value);
+      }), j = Rs(H, l, u.value);
     } else if (n.type === "duplicate") {
-      const X = l.map((se) => Pe(x, se)).filter(Boolean), Y = Ht(
-        X,
+      const K = l.map((oe) => Pe(x, oe)).filter(Boolean), Y = Tt(
+        K,
         u.value,
-        new Set(x.map((se) => se.i)),
-        e.idGenerator || dt
+        new Set(x.map((oe) => oe.i)),
+        e.idGenerator || ct
       );
-      Object.keys(Y.metaById).forEach((se) => {
-        P.push({ type: "set", id: se, next: Y.metaById[se] });
+      Object.keys(Y.metaById).forEach((oe) => {
+        P.push({ type: "set", id: oe, next: Y.metaById[oe] });
       });
       const _ = xt(
         H,
@@ -4136,8 +4136,8 @@ const Ho = () => {
         String(g.strategy || e.pasteStrategy || "offset"),
         g
       );
-      if (B = ye(_, g), _.failed)
-        return Ie(n, "blocked", {
+      if (B = pe(_, g), _.failed)
+        return xe(n, "blocked", {
           targetIds: l,
           blocked: {
             reason: ((es = _.blocked) == null ? void 0 : es.reason) || "bounds",
@@ -4146,121 +4146,121 @@ const Ho = () => {
           },
           diagnostics: B
         });
-      H = _.layout, be = Ge(Y.items.map((se) => se.i), "api"), j = be.activeId;
+      H = _.layout, be = Ge(Y.items.map((oe) => oe.i), "api"), j = be.activeId;
     } else if (n.type === "copy") {
-      const X = l.map((Y) => Pe(x, Y)).filter(Boolean);
-      return await ne(Se(), _r({
+      const K = l.map((Y) => Pe(x, Y)).filter(Boolean);
+      return await ae(Se(), Wr({
         sourceId: n.id,
-        items: X,
-        editorMetaById: Me(u.value, { layout: X }),
+        items: K,
+        editorMetaById: Me(u.value, { layout: K }),
         source: $(g)
-      })), Ie(n, "changed", {
+      })), xe(n, "changed", {
         targetIds: l,
         affectedIds: l
       });
     } else if (n.type === "paste") {
-      const X = g.resolvedClipboardPayload && typeof g.resolvedClipboardPayload == "object" ? g.resolvedClipboardPayload : null, Y = X ? {
-        items: de(Array.isArray(X.items) ? X.items : []),
-        editorMetaById: Me(X.editorMetaById),
-        sourceId: typeof X.sourceId == "string" ? X.sourceId : n.id,
+      const K = g.resolvedClipboardPayload && typeof g.resolvedClipboardPayload == "object" ? g.resolvedClipboardPayload : null, Y = K ? {
+        items: le(Array.isArray(K.items) ? K.items : []),
+        editorMetaById: Me(K.editorMetaById),
+        sourceId: typeof K.sourceId == "string" ? K.sourceId : n.id,
         copiedAt: (/* @__PURE__ */ new Date()).toISOString(),
         version: 2,
-        source: X.source,
-        originalGeometryById: X.originalGeometryById
-      } : await oe(Se());
+        source: K.source,
+        originalGeometryById: K.originalGeometryById
+      } : await se(Se());
       if (!Y)
-        return Ie(n, "blocked", {
+        return xe(n, "blocked", {
           blocked: {
             reason: "clipboard-unavailable",
             message: "Clipboard is empty or unavailable."
           }
         });
-      const _ = (X == null ? void 0 : X.mapped) === !0 ? {
-        items: de(Y.items)
+      const _ = (K == null ? void 0 : K.mapped) === !0 ? {
+        items: le(Y.items)
       } : Io(Y, {
         cols: b(g)
-      }), se = (X == null ? void 0 : X.mapped) === !0 ? {
-        items: de(_.items),
+      }), oe = (K == null ? void 0 : K.mapped) === !0 ? {
+        items: le(_.items),
         metaById: Me(Y.editorMetaById, {
           layout: _.items
         })
-      } : Ht(
+      } : Tt(
         _.items,
         Y.editorMetaById,
-        new Set(x.map((re) => re.i)),
-        e.idGenerator || dt
+        new Set(x.map((ne) => ne.i)),
+        e.idGenerator || ct
       );
-      Object.keys(se.metaById).forEach((re) => {
-        P.push({ type: "set", id: re, next: se.metaById[re] });
+      Object.keys(oe.metaById).forEach((ne) => {
+        P.push({ type: "set", id: ne, next: oe.metaById[ne] });
       });
-      const le = xt(
+      const ue = xt(
         H,
-        se.items,
+        oe.items,
         String(g.strategy || e.pasteStrategy || "offset"),
         g
       );
-      if (B = ye(le, g), le.failed)
-        return Ie(n, "blocked", {
+      if (B = pe(ue, g), ue.failed)
+        return xe(n, "blocked", {
           blocked: {
-            reason: ((ss = le.blocked) == null ? void 0 : ss.reason) || "bounds",
-            itemIds: (is = le.blocked) == null ? void 0 : is.itemIds,
-            message: ((rs = le.blocked) == null ? void 0 : rs.message) || "Clipboard items could not fit in the current layout."
+            reason: ((ss = ue.blocked) == null ? void 0 : ss.reason) || "bounds",
+            itemIds: (is = ue.blocked) == null ? void 0 : is.itemIds,
+            message: ((rs = ue.blocked) == null ? void 0 : rs.message) || "Clipboard items could not fit in the current layout."
           },
           diagnostics: B
         });
-      H = le.layout, be = Ge(se.items.map((re) => re.i), "api"), j = be.activeId;
-    } else fs(n.type) && l.forEach((X) => {
-      const Y = n.type === "lock" ? { locked: !0 } : n.type === "unlock" ? { locked: !1 } : n.type === "show" ? { visible: !0 } : { visible: !1 }, _ = ys(u.value, X, Y);
+      H = ue.layout, be = Ge(oe.items.map((ne) => ne.i), "api"), j = be.activeId;
+    } else ps(n.type) && l.forEach((K) => {
+      const Y = n.type === "lock" ? { locked: !0 } : n.type === "unlock" ? { locked: !1 } : n.type === "show" ? { visible: !0 } : { visible: !1 }, _ = ms(u.value, K, Y);
       _.patch && P.push(_.patch);
     });
-    const fe = Nt(x, H), D = ht(
+    const ye = Ft(x, H), O = ht(
       Ot(h.editorMetaById, P),
       H
-    ), Q = Ve(
+    ), Q = We(
       be,
       H,
-      D,
+      O,
       be.source
-    ), pe = j !== h.focusId ? j : Q.activeId, ce = wo(fe, P), ke = ce.length > 0 ? "changed" : "noop";
-    return nt(n, h, at(h, {
+    ), me = j !== h.focusId ? j : Q.activeId, de = wo(ye, P), ke = de.length > 0 ? "changed" : "noop";
+    return rt(n, h, nt(h, {
       layout: H,
-      editorMetaById: D,
+      editorMetaById: O,
       selection: Q,
-      focusId: pe
+      focusId: me
     }), {
       status: ke,
       targetIds: l.length > 0 ? l : n.targetIds,
-      layoutPatches: fe,
+      layoutPatches: ye,
       metadataPatches: P,
-      affectedIds: ce,
+      affectedIds: de,
       selection: e.selectedIds ? h.selection : Q,
       blocked: I.length > 0 ? { reason: "capability", skippedIds: I, itemIds: I } : void 0,
       diagnostics: B
     });
-  }, mi = (n, l) => n.kind === "responsive" ? {
+  }, hi = (n, l) => n.kind === "responsive" ? {
     ...n,
     layouts: {
-      ...io(n.layouts),
-      [n.breakpoint]: de(l)
+      ...so(n.layouts),
+      [n.breakpoint]: le(l)
     }
   } : {
     ...n,
-    layout: de(l)
-  }, at = (n, l) => ({
-    ...l.layout ? mi(n, l.layout) : n,
+    layout: le(l)
+  }, nt = (n, l) => ({
+    ...l.layout ? hi(n, l.layout) : n,
     editorMetaById: l.editorMetaById ? Bt(l.editorMetaById) : Bt(n.editorMetaById),
-    sectionRows: l.sectionRows ? ct(l.sectionRows) : ct(n.sectionRows),
-    selection: l.selection ? Ze(l.selection) : Ze(n.selection),
+    sectionRows: l.sectionRows ? at(l.sectionRows) : at(n.sectionRows),
+    selection: l.selection ? qe(l.selection) : qe(n.selection),
     focusId: l.focusId !== void 0 ? l.focusId : n.focusId
   }), jo = (n) => {
-    const l = Qt(n), I = l.candidateLayout || l.placementCandidateLayout || l.afterLayout || l.layout;
-    return Array.isArray(I) ? de(I.filter(
+    const l = Jt(n), I = l.candidateLayout || l.placementCandidateLayout || l.afterLayout || l.layout;
+    return Array.isArray(I) ? le(I.filter(
       (h) => !!h && typeof h == "object" && typeof h.i == "string"
     )) : null;
-  }, gi = (n, l, I) => {
-    const h = Qt(n);
-    let x = jo(n), g = Bt(I.editorMetaById), P = ct(I.sectionRows), B = Ze(I.selection), H = I.focusId;
-    const be = n.type === "delete" || n.type === "section-row-delete" ? "destructive" : cs(n.type) ? "persistence" : n.source === "external" || n.source === "remote" ? "external" : "normal";
+  }, vi = (n, l, I) => {
+    const h = Jt(n);
+    let x = jo(n), g = Bt(I.editorMetaById), P = at(I.sectionRows), B = qe(I.selection), H = I.focusId;
+    const be = n.type === "delete" || n.type === "section-row-delete" ? "destructive" : ls(n.type) ? "persistence" : n.source === "external" || n.source === "remote" ? "external" : "normal";
     if (!x && n.type === "delete") {
       const j = new Set(l);
       x = E().filter((V) => !j.has(V.i)), l.forEach((V) => {
@@ -4268,20 +4268,20 @@ const Ho = () => {
       }), B = Ge(
         B.selectedIds.filter((V) => !j.has(V)),
         n.source === "keyboard" ? "keyboard" : n.source === "pointer" ? "pointer" : "api"
-      ), H = Ss(x, l, g);
+      ), H = Rs(x, l, g);
     }
     if (!x && n.type === "move") {
-      const j = U(h.dx) ? h.dx : null, V = U(h.dy) ? h.dy : null, te = U(h.x), fe = U(h.y);
-      (j !== null || V !== null || te || fe) && (x = E().map((D) => l.includes(D.i) ? {
-        ...D,
-        x: te && l.length === 1 ? Math.max(0, Math.floor(h.x)) : Math.max(0, Math.floor(D.x + (j || 0))),
-        y: fe && l.length === 1 ? Math.max(0, Math.floor(h.y)) : Math.max(0, Math.floor(D.y + (V || 0)))
-      } : D));
+      const j = U(h.dx) ? h.dx : null, V = U(h.dy) ? h.dy : null, te = U(h.x), ye = U(h.y);
+      (j !== null || V !== null || te || ye) && (x = E().map((O) => l.includes(O.i) ? {
+        ...O,
+        x: te && l.length === 1 ? Math.max(0, Math.floor(h.x)) : Math.max(0, Math.floor(O.x + (j || 0))),
+        y: ye && l.length === 1 ? Math.max(0, Math.floor(h.y)) : Math.max(0, Math.floor(O.y + (V || 0)))
+      } : O));
     }
     if (!x && n.type === "resize") {
-      const j = E(), V = l[0], te = V ? Pe(j, V) : void 0, fe = V ? ee(V) : void 0, D = fe ? Mt(h) : null;
-      if (te && fe && D) {
-        const Q = U(h.w) ? h.w : te.w + (U(h.dw) ? h.dw : 0), pe = U(h.h) ? h.h : te.h + (U(h.dh) ? h.dh : 0), ce = ko({
+      const j = E(), V = l[0], te = V ? Pe(j, V) : void 0, ye = V ? ee(V) : void 0, O = ye ? pt(h) : null;
+      if (te && ye && O) {
+        const Q = U(h.w) ? h.w : te.w + (U(h.dw) ? h.dw : 0), me = U(h.h) ? h.h : te.h + (U(h.dh) ? h.dh : 0), de = ko({
           id: `${n.id}:preview-layout`,
           phase: "preview",
           layout: j,
@@ -4290,50 +4290,50 @@ const Ho = () => {
             id: V,
             x: U(h.x) ? Math.max(0, Math.floor(h.x)) : void 0,
             y: U(h.y) ? Math.max(0, Math.floor(h.y)) : void 0,
-            w: Ne(Q, te.w),
-            h: Ne(pe, te.h),
-            handle: Fs(h.handle) ? h.handle : "se",
-            constraint: fe
+            w: Fe(Q, te.w),
+            h: Fe(me, te.h),
+            handle: Ns(h.handle) ? h.handle : "se",
+            constraint: ye
           },
-          options: D
+          options: O
         });
-        x = ce.status === "blocked" || ce.status === "error" ? j : ce.layout;
+        x = de.status === "blocked" || de.status === "error" ? j : de.layout;
       } else
         x = j.map((Q) => {
           if (Q.i !== V) return Q;
-          const pe = U(h.w) ? h.w : Q.w + (U(h.dw) ? h.dw : 0), ce = U(h.h) ? h.h : Q.h + (U(h.dh) ? h.dh : 0);
+          const me = U(h.w) ? h.w : Q.w + (U(h.dw) ? h.dw : 0), de = U(h.h) ? h.h : Q.h + (U(h.dh) ? h.dh : 0);
           return {
             ...Q,
             x: U(h.x) ? Math.max(0, Math.floor(h.x)) : Q.x,
             y: U(h.y) ? Math.max(0, Math.floor(h.y)) : Q.y,
-            w: Ne(pe, Q.w),
-            h: Ne(ce, Q.h)
+            w: Fe(me, Q.w),
+            h: Fe(de, Q.h)
           };
         });
     }
     if (!x && n.type === "add") {
-      const j = Array.isArray(h.items) ? h.items : h.item ? [h.item] : [], V = new Set(E().map((D) => D.i)), te = e.idGenerator || dt, fe = j.filter((D) => D && typeof D == "object").map((D, Q) => {
-        const pe = D, ce = typeof pe.i == "string" && !V.has(pe.i) ? pe.i : te(typeof pe.i == "string" ? pe.i : `item-${Q + 1}`, V);
-        return V.add(ce), {
-          ...pe,
-          i: ce,
-          x: U(pe.x) ? pe.x : 0,
-          y: U(pe.y) ? pe.y : 0,
-          w: Ne(pe.w, 1),
-          h: Ne(pe.h, 1)
+      const j = Array.isArray(h.items) ? h.items : h.item ? [h.item] : [], V = new Set(E().map((O) => O.i)), te = e.idGenerator || ct, ye = j.filter((O) => O && typeof O == "object").map((O, Q) => {
+        const me = O, de = typeof me.i == "string" && !V.has(me.i) ? me.i : te(typeof me.i == "string" ? me.i : `item-${Q + 1}`, V);
+        return V.add(de), {
+          ...me,
+          i: de,
+          x: U(me.x) ? me.x : 0,
+          y: U(me.y) ? me.y : 0,
+          w: Fe(me.w, 1),
+          h: Fe(me.h, 1)
         };
       });
-      if (fe.length > 0) {
-        const D = xt(
+      if (ye.length > 0) {
+        const O = xt(
           E(),
-          fe,
+          ye,
           String(h.strategy || "first-fit"),
           h
         );
-        D.failed || (x = D.layout, g = {
+        O.failed || (x = O.layout, g = {
           ...g,
-          ...Me(h.editorMetaById, { layout: fe })
-        }, B = Ge(fe.map((Q) => Q.i), "api"), H = B.activeId);
+          ...Me(h.editorMetaById, { layout: ye })
+        }, B = Ge(ye.map((Q) => Q.i), "api"), H = B.activeId);
       }
     }
     if (!x && n.type === "paste") {
@@ -4343,47 +4343,47 @@ const Ho = () => {
           version: 2,
           sourceId: typeof j.sourceId == "string" ? j.sourceId : n.id,
           copiedAt: (/* @__PURE__ */ new Date()).toISOString(),
-          items: de(j.items),
+          items: le(j.items),
           editorMetaById: Me(j.editorMetaById),
           source: j.source,
           originalGeometryById: j.originalGeometryById
-        }, te = j.mapped === !0 ? de(V.items) : Io(V, {
+        }, te = j.mapped === !0 ? le(V.items) : Io(V, {
           cols: b(h)
-        }).items, fe = j.mapped === !0 ? {
+        }).items, ye = j.mapped === !0 ? {
           items: te,
           metaById: Me(j.editorMetaById, {
             layout: te
           })
-        } : Ht(
+        } : Tt(
           te,
           Me(j.editorMetaById),
           new Set(E().map((Q) => Q.i)),
-          e.idGenerator || dt
-        ), D = xt(
+          e.idGenerator || ct
+        ), O = xt(
           E(),
-          fe.items,
+          ye.items,
           String(h.strategy || e.pasteStrategy || "offset"),
           h
         );
-        D.failed || (x = D.layout, g = { ...g, ...fe.metaById }, B = Ge(fe.items.map((Q) => Q.i), "api"), H = B.activeId);
+        O.failed || (x = O.layout, g = { ...g, ...ye.metaById }, B = Ge(ye.items.map((Q) => Q.i), "api"), H = B.activeId);
       }
     }
     if (!x && n.type === "duplicate") {
-      const j = l.map((fe) => Pe(E(), fe)).filter(Boolean), V = Ht(
+      const j = l.map((ye) => Pe(E(), ye)).filter(Boolean), V = Tt(
         j,
         g,
-        new Set(E().map((fe) => fe.i)),
-        e.idGenerator || dt
+        new Set(E().map((ye) => ye.i)),
+        e.idGenerator || ct
       ), te = xt(
         E(),
         V.items,
         String(h.strategy || e.pasteStrategy || "offset"),
         h
       );
-      te.failed || (x = te.layout, g = { ...g, ...V.metaById }, B = Ge(V.items.map((fe) => fe.i), "api"), H = B.activeId);
+      te.failed || (x = te.layout, g = { ...g, ...V.metaById }, B = Ge(V.items.map((ye) => ye.i), "api"), H = B.activeId);
     }
     if (!x && n.type === "align") {
-      const j = $s(E(), h, {
+      const j = zs(E(), h, {
         targetIds: l,
         selectedIds: v.value.selectedIds,
         activeId: v.value.activeId,
@@ -4395,7 +4395,7 @@ const Ho = () => {
       j.status !== "blocked" && (x = j.layout);
     }
     if (!x && (n.type === "distribute" || n.type === "tidy")) {
-      const j = n.type === "distribute" ? Gs(E(), h, {
+      const j = n.type === "distribute" ? As(E(), h, {
         targetIds: l,
         selectedIds: v.value.selectedIds,
         activeId: v.value.activeId,
@@ -4403,7 +4403,7 @@ const Ho = () => {
         sectionRows: m.value,
         cols: U(h.cols) ? h.cols : 12,
         maxRows: U(h.maxRows) ? h.maxRows : 1 / 0
-      }) : zs(E(), h, {
+      }) : Os(E(), h, {
         targetIds: l,
         selectedIds: v.value.selectedIds,
         activeId: v.value.activeId,
@@ -4414,72 +4414,72 @@ const Ho = () => {
       });
       j.status !== "blocked" && (x = j.layout);
     }
-    if (fs(n.type) && l.forEach((j) => {
-      const V = n.type === "lock" ? { locked: !0 } : n.type === "unlock" ? { locked: !1 } : n.type === "show" ? { visible: !0 } : { visible: !1 }, te = ys(g, j, V);
+    if (ps(n.type) && l.forEach((j) => {
+      const V = n.type === "lock" ? { locked: !0 } : n.type === "unlock" ? { locked: !1 } : n.type === "show" ? { visible: !0 } : { visible: !1 }, te = ms(g, j, V);
       te.patch && (g = Ot(g, [te.patch]));
-    }), n.type === "select" ? (B = Ms(E(), v.value, {
+    }), n.type === "select" ? (B = Cs(E(), v.value, {
       id: typeof h.id == "string" ? h.id : void 0,
       ids: Array.isArray(h.ids) ? h.ids.filter((j) => typeof j == "string") : typeof h.id == "string" ? void 0 : l,
       toggle: h.toggle === !0,
       range: h.range === !0,
       source: n.source === "keyboard" ? "keyboard" : n.source === "pointer" ? "pointer" : "api"
-    }), H = B.activeId) : n.type === "clearSelection" && (B = Co("api"), H = null), us(n.type)) {
-      const j = h, V = He(P, E()), te = l.length > 0 ? l : j.id ? [j.id] : [];
-      if (te.filter((D) => !V.items[D]).length === 0) {
-        const D = ct({
+    }), H = B.activeId) : n.type === "clearSelection" && (B = Co("api"), H = null), ys(n.type)) {
+      const j = h, V = Le(P, E()), te = l.length > 0 ? l : j.id ? [j.id] : [];
+      if (te.filter((O) => !V.items[O]).length === 0) {
+        const O = at({
           items: V.items,
           itemMembership: V.itemMembership
-        }), Q = St(V, te);
+        }), Q = Mt(V, te);
         if (n.type === "section-row-collapse" || n.type === "section-row-expand") {
-          const ce = n.type === "section-row-collapse";
+          const de = n.type === "section-row-collapse";
           te.forEach((ke) => {
-            D.items[ke] = { ...D.items[ke], collapsed: ce };
-          }), ce && (B = Ge(
+            O.items[ke] = { ...O.items[ke], collapsed: de };
+          }), de && (B = Ge(
             B.selectedIds.filter((ke) => !Q.includes(ke)),
             "api"
           ), H = B.activeId);
         } else if (n.type === "section-row-reorder")
-          te.forEach((ce) => {
-            D.items[ce] = {
-              ...D.items[ce],
-              order: Wt(V, j)
+          te.forEach((de) => {
+            O.items[de] = {
+              ...O.items[de],
+              order: _t(V, j)
             };
           });
         else if (n.type === "section-row-move") {
-          const ce = U(j.dy) ? Math.floor(j.dy) : 0;
+          const de = U(j.dy) ? Math.floor(j.dy) : 0;
           x = (x || E()).map(
-            (ke) => Q.includes(ke.i) ? { ...ke, y: Math.max(0, ke.y + ce) } : ke
+            (ke) => Q.includes(ke.i) ? { ...ke, y: Math.max(0, ke.y + de) } : ke
           ), te.forEach((ke) => {
-            const Re = D.items[ke];
-            D.items[ke] = {
+            const Re = O.items[ke];
+            O.items[ke] = {
               ...Re,
-              bounds: Re.bounds ? { ...Re.bounds, y: Math.max(0, Re.bounds.y + ce) } : Re.bounds
+              bounds: Re.bounds ? { ...Re.bounds, y: Math.max(0, Re.bounds.y + de) } : Re.bounds
             };
           });
-        } else n.type === "section-row-delete" && (te.forEach((ce) => {
-          delete D.items[ce];
-        }), Object.keys(D.itemMembership || {}).forEach((ce) => {
+        } else n.type === "section-row-delete" && (te.forEach((de) => {
+          delete O.items[de];
+        }), Object.keys(O.itemMembership || {}).forEach((de) => {
           var Gt, zt;
-          const ke = ((Gt = D.itemMembership) == null ? void 0 : Gt[ce]) || {}, Re = {
+          const ke = ((Gt = O.itemMembership) == null ? void 0 : Gt[de]) || {}, Re = {
             sectionId: ke.sectionId && te.includes(ke.sectionId) ? void 0 : ke.sectionId,
             rowId: ke.rowId && te.includes(ke.rowId) ? void 0 : ke.rowId
           };
-          !Re.sectionId && !Re.rowId ? (zt = D.itemMembership) == null || delete zt[ce] : D.itemMembership && (D.itemMembership[ce] = Re);
-        }), j.deleteItems === !0 && (x = (x || E()).filter((ce) => !Q.includes(ce.i)), Q.forEach((ce) => {
-          delete g[ce];
+          !Re.sectionId && !Re.rowId ? (zt = O.itemMembership) == null || delete zt[de] : O.itemMembership && (O.itemMembership[de] = Re);
+        }), j.deleteItems === !0 && (x = (x || E()).filter((de) => !Q.includes(de.i)), Q.forEach((de) => {
+          delete g[de];
         }), B = Ge(
-          B.selectedIds.filter((ce) => !Q.includes(ce)),
+          B.selectedIds.filter((de) => !Q.includes(de)),
           "api"
         ), H = B.activeId));
-        const pe = He(D, x || E());
+        const me = Le(O, x || E());
         P = {
           version: 1,
-          items: pe.items,
-          itemMembership: pe.itemMembership
+          items: me.items,
+          itemMembership: me.itemMembership
         };
       }
     }
-    return Os(I, at(I, {
+    return Hs(I, nt(I, {
       layout: x || void 0,
       editorMetaById: g,
       sectionRows: P,
@@ -4488,12 +4488,12 @@ const Ho = () => {
     }), {
       risk: be
     });
-  }, mt = Wr({
+  }, mt = Vr({
     beforeCommand: e.beforeCommand,
     guardTimeoutMs: e.guardTimeoutMs,
     getSnapshot: W,
     getStateRevision: () => M,
-    check: (n) => ls(n, {
+    check: (n) => fs(n, {
       mode: c.value,
       modeMissing: f,
       layout: E(),
@@ -4503,13 +4503,13 @@ const Ho = () => {
       itemCapabilities: e.itemCapabilities
     }),
     getGuardContext: (n, l, I, h) => {
-      const x = Qt(n), g = x.placementSummary && typeof x.placementSummary == "object" ? x.placementSummary : void 0;
+      const x = Jt(n), g = x.placementSummary && typeof x.placementSummary == "object" ? x.placementSummary : void 0;
       return {
         source: n.source || "api",
         origin: n.origin,
         targetIds: l.allowedIds,
         layout: E(),
-        layouts: Oe(),
+        layouts: De(),
         editorMetaById: u.value,
         sectionRows: m.value,
         selection: v.value,
@@ -4529,25 +4529,25 @@ const Ho = () => {
         signal: h
       };
     },
-    buildPreview: (n, l, I) => gi(n, l.allowedIds, I),
+    buildPreview: (n, l, I) => vi(n, l.allowedIds, I),
     cleanupInteraction: () => {
-      K.value = null, Fe("command-cleanup");
+      X.value = null, He("command-cleanup");
     },
-    finalize: Ye,
-    now: Ls,
+    finalize: Xe,
+    now: Fs,
     isStopped: () => w.value,
     onStart: (n) => {
-      n.source === "keyboard" && ho(n.type) && (K.value = "keyboardEditing"), z({ type: "command-start", command: n });
+      n.source === "keyboard" && ho(n.type) && (X.value = "keyboardEditing"), z({ type: "command-start", command: n });
     },
     commit: async ({ command: n, check: l, before: I, startedAt: h, guardMs: x }) => {
       try {
-        if (cs(n.type)) {
-          const P = n.type === "save" ? await st.save() : n.type === "discard" ? st.discard() : st.reset();
-          return P.status === "changed" && (ie.value = W(), A.value = !1), Ye(n, { ...P, id: n.id }, h, x);
+        if (ls(n.type)) {
+          const P = n.type === "save" ? await ot.save() : n.type === "discard" ? ot.discard() : ot.reset();
+          return P.status === "changed" && (ie.value = W(), A.value = !1), Xe(n, { ...P, id: n.id }, h, x);
         }
-        if (Ai(n.type)) {
+        if (Di(n.type)) {
           const P = n.type === "undo" ? J == null ? void 0 : J.undo() : J == null ? void 0 : J.redo();
-          return P ? (ve(n.type === "undo" ? P.before : P.after), Ye(n, Ie(n, "changed", {
+          return P ? (ve(n.type === "undo" ? P.before : P.after), Xe(n, xe(n, "changed", {
             affectedIds: P.affectedIds || P.after.selection.selectedIds,
             selection: v.value,
             undo: P,
@@ -4557,14 +4557,14 @@ const Ho = () => {
               source: n.source,
               origin: n.origin
             }
-          }), h, x)) : Ye(n, Ie(n, "blocked", {
+          }), h, x)) : Xe(n, xe(n, "blocked", {
             blocked: { reason: "missing-item", message: "No editor history entry is available." }
           }), h, x);
         }
-        const g = await mo(n, l.allowedIds, l.blockedIds, I);
-        return Ye(n, g, h, x);
+        const g = await po(n, l.allowedIds, l.blockedIds, I);
+        return Xe(n, g, h, x);
       } catch (g) {
-        return g instanceof ut ? Ye(n, Ie(n, "blocked", {
+        return g instanceof lt ? Xe(n, xe(n, "blocked", {
           targetIds: l.targetIds,
           blocked: {
             reason: g.code,
@@ -4572,20 +4572,20 @@ const Ho = () => {
             message: g.message
           },
           error: { message: g.message, cause: g }
-        }), h, x) : Ye(
+        }), h, x) : Xe(
           n,
-          ds(n, "Editor command failed.", g),
+          us(n, "Editor command failed.", g),
           h,
           x
         );
       }
     }
   }), No = (n) => {
-    if (w.value || O > 0) return;
-    mt.abortPending(n), K.value = null, Fe(n), M += 1;
+    if (w.value || T > 0) return;
+    mt.abortPending(n), X.value = null, He(n), M += 1;
     const l = E(), I = ht(u.value, l);
-    Ke(I, u.value) || (u.value = I);
-    const h = Ve(
+    Ne(I, u.value) || (u.value = I);
+    const h = We(
       v.value,
       l,
       u.value,
@@ -4598,13 +4598,13 @@ const Ho = () => {
   }, { deep: !0, flush: "sync" })), e.layouts && R.push(vt(a, () => {
     No("external-layouts");
   }, { deep: !0, flush: "sync" }));
-  const gt = async (n) => mt.execute(n), hi = (n) => {
+  const gt = async (n) => mt.execute(n), bi = (n) => {
     var g;
-    const l = ro(n.type), I = Ks({
+    const l = io(n.type), I = Ys({
       source: l.defaultSource,
       ...n,
       history: n.history || l.defaultHistory
-    }), h = ls(I, {
+    }), h = fs(I, {
       mode: c.value,
       modeMissing: f,
       layout: E(),
@@ -4615,34 +4615,34 @@ const Ho = () => {
     });
     if (h.result) return h.result;
     const x = (g = l.validatePayload) == null ? void 0 : g.call(l, I);
-    return x && !x.ok ? so(I, "invalid-input", {
+    return x && !x.ok ? oo(I, "invalid-input", {
       targetIds: h.targetIds,
       blocked: {
         reason: "invalid-input",
         itemIds: h.targetIds,
         message: x.message
       }
-    }) : Ie(I, "noop", {
+    }) : xe(I, "noop", {
       targetIds: h.allowedIds
     });
-  }, vi = async (n) => {
+  }, Ii = async (n) => {
     var P, B, H, be, j, V, te;
     const l = n.commandType || (n.source === "paste" ? "paste" : "add");
     if (f)
-      return Te(l, "editor-mode-missing", "Editor mode is not configured.");
+      return Oe(l, "editor-mode-missing", "Editor mode is not configured.");
     if (c.value === "view")
-      return Te(l, "mode-readonly", "Placement requires edit mode.");
+      return Oe(l, "mode-readonly", "Placement requires edit mode.");
     if (w.value)
-      return Te(l, "unsupported-scope", "Editor controller is stopped.");
-    if (K.value)
-      return Te(l, "unsupported-scope", `Cannot start placement while ${K.value}.`);
+      return Oe(l, "unsupported-scope", "Editor controller is stopped.");
+    if (X.value)
+      return Oe(l, "unsupported-scope", `Cannot start placement while ${X.value}.`);
     if (k.value)
-      return Te(l, "command-pending", "A placement session is already active.");
+      return Oe(l, "command-pending", "A placement session is already active.");
     let I = {
       ...n,
       commandType: l
     };
-    const h = Mt({
+    const h = pt({
       cols: n.cols,
       maxRows: n.maxRows,
       compactType: n.compactType,
@@ -4650,75 +4650,75 @@ const Ho = () => {
       preventCollision: n.preventCollision
     });
     if (n.source === "paste" || l === "paste") {
-      const fe = Se();
-      let D = null, Q = null;
+      const ye = Se();
+      let O = null, Q = null;
       try {
-        D = await fe.read();
+        O = await ye.read();
       } catch (Re) {
         Q = Re;
       }
-      if ((!D || Q) && fe !== bt)
+      if ((!O || Q) && ye !== bt)
         try {
-          D = await bt.read();
+          O = await bt.read();
         } catch (Re) {
           Q || (Q = Re);
         }
-      if (!D && Q) {
-        const Re = Q instanceof ut ? Q.code : "clipboard-invalid";
-        return Te(
+      if (!O && Q) {
+        const Re = Q instanceof lt ? Q.code : "clipboard-invalid";
+        return Oe(
           "paste",
           Re,
           Q instanceof Error ? Q.message : "Clipboard could not be read."
         );
       }
-      if (!D || D.items.length === 0)
-        return Te(
+      if (!O || O.items.length === 0)
+        return Oe(
           "paste",
           "clipboard-unavailable",
           "Clipboard is empty or unavailable."
         );
-      const pe = Io(D, {
+      const me = Io(O, {
         cols: (P = n.cols) != null ? P : h == null ? void 0 : h.cols
-      }), ce = Ht(
-        pe.items,
-        D.editorMetaById,
+      }), de = Tt(
+        me.items,
+        O.editorMetaById,
         new Set(E().map((Re) => Re.i)),
-        e.idGenerator || dt
+        e.idGenerator || ct
       ), ke = {
-        items: ce.items,
-        editorMetaById: ce.metaById,
-        sourceId: D.sourceId,
-        source: D.version === 2 ? D.source : void 0,
-        originalGeometryById: D.version === 2 ? D.originalGeometryById : void 0,
+        items: de.items,
+        editorMetaById: de.metaById,
+        sourceId: O.sourceId,
+        source: O.version === 2 ? O.source : void 0,
+        originalGeometryById: O.version === 2 ? O.originalGeometryById : void 0,
         responsive: {
-          scaled: pe.scaled,
-          sourceCols: pe.sourceCols,
-          targetCols: pe.targetCols
+          scaled: me.scaled,
+          sourceCols: me.sourceCols,
+          targetCols: me.targetCols
         },
         mapped: !0
       };
       I = {
         ...I,
         commandType: "paste",
-        items: ce.items,
-        editorMetaById: ce.metaById,
+        items: de.items,
+        editorMetaById: de.metaById,
         resolvedClipboardPayload: ke
       };
     } else
-      I = Qe(I);
+      I = Ze(I);
     const x = {
       ...I,
       compactType: (B = I.compactType) != null ? B : h == null ? void 0 : h.compactType,
       allowOverlap: (H = I.allowOverlap) != null ? H : h == null ? void 0 : h.allowOverlap,
       preventCollision: (be = I.preventCollision) != null ? be : h == null ? void 0 : h.preventCollision
-    }, g = In(x, {
+    }, g = wn(x, {
       baseLayout: E(),
       baseRevision: M,
       defaultStrategy: x.strategy || (l === "paste" ? e.pasteStrategy || "offset" : "first-fit"),
       cols: x.cols,
       maxRows: x.maxRows
     });
-    return g.items.length === 0 || g.blocked && g.ghostItems.length === 0 ? Te(
+    return g.items.length === 0 || g.blocked && g.ghostItems.length === 0 ? Oe(
       l,
       ((j = g.blocked) == null ? void 0 : j.reason) || "invalid-input",
       ((V = g.blocked) == null ? void 0 : V.message) || "No items were provided for placement.",
@@ -4734,7 +4734,7 @@ const Ho = () => {
       } : void 0,
       diagnostics: Ce(g)
     });
-  }, bi = (n) => {
+  }, xi = (n) => {
     const l = k.value;
     if (!l)
       return { status: "noop" };
@@ -4749,25 +4749,25 @@ const Ho = () => {
       } : void 0,
       diagnostics: Ce(I)
     };
-  }, Ii = (n = "cancelled") => {
+  }, wi = (n = "cancelled") => {
     const l = k.value;
     if (!l) return { status: "noop" };
-    const I = wn(l, n);
-    return Fe(n), I;
-  }, xi = (n) => {
+    const I = Mn(l, n);
+    return He(n), I;
+  }, ki = (n) => {
     var I;
     const l = (I = n.blocked) == null ? void 0 : I.reason;
     return n.status === "blocked" && (l === "bounds" || l === "collision" || l === "maxRows" || l === "section-row-policy" || l === "invalid-input");
-  }, wi = async (n = {}) => {
-    var g, P, B, H, be, j, V, te, fe;
+  }, Mi = async (n = {}) => {
+    var g, P, B, H, be, j, V, te, ye;
     const l = k.value;
     if (!l)
-      return Ie({
+      return xe({
         id: `placement-commit:noop:${Date.now()}`,
         type: "add"
       }, "noop");
     if (!l.candidateLayout || l.blocked) {
-      const D = Ie({
+      const O = xe({
         id: `placement-commit:blocked:${l.id}`,
         type: l.commandType
       }, "blocked", {
@@ -4779,52 +4779,52 @@ const Ho = () => {
         },
         diagnostics: Ce(l)
       });
-      return F.value = D, D;
+      return F.value = O, O;
     }
     if (M !== l.baseRevision) {
-      const D = Ce(l) || { durationMs: 0 }, Q = Ie({
+      const O = Ce(l) || { durationMs: 0 }, Q = xe({
         id: `placement-commit:stale:${l.id}`,
         type: l.commandType
       }, "blocked", {
-        targetIds: l.items.map((pe) => pe.i),
+        targetIds: l.items.map((me) => me.i),
         blocked: {
           reason: "stale-command",
-          itemIds: l.items.map((pe) => pe.i),
+          itemIds: l.items.map((me) => me.i),
           message: "Placement base layout changed before commit."
         },
         diagnostics: {
-          ...D,
-          durationMs: D.durationMs || 0,
+          ...O,
+          durationMs: O.durationMs || 0,
           stale: !0,
           stateRevision: M
         }
       });
-      return F.value = Q, Fe("stale-command"), Q;
+      return F.value = Q, He("stale-command"), Q;
     }
     const I = {
       ...l,
       phase: "committing",
-      ghostItems: l.ghostItems.map((D) => ({ ...D, state: "committing" }))
+      ghostItems: l.ghostItems.map((O) => ({ ...O, state: "committing" }))
     };
     k.value = I;
-    const h = xn(I, n), x = await gt(h);
-    if (z({ type: "placement-commit", sessionId: I.id, result: x }), x.status === "changed" || x.status === "noop" || (n == null ? void 0 : n.autoCancelOnBlocked) === !0 || !xi(x))
-      Fe(x.status);
+    const h = kn(I, n), x = await gt(h);
+    if (z({ type: "placement-commit", sessionId: I.id, result: x }), x.status === "changed" || x.status === "noop" || (n == null ? void 0 : n.autoCancelOnBlocked) === !0 || !ki(x))
+      He(x.status);
     else {
-      const D = $o(l, {});
+      const O = $o(l, {});
       k.value = {
-        ...D,
+        ...O,
         blocked: {
-          reason: ((H = x.blocked) == null ? void 0 : H.reason) || ((be = D.blocked) == null ? void 0 : be.reason) || "invalid-input",
-          itemIds: ((j = x.blocked) == null ? void 0 : j.itemIds) || ((V = D.blocked) == null ? void 0 : V.itemIds),
-          message: ((te = x.blocked) == null ? void 0 : te.message) || ((fe = D.blocked) == null ? void 0 : fe.message),
+          reason: ((H = x.blocked) == null ? void 0 : H.reason) || ((be = O.blocked) == null ? void 0 : be.reason) || "invalid-input",
+          itemIds: ((j = x.blocked) == null ? void 0 : j.itemIds) || ((V = O.blocked) == null ? void 0 : V.itemIds),
+          message: ((te = x.blocked) == null ? void 0 : te.message) || ((ye = O.blocked) == null ? void 0 : ye.message),
           recoverable: !0
         },
         phase: "blocked"
       };
     }
     return x;
-  }, Ko = (n) => Ft(n, "ignore"), Xo = (n) => {
+  }, Ko = (n) => Lt(n, "ignore"), Xo = (n) => {
     var l;
     if (J) {
       if (n.mode === "clear") {
@@ -4841,20 +4841,20 @@ const Ho = () => {
         preserveRedoStack: (l = n.preserveRedoStack) != null ? l : !0
       });
     }
-  }, ki = (n, l = "external", I = {}) => {
+  }, Si = (n, l = "external", I = {}) => {
     const h = Ko(I.history);
-    mt.abortPending(I.origin || l), K.value = null, me(n), M += 1, u.value = ht(u.value, n), it(Ve(v.value, n, u.value, "external")), Xo(h), z({
+    mt.abortPending(I.origin || l), X.value = null, ge(n), M += 1, u.value = ht(u.value, n), st(We(v.value, n, u.value, "external")), Xo(h), z({
       type: "editor-state-change",
-      state: Je.value,
+      state: Ve.value,
       reason: I.origin || l
     });
-  }, Mi = (n, l, I = "external", h = {}) => {
+  }, Ci = (n, l, I = "external", h = {}) => {
     const x = Ko(h.history);
-    mt.abortPending(h.origin || I), K.value = null, ze(n, l);
+    mt.abortPending(h.origin || I), X.value = null, ze(n, l);
     const g = n[l] || [];
-    M += 1, u.value = ht(u.value, g), it(Ve(v.value, g, u.value, "external")), Xo(x), z({
+    M += 1, u.value = ht(u.value, g), st(We(v.value, g, u.value, "external")), Xo(x), z({
       type: "editor-state-change",
-      state: Je.value,
+      state: Ve.value,
       reason: h.origin || I
     });
   };
@@ -4865,8 +4865,8 @@ const Ho = () => {
   });
   let Yo = E();
   R.push(vt(c, (n, l) => {
-    n !== l && (n === "view" && K.value ? (K.value = null, me(Yo)) : Yo = E(), n === "view" && (S.value = { ...xo }, Fe("mode-readonly")), z({ type: "mode-change", from: l, to: n, source: "external" }));
-  })), R.push(vt(() => Je.value, (n, l) => {
+    n !== l && (n === "view" && X.value ? (X.value = null, ge(Yo)) : Yo = E(), n === "view" && (S.value = { ...xo }, He("mode-readonly")), z({ type: "mode-change", from: l, to: n, source: "external" }));
+  })), R.push(vt(() => Ve.value, (n, l) => {
     n !== l && z({
       type: "editor-state-change",
       state: n,
@@ -4874,7 +4874,7 @@ const Ho = () => {
       reason: "derived-state"
     });
   })), e.selectedIds && R.push(vt(e.selectedIds, (n) => {
-    mt.abortPending("external-selection"), M += 1, v.value = Ve(
+    mt.abortPending("external-selection"), M += 1, v.value = We(
       Ge(n, "external"),
       E(),
       u.value,
@@ -4882,65 +4882,65 @@ const Ho = () => {
     ), L.value = v.value.activeId, J == null || J.replacePresent(W(), { preserveRedoStack: !0 });
   }, { flush: "sync" })), R.push(vt(u, (n) => {
     const l = Me(n, { layout: E() });
-    Ke(l, n) || (u.value = l);
+    Ne(l, n) || (u.value = l);
   }, { deep: !0 })), R.push(vt(m, (n) => {
-    const l = He(n, E()), I = {
+    const l = Le(n, E()), I = {
       version: 1,
       items: l.items,
       itemMembership: l.itemMembership
     };
-    Ke(I, n) || (m.value = I);
+    Ne(I, n) || (m.value = I);
     const h = v.value.selectedIds.filter((x) => {
       const g = l.itemMembership[x], P = g != null && g.sectionId ? l.items[g.sectionId] : void 0, B = g != null && g.rowId ? l.items[g.rowId] : void 0;
       return (P == null ? void 0 : P.collapsed) || (B == null ? void 0 : B.collapsed);
     });
-    h.length > 0 && it(Ge(
+    h.length > 0 && st(Ge(
       v.value.selectedIds.filter((x) => !h.includes(x)),
       "api"
     ));
   }, { deep: !0 }));
   const _o = {
     mode: c,
-    state: Je,
+    state: Ve,
     selection: v,
     editorMetaById: u,
     sectionRows: m,
     placementSession: k,
-    dirty: pt,
+    dirty: yt,
     conflict: C,
     guides: S,
     lastResult: F,
     subscribe: q,
-    createRollbackCheckpoint: We,
-    restoreRollbackCheckpoint: qe,
+    createRollbackCheckpoint: _e,
+    restoreRollbackCheckpoint: Ue,
     execute: gt,
-    canExecute: hi,
-    beginPlacement: vi,
-    updatePlacement: bi,
-    commitPlacement: wi,
-    cancelPlacement: Ii,
-    getToolbarState: () => Cn(_o),
+    canExecute: bi,
+    beginPlacement: Ii,
+    updatePlacement: xi,
+    commitPlacement: Mi,
+    cancelPlacement: wi,
+    getToolbarState: () => En(_o),
     undo: () => gt({ type: "undo", source: "api" }),
     redo: () => gt({ type: "redo", source: "api" }),
     save: () => gt({ type: "save", source: "api" }),
     discard: () => gt({ type: "discard", source: "api" }),
     reset: () => gt({ type: "reset", source: "api" }),
-    setExternalLayout: ki,
-    setExternalLayouts: Mi,
+    setExternalLayout: Si,
+    setExternalLayouts: Ci,
     stop() {
-      w.value || (w.value = !0, mt.abortPending("editor-stop"), Fe("editor-stop"), R.forEach((n) => n()), et == null || et.stop(), T.clear());
+      w.value || (w.value = !0, mt.abortPending("editor-stop"), He("editor-stop"), R.forEach((n) => n()), et == null || et.stop(), D.clear());
     }
   };
   return _o;
-}, na = yi, Gn = (e) => !!(e && typeof e == "object" && "getBoundingClientRect" in e), zn = (e, t) => {
-  const o = Gn(e.currentTarget) ? e.currentTarget.getBoundingClientRect() : { left: 0, top: 0 }, s = t.transformScale || 1, r = (e.clientX - o.left) / s, a = (e.clientY - o.top) / s, i = t.itemSize || { w: 1, h: 1 }, f = {
+}, ca = mi, An = (e) => !!(e && typeof e == "object" && "getBoundingClientRect" in e), On = (e, t) => {
+  const o = An(e.currentTarget) ? e.currentTarget.getBoundingClientRect() : { left: 0, top: 0 }, s = t.transformScale || 1, r = (e.clientX - o.left) / s, a = (e.clientY - o.top) / s, i = t.itemSize || { w: 1, h: 1 }, f = {
     cols: t.cols,
     margin: t.margin,
     maxRows: t.maxRows,
     rowHeight: t.rowHeight,
     containerWidth: t.width || 0,
     containerPadding: t.containerPadding || t.margin
-  }, d = Hi(f, a, r, i.w, i.h);
+  }, d = ji(f, a, r, i.w, i.h);
   return {
     x: d.x,
     y: d.y,
@@ -4949,7 +4949,7 @@ const Ho = () => {
     clientY: e.clientY
   };
 };
-function An({
+function Dn({
   controller: e,
   getGeometry: t,
   stopEvent: o
@@ -4963,7 +4963,7 @@ function An({
     isActive: s,
     onPointerMove: (d) => {
       if (!(e != null && e.placementSession.value)) return;
-      const c = t(), y = zn(d, {
+      const c = t(), y = On(d, {
         ...c,
         itemSize: r()
       });
@@ -4980,12 +4980,12 @@ function An({
     }
   };
 }
-const eo = (e) => ({
+const Qt = (e) => ({
   x: e.x,
   y: e.y,
   w: e.w,
   h: e.h
-}), Dn = () => ({
+}), Tn = () => ({
   activeId: null,
   guides: [],
   displayGuides: [],
@@ -4994,7 +4994,7 @@ const eo = (e) => ({
   spacingChips: [],
   measurementHud: null,
   anchorEdges: []
-}), pi = (e) => !!(e && typeof e == "object" && "save" in e && "commit" in e && "load" in e), Ns = (e) => !!(e && typeof e == "object" && !pi(e)), Tn = (e) => typeof e == "function" ? { ...e() || {} } : { ...e || {} }, On = (e, t, o) => ({
+}), gi = (e) => !!(e && typeof e == "object" && "save" in e && "commit" in e && "load" in e), Xs = (e) => !!(e && typeof e == "object" && !gi(e)), Ln = (e) => typeof e == "function" ? { ...e() || {} } : { ...e || {} }, Hn = (e, t, o) => ({
   id: e,
   status: "blocked",
   layout: t,
@@ -5017,7 +5017,7 @@ const eo = (e) => ({
     durationMs: 0
   }
 });
-function Ln({
+function Fn({
   props: e,
   layoutRef: t,
   persistenceController: o,
@@ -5030,7 +5030,7 @@ function Ln({
 }) {
   const c = e.editor && typeof e.editor == "object" ? e.editor : null, y = (c == null ? void 0 : c.layoutOperationRunner) || ((b) => {
     const $ = `${b.commandId}:layout`;
-    return s.isLegacyLayoutEngine() ? On($, b.layout, b.operation) : ko({
+    return s.isLegacyLayoutEngine() ? Hn($, b.layout, b.operation) : ko({
       id: $,
       phase: b.phase,
       layout: b.layout,
@@ -5039,14 +5039,14 @@ function Ln({
     });
   }), u = o || e.persistence || (c == null ? void 0 : c.persistence);
   let p = null;
-  const m = c && pi(u) ? u : c && Ns(u) ? Li({
+  const m = c && gi(u) ? u : c && Xs(u) ? Fi({
     ...u,
     kind: "layout",
     target: t,
     watchTarget: !1,
     meta: () => ({
-      ...Tn(u.meta),
-      editor: co(
+      ...Ln(u.meta),
+      editor: ao(
         (p == null ? void 0 : p.editorMetaById.value) || {},
         p == null ? void 0 : p.sectionRows.value
       )
@@ -5054,13 +5054,13 @@ function Ln({
     onEvent: (b) => {
       var $;
       if (b.type === "load-success" || b.type === "external-apply") {
-        const N = no(b.document);
+        const N = ro(b.document);
         N.ok && N.envelope && p && (p.editorMetaById.value = N.envelope.editorMetaById, N.envelope.sectionRows && (p.sectionRows.value = N.envelope.sectionRows)), p == null || p.setExternalLayout(b.value, b.type);
       }
       ($ = u.onEvent) == null || $.call(u, b);
     }
-  }) : null, v = !!(c && m && Ns(u));
-  p = c ? c.controller || yi({
+  }) : null, v = !!(c && m && Xs(u));
+  p = c ? c.controller || mi({
     ...c,
     kind: "layout",
     layout: t,
@@ -5070,7 +5070,7 @@ function Ln({
     persistence: m || c.persistence
   }) : null;
   let C = null, S = null;
-  const k = An({
+  const k = Dn({
     controller: p,
     getGeometry: () => ({
       width: e.width || 0,
@@ -5080,34 +5080,34 @@ function Ln({
       rowHeight: e.rowHeight,
       containerPadding: e.containerPadding || e.margin,
       transformScale: e.transformScale || 1,
-      compactType: as(e),
+      compactType: ds(e),
       allowOverlap: e.allowOverlap,
       preventCollision: e.preventCollision
     }),
     stopEvent: (b) => {
       b.preventDefault(), b.stopPropagation();
     }
-  }), F = () => !!p, K = () => !!(p && p.mode.value === "view"), A = () => !!(p && p.mode.value === "edit"), ae = () => (p == null ? void 0 : p.editorMetaById.value) || {}, L = () => !!(p && (c == null ? void 0 : c.guides) !== !1), w = (b) => {
+  }), F = () => !!p, X = () => !!(p && p.mode.value === "view"), A = () => !!(p && p.mode.value === "edit"), ce = () => (p == null ? void 0 : p.editorMetaById.value) || {}, L = () => !!(p && (c == null ? void 0 : c.guides) !== !1), w = (b) => {
     var $;
     return ($ = e.itemCapabilities) == null ? void 0 : $[b];
   }, R = (b) => {
     var $;
     return ($ = e.resizeConstraints) == null ? void 0 : $[b];
-  }, T = (b) => !!(w(b) || R(b)), M = () => {
+  }, D = (b) => !!(w(b) || R(b)), M = () => {
     S = null;
-  }, O = () => {
-    p && (M(), p.guides.value = Dn());
+  }, T = () => {
+    p && (M(), p.guides.value = Tn());
   }, G = (b) => {
     const $ = d();
     return ($ == null ? void 0 : $.activeResizeId) === b ? "resize" : f() ? "drop" : ($ == null ? void 0 : $.activeDragId) === b ? "drag" : "api";
   }, z = (b) => {
     const $ = d(), N = ($ == null ? void 0 : $.activeResizeId) === b ? i() : ($ == null ? void 0 : $.activeDragId) === b ? a() : null;
-    return N ? { [b]: eo(N) } : void 0;
+    return N ? { [b]: Qt(N) } : void 0;
   }, q = (b, $, N) => {
-    var ne;
-    const ee = d(), oe = b === "drag" && (ee != null && ee.dragBlocked) ? {
+    var ae;
+    const ee = d(), se = b === "drag" && (ee != null && ee.dragBlocked) ? {
       reason: ee.dragBlockedReason || "collision",
-      itemIds: (ne = ee.dragBlockedItemIds) != null && ne.length ? ee.dragBlockedItemIds : $ ? [$] : void 0,
+      itemIds: (ae = ee.dragBlockedItemIds) != null && ae.length ? ee.dragBlockedItemIds : $ ? [$] : void 0,
       message: ee.dragBlockedMessage || void 0
     } : b === "resize" && (ee != null && ee.resizeBlocked) ? { reason: "collision", itemIds: $ ? [$] : void 0 } : void 0;
     return {
@@ -5120,30 +5120,30 @@ function Ln({
       startGeometry: $ ? z($) : void 0,
       resizeHandle: N,
       selectionCount: (p == null ? void 0 : p.selection.value.selectedIds.length) || 0,
-      blocked: oe
+      blocked: se
     };
   }, E = (b, $, N, ee) => {
-    var ye, Ce;
+    var pe, Ce;
     if (!p || !c || c.guides === !1) return null;
-    const oe = G(b), ne = q(oe, b, ee), Se = Ao({
+    const se = G(b), ae = q(se, b, ee), Se = Ao({
       layout: r(),
       activeItem: $,
       candidateItem: N,
       selectionIds: p.selection.value.selectedIds,
-      metaById: ae(),
+      metaById: ce(),
       sectionRows: p.sectionRows.value,
       cols: e.cols,
       maxRows: e.maxRows,
       margin: e.margin,
       rowHeight: e.rowHeight,
-      compactType: as(e),
+      compactType: ds(e),
       allowOverlap: e.allowOverlap,
       preventCollision: e.preventCollision,
-      interaction: oe,
-      startGeometry: ne.startGeometry,
-      options: ne
+      interaction: se,
+      startGeometry: ae.startGeometry,
+      options: ae
     });
-    return p.guides.value = Se.guideState, (ye = c.onEvent) == null || ye.call(c, {
+    return p.guides.value = Se.guideState, (pe = c.onEvent) == null || pe.call(c, {
       type: "guide-change",
       guides: p.guides.value.guides,
       activeId: b
@@ -5151,32 +5151,32 @@ function Ln({
       type: "intelligence-change",
       activeId: b,
       diagnostics: Se.diagnostics
-    }), { intelligence: Se, options: ne };
-  }, me = (b, $, N, ee, oe) => {
+    }), { intelligence: Se, options: ae };
+  }, ge = (b, $, N, ee, se) => {
     var Ce;
-    const ne = E(b, $, N, oe);
-    if (!ne) return N;
-    const Se = S == null ? void 0 : S.nextGuideId, ye = Ar(ne.intelligence, N, {
-      snap: ne.options.snap,
+    const ae = E(b, $, N, se);
+    if (!ae) return N;
+    const Se = S == null ? void 0 : S.nextGuideId, pe = Dr(ae.intelligence, N, {
+      snap: ae.options.snap,
       layout: ee || r(),
       cols: e.cols,
       maxRows: e.maxRows,
       allowOverlap: e.allowOverlap,
-      metaById: ae(),
+      metaById: ce(),
       previousGuideId: Se
     });
-    return (ye.status === "snapped" || Se !== ye.nextGuideId) && ((Ce = c == null ? void 0 : c.onEvent) == null || Ce.call(c, {
+    return (pe.status === "snapped" || Se !== pe.nextGuideId) && ((Ce = c == null ? void 0 : c.onEvent) == null || Ce.call(c, {
       type: "snap-change",
       activeId: b,
       previousGuideId: Se,
-      nextGuideId: ye.nextGuideId,
-      snapKind: ye.snapKind,
-      geometry: ye.geometry
-    })), S = ye, ye.status !== "snapped" ? N : {
+      nextGuideId: pe.nextGuideId,
+      snapKind: pe.snapKind,
+      geometry: pe.geometry
+    })), S = pe, pe.status !== "snapped" ? N : {
       ...N,
-      ...ye.geometry
+      ...pe.geometry
     };
-  }, Oe = (b, $, N) => N != null && N.locked || $ != null && $.locked ? "locked" : (N == null ? void 0 : N.visible) === !1 || ($ == null ? void 0 : $.visible) === !1 ? "hidden" : N != null && N.static || b.static ? "static-item" : "capability", ze = (b, $, N) => {
+  }, De = (b, $, N) => N != null && N.locked || $ != null && $.locked ? "locked" : (N == null ? void 0 : N.visible) === !1 || ($ == null ? void 0 : $.visible) === !1 ? "hidden" : N != null && N.static || b.static ? "static-item" : "capability", ze = (b, $, N) => {
     if (b)
       return {
         ...b,
@@ -5188,53 +5188,53 @@ function Ln({
       };
   }, W = (b, $, N) => {
     var Se;
-    const ee = w(b.i), oe = R(b.i);
+    const ee = w(b.i), se = R(b.i);
     if (ee) {
-      const ye = eo(i() || b);
+      const pe = Qt(i() || b);
       return {
         ...ee,
         resizeConstraint: ze(
-          oe ? {
+          se ? {
             ...ee.resizeConstraint,
-            aspectRatio: oe,
+            aspectRatio: se,
             handlePolicy: ((Se = ee.resizeConstraint) == null ? void 0 : Se.handlePolicy) || {
               allowedHandles: ee.resizeHandles,
               blockedReason: "handle-disabled"
             }
           } : ee.resizeConstraint,
           N,
-          ye
+          pe
         )
       };
     }
-    const ne = to(b, ae()[b.i], $);
+    const ae = eo(b, ce()[b.i], $);
     return {
-      id: ne.id,
-      visible: ne.visible,
-      editable: ne.editable,
-      draggable: ne.draggable,
-      resizable: ne.resizable,
-      bounded: ne.bounded,
-      static: ne.source.layoutStatic === !0,
-      locked: ne.locked,
-      resizeHandles: ne.resizeHandles || [],
-      deletable: ne.deletable,
-      duplicatable: ne.duplicatable,
-      copyable: ne.copyable,
-      resizeConstraint: oe || ne.resizeHandles ? {
-        handlePolicy: ne.resizeHandles ? {
-          allowedHandles: ne.resizeHandles,
+      id: ae.id,
+      visible: ae.visible,
+      editable: ae.editable,
+      draggable: ae.draggable,
+      resizable: ae.resizable,
+      bounded: ae.bounded,
+      static: ae.source.layoutStatic === !0,
+      locked: ae.locked,
+      resizeHandles: ae.resizeHandles || [],
+      deletable: ae.deletable,
+      duplicatable: ae.duplicatable,
+      copyable: ae.copyable,
+      resizeConstraint: se || ae.resizeHandles ? {
+        handlePolicy: ae.resizeHandles ? {
+          allowedHandles: ae.resizeHandles,
           blockedReason: "handle-disabled"
         } : void 0,
-        aspectRatio: oe
+        aspectRatio: se
       } : void 0,
-      sources: ne.source.capabilitySources || {},
+      sources: ae.source.capabilitySources || {},
       sourceLists: {},
-      diagnostics: ne.diagnostics || []
+      diagnostics: ae.diagnostics || []
     };
   }, ve = (b) => {
-    var ne, Se;
-    const $ = T(b.id);
+    var ae, Se;
+    const $ = D(b.id);
     if (!p && !$)
       return { kind: "allowed", candidate: b.rawCandidate };
     if (p && !A())
@@ -5252,16 +5252,16 @@ function Ln({
     if (!N || !N.resizable)
       return {
         kind: "blocked",
-        reason: Oe(b.item, ae()[b.id], N),
+        reason: De(b.item, ce()[b.id], N),
         ids: [b.id],
         diagnostics: N == null ? void 0 : N.diagnostics
       };
     const ee = ze(
       N.resizeConstraint,
       b.metrics,
-      eo(i() || b.item)
-    ), oe = (ne = ee == null ? void 0 : ee.handlePolicy) == null ? void 0 : ne.allowedHandles;
-    if (oe && oe.indexOf(b.handle) === -1)
+      Qt(i() || b.item)
+    ), se = (ae = ee == null ? void 0 : ee.handlePolicy) == null ? void 0 : ae.allowedHandles;
+    if (se && se.indexOf(b.handle) === -1)
       return {
         kind: "blocked",
         reason: "handle-disabled",
@@ -5270,10 +5270,10 @@ function Ln({
         diagnostics: N.diagnostics
       };
     if ((Se = ee == null ? void 0 : ee.aspectRatio) != null && Se.enabled) {
-      const ye = Oi({
+      const pe = Hi({
         startItem: {
           ...b.item,
-          ...eo(i() || b.item)
+          ...Qt(i() || b.item)
         },
         rawCandidate: b.rawCandidate,
         handle: b.handle,
@@ -5287,16 +5287,16 @@ function Ln({
           maxH: b.item.maxH
         }
       });
-      return ye.kind === "blocked" ? {
+      return pe.kind === "blocked" ? {
         kind: "blocked",
-        reason: ye.reason,
+        reason: pe.reason,
         ids: [b.id],
-        diagnostics: ye.diagnostics
+        diagnostics: pe.diagnostics
       } : {
         kind: "allowed",
-        candidate: ye.candidate,
+        candidate: pe.candidate,
         constraint: ee,
-        diagnostics: ye.diagnostics
+        diagnostics: pe.diagnostics
       };
     }
     return {
@@ -5314,59 +5314,59 @@ function Ln({
         ids: [b.id],
         activeId: b.id
       };
-    const $ = ae();
-    if (!to(
+    const $ = ce();
+    if (!eo(
       b.item,
       $[b.id],
       { isDraggable: !0, isResizable: !0, isBounded: !0 }
     ).draggable)
       return {
         kind: "blocked",
-        reason: Oe(b.item, $[b.id]),
+        reason: De(b.item, $[b.id]),
         ids: [b.id],
         activeId: b.id
       };
-    const oe = p.selection.value.selectedIds.filter(Boolean), ne = typeof MouseEvent != "undefined" && b.event instanceof MouseEvent && (b.event.metaKey || b.event.ctrlKey || b.event.shiftKey);
-    if (!(oe.length > 1 && oe.includes(b.id)))
-      return !oe.includes(b.id) && !ne && p.execute({
+    const se = p.selection.value.selectedIds.filter(Boolean), ae = typeof MouseEvent != "undefined" && b.event instanceof MouseEvent && (b.event.metaKey || b.event.ctrlKey || b.event.shiftKey);
+    if (!(se.length > 1 && se.includes(b.id)))
+      return !se.includes(b.id) && !ae && p.execute({
         type: "select",
         targetIds: [b.id],
         payload: { id: b.id },
         source: "pointer",
         history: { skip: !0 }
       }), { kind: "single", id: b.id };
-    const ye = [], Ce = [];
-    let Te = "capability";
-    return oe.forEach((Qe) => {
-      const Fe = Pe(b.layout, Qe);
-      if (!Fe) {
-        Ce.push(Qe), Te = "missing-item";
+    const pe = [], Ce = [];
+    let Oe = "capability";
+    return se.forEach((Ze) => {
+      const He = Pe(b.layout, Ze);
+      if (!He) {
+        Ce.push(Ze), Oe = "missing-item";
         return;
       }
-      to(
-        Fe,
-        $[Qe],
+      eo(
+        He,
+        $[Ze],
         { isDraggable: !0, isResizable: !0, isBounded: !0 }
-      ).draggable ? ye.push(Qe) : (Ce.push(Qe), Te = Oe(Fe, $[Qe]));
+      ).draggable ? pe.push(Ze) : (Ce.push(Ze), Oe = De(He, $[Ze]));
     }), Ce.length > 0 && (c == null ? void 0 : c.commandPolicy) !== "skip-blocked" ? {
       kind: "blocked",
-      reason: Te,
+      reason: Oe,
       ids: Ce,
       activeId: b.id
     } : b.legacyLayoutEngine ? {
       kind: "blocked",
       reason: "unsupported",
-      ids: ye,
+      ids: pe,
       activeId: b.id
-    } : ye.length === 0 ? {
+    } : pe.length === 0 ? {
       kind: "blocked",
-      reason: Te,
+      reason: Oe,
       ids: Ce.length > 0 ? Ce : [b.id],
       activeId: b.id
     } : {
       kind: "group",
       activeId: b.id,
-      ids: ye
+      ids: pe
     };
   }, J = (b) => {
     var ee;
@@ -5376,7 +5376,7 @@ function Ln({
       type: "move",
       targetIds: b.ids,
       source: "pointer"
-    }, N = Ie($, "blocked", {
+    }, N = xe($, "blocked", {
       targetIds: b.ids,
       blocked: {
         reason: b.reason,
@@ -5390,13 +5390,13 @@ function Ln({
       } : void 0
     });
     p.lastResult.value = N, (ee = c == null ? void 0 : c.onEvent) == null || ee.call(c, { type: "command-blocked", command: $, result: N });
-  }, We = (b) => {
-    t.value = de(b);
-  }, qe = (b) => {
+  }, _e = (b) => {
+    t.value = le(b);
+  }, Ue = (b) => {
     (b == null ? void 0 : b.status) === "changed" && (m == null || m.commit(t.value, { source: "component" }));
-  }, pt = async (b) => {
+  }, yt = async (b) => {
     if (!p) return null;
-    We(b.beforeLayout);
+    _e(b.beforeLayout);
     const $ = await p.execute({
       type: "move",
       targetIds: b.ids,
@@ -5411,10 +5411,10 @@ function Ln({
         preventCollision: e.preventCollision
       }
     });
-    return qe($), $;
-  }, Je = async (b) => {
+    return Ue($), $;
+  }, Ve = async (b) => {
     if (!p) return null;
-    We(b.beforeLayout);
+    _e(b.beforeLayout);
     const $ = await p.execute({
       type: "resize",
       targetIds: [b.id],
@@ -5429,10 +5429,10 @@ function Ln({
         preventCollision: e.preventCollision
       }
     });
-    return qe($), $;
+    return Ue($), $;
   }, et = async (b) => {
     if (!p) return null;
-    We(b.beforeLayout);
+    _e(b.beforeLayout);
     const $ = await p.execute({
       type: "add",
       targetIds: [b.id],
@@ -5447,13 +5447,13 @@ function Ln({
         preventCollision: e.preventCollision
       }
     });
-    return qe($), $;
-  }, st = (b) => {
-    We(b), O();
-  }, it = (b, $ = "push") => {
+    return Ue($), $;
+  }, ot = (b) => {
+    _e(b), T();
+  }, st = (b, $ = "push") => {
     const N = c == null ? void 0 : c.legacyHistoryStore;
     N && ($ === "replace" ? N.replacePresent(b) : N.push(b));
-  }, Ye = (b, $) => {
+  }, Xe = (b, $) => {
     !p || !A() || p.execute({
       type: "select",
       targetIds: [b],
@@ -5469,71 +5469,71 @@ function Ln({
     if (!$ || $.collisionPolicy !== "layout" || $.blocked || !$.candidateLayout || $.phase === "starting" || $.ghostItems.some((ee) => ee.id === b.i)) return null;
     const N = Pe($.candidateLayout, b.i);
     return !N || N.x === b.x && N.y === b.y && N.w === b.w && N.h === b.h ? null : N;
-  }, rt = (b, $, N) => {
-    const ee = ae()[b.i], oe = p || T(b.i) ? W(b, $) : null, ne = typeof b.isDraggable == "boolean" ? b.isDraggable : !b.static && $.isDraggable, Se = typeof b.isResizable == "boolean" ? b.isResizable : !b.static && $.isResizable, ye = !((oe == null ? void 0 : oe.visible) === !1 && !N), Ce = K() || !!(p && !(oe != null && oe.editable)), Te = oe ? (p ? A() : ne) && oe.draggable : ne, Qe = oe ? (p ? A() : Se) && oe.resizable : Se, Fe = Te && (oe ? oe.bounded : $.isBounded && b.isBounded !== !1), Ut = (p == null ? void 0 : p.selection.value.selectedIds.includes(b.i)) || !1, po = (p == null ? void 0 : p.selection.value.activeId) === b.i, St = we(b), Wt = p ? lt({
-      "editor-selected": Ut,
-      "editor-active": po,
-      "editor-locked": oe == null ? void 0 : oe.locked,
+  }, it = (b, $, N) => {
+    const ee = ce()[b.i], se = p || D(b.i) ? W(b, $) : null, ae = typeof b.isDraggable == "boolean" ? b.isDraggable : !b.static && $.isDraggable, Se = typeof b.isResizable == "boolean" ? b.isResizable : !b.static && $.isResizable, pe = !((se == null ? void 0 : se.visible) === !1 && !N), Ce = X() || !!(p && !(se != null && se.editable)), Oe = se ? (p ? A() : ae) && se.draggable : ae, Ze = se ? (p ? A() : Se) && se.resizable : Se, He = Oe && (se ? se.bounded : $.isBounded && b.isBounded !== !1), Yt = (p == null ? void 0 : p.selection.value.selectedIds.includes(b.i)) || !1, yo = (p == null ? void 0 : p.selection.value.activeId) === b.i, Mt = we(b), _t = p ? dt({
+      "editor-selected": Yt,
+      "editor-active": yo,
+      "editor-locked": se == null ? void 0 : se.locked,
       "editor-hidden": (ee == null ? void 0 : ee.visible) === !1,
       "editor-readonly": Ce,
       "editor-keyboard-editing": p.state.value === "keyboardEditing",
       "editor-drop-target": N,
-      "editor-placement-reflowed": !!St
+      "editor-placement-reflowed": !!Mt
     }) : void 0;
     return {
-      visible: ye,
-      draggable: Te,
-      resizable: Qe,
-      bounded: Fe,
-      resizeHandles: oe == null ? void 0 : oe.resizeHandles,
-      capabilityDiagnostics: oe == null ? void 0 : oe.diagnostics,
-      className: Wt,
-      previewItem: St,
-      onClick: p ? (mo) => Ye(b.i, mo) : void 0
+      visible: pe,
+      draggable: Oe,
+      resizable: Ze,
+      bounded: He,
+      resizeHandles: se == null ? void 0 : se.resizeHandles,
+      capabilityDiagnostics: se == null ? void 0 : se.diagnostics,
+      className: _t,
+      previewItem: Mt,
+      onClick: p ? (po) => Xe(b.i, po) : void 0
     };
-  }, yo = (b) => {
+  }, fo = (b) => {
     k.onClick(b) || b.target === b.currentTarget && p && A() && p.execute({ type: "clearSelection", source: "pointer" });
-  }, _t = (b) => {
+  }, Xt = (b) => {
     k.onPointerMove(b);
-  }, nt = () => {
-    p && (c == null ? void 0 : c.keyboard) !== !1 && (C = qi(
+  }, rt = () => {
+    p && (c == null ? void 0 : c.keyboard) !== !1 && (C = Zi(
       p,
       typeof (c == null ? void 0 : c.keyboard) == "object" ? c.keyboard : {}
     )), v && (m == null || m.load().then((b) => {
       b.value && b.fallbackApplied && (p == null || p.setExternalLayout(b.value, "persistence-fallback"));
     }));
-  }, Mt = () => {
+  }, pt = () => {
     C == null || C(), C = null, k.cancel("runtime-stop"), c != null && c.controller ? v && (m == null || m.stop()) : p == null || p.stop();
   };
   return {
     config: c,
     controller: p,
     isEnabled: F,
-    isViewMode: K,
+    isViewMode: X,
     isEditMode: A,
     guidesEnabled: L,
-    getMetaById: ae,
-    clearGuides: O,
+    getMetaById: ce,
+    clearGuides: T,
     resetSnap: M,
-    snapCandidate: me,
+    snapCandidate: ge,
     updateIntelligence: E,
     resolveMoveDrag: ie,
     resolveResizeIntent: ve,
     notifyMoveBlocked: J,
-    commitMove: pt,
-    commitResize: Je,
+    commitMove: yt,
+    commitResize: Ve,
     commitDrop: et,
-    rollbackInteraction: st,
-    syncHistory: it,
-    getItemRenderState: rt,
+    rollbackInteraction: ot,
+    syncHistory: st,
+    getItemRenderState: it,
     isPlacementActive: k.isActive,
-    onRootPointerMove: _t,
-    onRootClick: yo,
-    mount: nt,
-    stop: Mt
+    onRootPointerMove: Xt,
+    onRootClick: fo,
+    mount: rt,
+    stop: pt
   };
 }
-function Hn({
+function jn({
   width: e,
   margin: t,
   containerPadding: o,
@@ -5542,12 +5542,12 @@ function Hn({
   cols: a,
   maxRows: i
 }) {
-  const f = o, d = Fi({
+  const f = o, d = Ni({
     cols: a,
     containerPadding: f,
     containerWidth: e,
     margin: t
-  }), c = (M) => ji(M, r), y = (M) => c(f[0] + M * (d + t[0])), u = (M) => c(f[1] + M * (s + t[1])), p = (M) => c(f[0] + M * (d + t[0]) - t[0] / 2), m = (M) => c(f[1] + M * (s + t[1]) - t[1] / 2), v = (M) => c(y(M) - t[0]), C = (M) => c(u(M) - t[1]);
+  }), c = (M) => Ki(M, r), y = (M) => c(f[0] + M * (d + t[0])), u = (M) => c(f[1] + M * (s + t[1])), p = (M) => c(f[0] + M * (d + t[0]) - t[0] / 2), m = (M) => c(f[1] + M * (s + t[1]) - t[1] / 2), v = (M) => c(y(M) - t[0]), C = (M) => c(u(M) - t[1]);
   return {
     padding: f,
     colWidth: d,
@@ -5555,21 +5555,21 @@ function Hn({
     gridLineYPx: u,
     guideXPx: (M) => M.kind === "right" ? v(M.position) : M.kind === "center-x" ? p(M.position) : y(M.position),
     guideYPx: (M) => M.kind === "bottom" ? C(M.position) : M.kind === "center-y" ? m(M.position) : u(M.position),
-    spanXPx: (M, O) => ({
+    spanXPx: (M, T) => ({
       start: y(M),
-      end: v(O)
+      end: v(T)
     }),
-    spanYPx: (M, O) => ({
+    spanYPx: (M, T) => ({
       start: u(M),
-      end: C(O)
+      end: C(T)
     }),
-    spacingXPx: (M, O) => ({
+    spacingXPx: (M, T) => ({
       start: v(M),
-      end: y(O)
+      end: y(T)
     }),
-    spacingYPx: (M, O) => ({
+    spacingYPx: (M, T) => ({
       start: C(M),
-      end: u(O)
+      end: u(T)
     }),
     itemLeftPx: (M) => c(f[0] + M * (d + t[0])),
     itemTopPx: (M) => c(f[1] + M * (s + t[1])),
@@ -5577,7 +5577,7 @@ function Hn({
     itemHeightPx: (M) => c(Math.max(0, M * s + Math.max(0, M - 1) * t[1]))
   };
 }
-function Fn({
+function Nn({
   enabled: e,
   geometry: t,
   guideState: o,
@@ -5598,7 +5598,7 @@ function Fn({
     itemWidthPx: v,
     itemHeightPx: C
   } = t, S = () => {
-    var O;
+    var T;
     if (!o) return [];
     const w = o.displayGuides || o.guides, R = (G) => {
       const z = G.display;
@@ -5640,14 +5640,14 @@ function Fn({
         left: 0,
         right: 0
       };
-    }, T = (G, z = !1) => {
+    }, D = (G, z = !1) => {
       var W, ve;
-      const q = o.snappedGuideIds.includes(G.id) || G.isSnapped === !0, E = G.kind === "spacing-x" || G.kind === "spacing-y", me = typeof G.proximity == "number" ? G.proximity : q ? 1 : 0.4, Oe = q ? 1 : Math.max(0.18, 0.18 + me * 0.62), ze = {
+      const q = o.snappedGuideIds.includes(G.id) || G.isSnapped === !0, E = G.kind === "spacing-x" || G.kind === "spacing-y", ge = typeof G.proximity == "number" ? G.proximity : q ? 1 : 0.4, De = q ? 1 : Math.max(0.18, 0.18 + ge * 0.62), ze = {
         ...R(G)
       };
-      return !z && !q && (ze.opacity = String(Math.round(Oe * 100) / 100)), Le("div", {
+      return !z && !q && (ze.opacity = String(Math.round(De * 100) / 100)), Te("div", {
         key: `${z ? "debug-" : ""}${G.id}`,
-        class: lt(z ? "vue-grid-editor-debug-guide" : "vue-grid-editor-guide", `vue-grid-editor-guide-${G.axis}`, {
+        class: dt(z ? "vue-grid-editor-debug-guide" : "vue-grid-editor-guide", `vue-grid-editor-guide-${G.axis}`, {
           "vue-grid-editor-guide-active": q,
           "vue-grid-editor-guide-snapped": q,
           "vue-grid-editor-guide-predict": !q && !z,
@@ -5660,18 +5660,18 @@ function Fn({
         "data-guide-kind": G.kind,
         "data-guide-role": E ? "spacing" : "alignment",
         "data-guide-state": q ? "snapped" : "predict",
-        "data-guide-proximity": String(Math.round(me * 100) / 100),
+        "data-guide-proximity": String(Math.round(ge * 100) / 100),
         "data-guide-debug": z ? "true" : void 0,
         "data-guide-source-ids": G.sourceIds.join(",")
-      }, (ve = G.display) != null && ve.showLabel && G.display.label ? [Le("span", {
+      }, (ve = G.display) != null && ve.showLabel && G.display.label ? [Te("span", {
         class: "vue-grid-editor-guide-label"
       }, G.display.label)] : void 0);
-    }, M = w.map((G) => T(G));
-    return o.debug && o.debugMode === "layer" && ((O = o.debugGuides) != null && O.length) ? M.push(Le("div", {
+    }, M = w.map((G) => D(G));
+    return o.debug && o.debugMode === "layer" && ((T = o.debugGuides) != null && T.length) ? M.push(Te("div", {
       key: "debug-guides-layer",
       class: "vue-grid-editor-debug-layer",
       "data-guide-debug-layer": "true"
-    }, o.debugGuides.map((G) => T(G, !0)))) : o.debug && o.debugMode === "panel" && M.push(Le("div", {
+    }, o.debugGuides.map((G) => D(G, !0)))) : o.debug && o.debugMode === "panel" && M.push(Te("div", {
       key: "debug-guides-panel",
       class: "vue-grid-editor-debug-panel",
       "data-guide-debug-panel": "true"
@@ -5680,7 +5680,7 @@ function Fn({
     if (!o) return [];
     const w = o.spacingChips || [];
     return w.length === 0 ? [] : w.map((R) => {
-      const T = R.axis === "x", M = T ? y(R.span.start, R.span.end) : u(R.span.start, R.span.end), O = M.start, G = M.end, z = Math.max(1, G - O), q = T ? f({
+      const D = R.axis === "x", M = D ? y(R.span.start, R.span.end) : u(R.span.start, R.span.end), T = M.start, G = M.end, z = Math.max(1, G - T), q = D ? f({
         kind: "center-y",
         axis: "y",
         position: R.position
@@ -5688,18 +5688,18 @@ function Fn({
         kind: "center-x",
         axis: "x",
         position: R.position
-      }), E = T ? {
-        left: `${O}px`,
+      }), E = D ? {
+        left: `${T}px`,
         top: `${q}px`,
         width: `${z}px`
       } : {
-        top: `${O}px`,
+        top: `${T}px`,
         left: `${q}px`,
         height: `${z}px`
-      }, me = `${R.distance} ${R.unit}${R.distance === 1 ? "" : "s"}`;
-      return Le("div", {
+      }, ge = `${R.distance} ${R.unit}${R.distance === 1 ? "" : "s"}`;
+      return Te("div", {
         key: R.id,
-        class: lt("vue-grid-editor-spacing-chip", `vue-grid-editor-spacing-chip-${R.side}`, `vue-grid-editor-spacing-chip-${R.axis}`, {
+        class: dt("vue-grid-editor-spacing-chip", `vue-grid-editor-spacing-chip-${R.side}`, `vue-grid-editor-spacing-chip-${R.axis}`, {
           "vue-grid-editor-spacing-chip-equal": R.isEqual
         }),
         style: E,
@@ -5707,34 +5707,34 @@ function Fn({
         "data-chip-side": R.side,
         "data-chip-equal": R.isEqual ? "true" : "false",
         "data-chip-neighbor": R.neighborId || "edge"
-      }, [Le("span", {
+      }, [Te("span", {
         class: "vue-grid-editor-spacing-chip-label"
-      }, me)]);
+      }, ge)]);
     });
   }, F = () => {
-    var z, q, E, me;
+    var z, q, E, ge;
     if (!o) return null;
     const w = o.measurementHud;
     if (!w) return null;
-    const R = p(w.position.x) + v(w.size.w), T = m(w.position.y), M = `${w.size.w}×${w.size.h} · col ${w.position.x}, row ${w.position.y}`, O = [];
-    (z = w.delta) != null && z.dw && O.push(`${w.delta.dw > 0 ? "+" : ""}${w.delta.dw} col${Math.abs(w.delta.dw) === 1 ? "" : "s"}`), (q = w.delta) != null && q.dh && O.push(`${w.delta.dh > 0 ? "+" : ""}${w.delta.dh} row${Math.abs(w.delta.dh) === 1 ? "" : "s"}`), (E = w.delta) != null && E.dx && O.push(`x ${w.delta.dx > 0 ? "+" : ""}${w.delta.dx}`), (me = w.delta) != null && me.dy && O.push(`y ${w.delta.dy > 0 ? "+" : ""}${w.delta.dy}`);
-    const G = [Le("span", {
+    const R = p(w.position.x) + v(w.size.w), D = m(w.position.y), M = `${w.size.w}×${w.size.h} · col ${w.position.x}, row ${w.position.y}`, T = [];
+    (z = w.delta) != null && z.dw && T.push(`${w.delta.dw > 0 ? "+" : ""}${w.delta.dw} col${Math.abs(w.delta.dw) === 1 ? "" : "s"}`), (q = w.delta) != null && q.dh && T.push(`${w.delta.dh > 0 ? "+" : ""}${w.delta.dh} row${Math.abs(w.delta.dh) === 1 ? "" : "s"}`), (E = w.delta) != null && E.dx && T.push(`x ${w.delta.dx > 0 ? "+" : ""}${w.delta.dx}`), (ge = w.delta) != null && ge.dy && T.push(`y ${w.delta.dy > 0 ? "+" : ""}${w.delta.dy}`);
+    const G = [Te("span", {
       class: "vue-grid-editor-measurement-hud-label"
-    }, w.label || w.itemId), Le("span", {
+    }, w.label || w.itemId), Te("span", {
       class: "vue-grid-editor-measurement-hud-dims"
     }, M)];
-    return O.length > 0 && G.push(Le("span", {
+    return T.length > 0 && G.push(Te("span", {
       class: "vue-grid-editor-measurement-hud-delta"
-    }, `Δ ${O.join(" · ")}`)), w.blocked && G.push(Le("span", {
+    }, `Δ ${T.join(" · ")}`)), w.blocked && G.push(Te("span", {
       class: "vue-grid-editor-measurement-hud-blocked"
-    }, w.blockedMessage || w.blocked)), Le("div", {
+    }, w.blockedMessage || w.blocked)), Te("div", {
       key: `hud:${w.itemId}`,
-      class: lt("vue-grid-editor-measurement-hud", `vue-grid-editor-measurement-hud-${w.interaction}`, {
+      class: dt("vue-grid-editor-measurement-hud", `vue-grid-editor-measurement-hud-${w.interaction}`, {
         "vue-grid-editor-measurement-hud-blocked-state": !!w.blocked
       }),
       style: {
         left: `${R}px`,
-        top: `${T}px`
+        top: `${D}px`
       },
       "data-hud-item-id": w.itemId,
       "data-hud-interaction": w.interaction,
@@ -5742,65 +5742,65 @@ function Fn({
       role: "status",
       "aria-live": "polite"
     }, G);
-  }, K = () => {
+  }, X = () => {
     if (!o) return [];
     const w = o.anchorEdges || [];
     if (w.length === 0) return [];
     const R = [];
-    return w.forEach((T) => {
-      const M = r.get(T.itemId) || a.find((E) => E.i === T.itemId);
+    return w.forEach((D) => {
+      const M = r.get(D.itemId) || a.find((E) => E.i === D.itemId);
       if (!M) return;
-      const O = p(M.x), G = m(M.y), z = v(M.w), q = C(M.h);
-      T.sides.forEach((E) => {
-        const me = {
+      const T = p(M.x), G = m(M.y), z = v(M.w), q = C(M.h);
+      D.sides.forEach((E) => {
+        const ge = {
           position: "absolute"
         };
-        E === "left" ? Object.assign(me, {
-          left: `${O}px`,
+        E === "left" ? Object.assign(ge, {
+          left: `${T}px`,
           top: `${G}px`,
           height: `${q}px`,
           width: "2px"
-        }) : E === "right" ? Object.assign(me, {
-          left: `${O + z - 2}px`,
+        }) : E === "right" ? Object.assign(ge, {
+          left: `${T + z - 2}px`,
           top: `${G}px`,
           height: `${q}px`,
           width: "2px"
-        }) : E === "top" ? Object.assign(me, {
-          left: `${O}px`,
+        }) : E === "top" ? Object.assign(ge, {
+          left: `${T}px`,
           top: `${G}px`,
           width: `${z}px`,
           height: "2px"
-        }) : E === "bottom" ? Object.assign(me, {
-          left: `${O}px`,
+        }) : E === "bottom" ? Object.assign(ge, {
+          left: `${T}px`,
           top: `${G + q - 2}px`,
           width: `${z}px`,
           height: "2px"
-        }) : E === "center-x" ? Object.assign(me, {
-          left: `${O + z / 2 - 1}px`,
+        }) : E === "center-x" ? Object.assign(ge, {
+          left: `${T + z / 2 - 1}px`,
           top: `${G}px`,
           height: `${q}px`,
           width: "2px"
-        }) : E === "center-y" && Object.assign(me, {
-          left: `${O}px`,
+        }) : E === "center-y" && Object.assign(ge, {
+          left: `${T}px`,
           top: `${G + q / 2 - 1}px`,
           width: `${z}px`,
           height: "2px"
-        }), R.push(Le("div", {
-          key: `anchor:${T.role}:${T.itemId}:${E}`,
-          class: lt("vue-grid-editor-anchor-edge", `vue-grid-editor-anchor-edge-${E}`, `vue-grid-editor-anchor-edge-${T.role}`),
-          style: me,
-          "data-anchor-item-id": T.itemId,
+        }), R.push(Te("div", {
+          key: `anchor:${D.role}:${D.itemId}:${E}`,
+          class: dt("vue-grid-editor-anchor-edge", `vue-grid-editor-anchor-edge-${E}`, `vue-grid-editor-anchor-edge-${D.role}`),
+          style: ge,
+          "data-anchor-item-id": D.itemId,
           "data-anchor-side": E,
-          "data-anchor-role": T.role
+          "data-anchor-role": D.role
         }));
       });
     }), R;
   }, A = () => s ? s.ghostItems.map((w) => {
-    const R = w.item, T = w.state === "blocked" || s.phase === "blocked";
-    return Le("div", {
+    const R = w.item, D = w.state === "blocked" || s.phase === "blocked";
+    return Te("div", {
       key: `placement-ghost:${s.id}:${w.id}`,
-      class: lt("vue-grid-editor-placement-ghost", `vue-grid-editor-placement-ghost-${w.state}`, {
-        "vue-grid-editor-placement-ghost-blocked": T,
+      class: dt("vue-grid-editor-placement-ghost", `vue-grid-editor-placement-ghost-${w.state}`, {
+        "vue-grid-editor-placement-ghost-blocked": D,
         "vue-grid-editor-placement-ghost-committing": w.state === "committing"
       }),
       style: {
@@ -5812,18 +5812,18 @@ function Fn({
       "data-placement-session-id": s.id,
       "data-placement-source": s.source,
       "data-placement-item-id": w.id,
-      "data-placement-state": T ? "blocked" : w.state,
+      "data-placement-state": D ? "blocked" : w.state,
       "data-placement-x": String(R.x),
       "data-placement-y": String(R.y),
       "data-placement-w": String(R.w),
       "data-placement-h": String(R.h),
       "aria-hidden": "true"
     });
-  }) : [], ae = () => s ? s.affectedOutlines.map((w) => {
+  }) : [], ce = () => s ? s.affectedOutlines.map((w) => {
     const R = w.after;
-    return Le("div", {
+    return Te("div", {
       key: `placement-affected:${s.id}:${w.id}:${w.kind}`,
-      class: lt("vue-grid-editor-placement-affected", `vue-grid-editor-placement-affected-${w.kind}`),
+      class: dt("vue-grid-editor-placement-affected", `vue-grid-editor-placement-affected-${w.kind}`),
       style: {
         left: `${p(R.x)}px`,
         top: `${m(R.y)}px`,
@@ -5841,27 +5841,27 @@ function Fn({
     if (!s) return null;
     const w = (G = s.ghostItems[0]) == null ? void 0 : G.item;
     if (!w && !s.blocked) return null;
-    const R = w ? p(w.x) + v(w.w) : 0, T = w ? m(w.y) : 0, M = s.blocked, O = M ? M.message || `Placement blocked by ${M.reason}.` : `${s.ghostItems.length} item${s.ghostItems.length === 1 ? "" : "s"}`;
-    return Le("div", {
+    const R = w ? p(w.x) + v(w.w) : 0, D = w ? m(w.y) : 0, M = s.blocked, T = M ? M.message || `Placement blocked by ${M.reason}.` : `${s.ghostItems.length} item${s.ghostItems.length === 1 ? "" : "s"}`;
+    return Te("div", {
       key: `placement-hud:${s.id}`,
-      class: lt("vue-grid-editor-placement-hud", {
+      class: dt("vue-grid-editor-placement-hud", {
         "vue-grid-editor-placement-hud-blocked": !!M
       }),
       style: {
         left: `${R}px`,
-        top: `${T}px`
+        top: `${D}px`
       },
       "data-placement-session-id": s.id,
       "data-placement-source": s.source,
       "data-placement-state": M ? "blocked" : s.phase,
       role: "status",
       "aria-live": "polite"
-    }, O);
+    }, T);
   };
-  return [...ae(), ...A(), L(), ...K(), ...S(), ...k(), F()].filter(Boolean);
+  return [...ce(), ...A(), L(), ...X(), ...S(), ...k(), F()].filter(Boolean);
 }
-const jn = (e) => {
-  const t = e.props, o = Ln({
+const Kn = (e) => {
+  const t = e.props, o = Fn({
     props: t,
     layoutRef: e.layoutRef,
     persistenceController: t.persistence,
@@ -5907,9 +5907,9 @@ const jn = (e) => {
     onRootClick: o.onRootClick,
     renderOverlay: (s) => {
       var r, a;
-      return Fn({
+      return Nn({
         enabled: o.guidesEnabled() || o.isPlacementActive(),
-        geometry: Hn(s.geometry),
+        geometry: jn(s.geometry),
         guideState: (r = o.controller) == null ? void 0 : r.guides.value,
         placementSession: (a = o.controller) == null ? void 0 : a.placementSession.value,
         itemMap: s.itemMap,
@@ -5917,8 +5917,8 @@ const jn = (e) => {
       });
     }
   };
-}, Nn = {
-  ...Ci,
+}, Xn = {
+  ...Ei,
   editor: {
     type: [Boolean, Object],
     default: !1
@@ -5935,62 +5935,62 @@ const jn = (e) => {
     type: Object,
     default: void 0
   }
-}, aa = Si({
+}, da = Ri({
   name: "EditorGridLayout",
-  props: Nn,
-  createRuntimeExtension: jn
+  props: Xn,
+  createRuntimeExtension: Kn
 });
 export {
-  ur as A,
-  Zs as B,
-  oa as C,
-  Wi as D,
-  aa as E,
-  Tr as F,
-  ut as G,
-  Ss as H,
+  yr as A,
+  Qs as B,
+  ia as C,
+  Vi as D,
+  da as E,
+  Lr as F,
+  lt as G,
+  Rs as H,
   bt as I,
-  ms as J,
+  hs as J,
   Io as K,
-  ia as L,
-  Dr as M,
-  Xr as N,
+  na as L,
+  Tr as M,
+  _r as N,
   xt as O,
-  no as P,
-  ro as Q,
-  Ar as R,
-  Ve as S,
-  Hr as T,
-  Ys as U,
-  ea as V,
-  Yr as W,
+  ro as P,
+  io as Q,
+  Dr as R,
+  We as S,
+  jr as T,
+  Us as U,
+  oa as V,
+  Ur as W,
   $o as X,
-  Ms as Y,
-  na as Z,
-  $s as a,
-  Gs as b,
-  zs as c,
-  qi as d,
-  sa as e,
-  xn as f,
-  Vs as g,
-  wn as h,
+  Cs as Y,
+  ca as Z,
+  zs as a,
+  As as b,
+  Os as c,
+  Zi as d,
+  ra as e,
+  kn as f,
+  Js as g,
+  Mn as h,
   Co as i,
-  Cr as j,
-  hr as k,
-  Qn as l,
+  Er as j,
+  br as k,
+  ta as l,
   Ao as m,
-  _r as n,
-  Wr as o,
-  yi as p,
-  Nr as q,
-  Kr as r,
-  qr as s,
-  co as t,
-  ra as u,
-  In as v,
+  Wr as n,
+  Vr as o,
+  mi as p,
+  Xr as q,
+  Yr as r,
+  Zr as s,
+  ao as t,
+  aa as u,
+  wn as v,
   Ge as w,
-  Os as x,
-  Cn as y,
-  ta as z
+  Hs as x,
+  En as y,
+  sa as z
 };

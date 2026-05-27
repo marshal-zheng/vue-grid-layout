@@ -1,5 +1,5 @@
 import { r as hi } from "./resolve-C3SqJijI.mjs";
-import { H as Ue, y as Se } from "./commands-C5DwsbEU.mjs";
+import { H as Ue, y as Se } from "./commands-BQlR3l-u.mjs";
 import { j as pi, m as yi, r as bi, t as wi } from "./migration-CPonYzEY.mjs";
 const re = 1, se = /* @__PURE__ */ new Set(["__proto__", "prototype", "constructor"]), vi = ["s", "w", "e", "n", "sw", "nw", "se", "ne"], Ii = [
   "desktopHide",
