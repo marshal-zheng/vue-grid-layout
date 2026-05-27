@@ -1548,8 +1548,19 @@ export const createGridEditorController = (
         allowedIds.length > 0 &&
         !singleAbsoluteMove &&
         (allowedIds.length > 1 || multiMoveRequest);
+      const canRunLayoutOperation = Boolean(
+        options.layoutOperationRunner ||
+        resolveLayoutEngineOptions(payload)
+      );
+      const shouldUseMoveOperation =
+        shouldUseGroupMove ||
+        (
+          allowedIds.length === 1 &&
+          canRunLayoutOperation &&
+          (dx !== null || dy !== null || absoluteX || absoluteY)
+        );
 
-      if (shouldUseGroupMove) {
+      if (shouldUseMoveOperation) {
         const groupDx = dx !== null
           ? dx
           : absoluteX && activeItem

@@ -412,7 +412,13 @@ export const checkGridEditorCommand = (
   }
 
   const missingIds = getMissingIds(context.layout, targetIds);
-  if (missingIds.length > 0 && command.type !== "select" && !isSectionRowCommand(command.type)) {
+  const targetIdsMayBeInserted = command.type === "add" || command.type === "paste";
+  if (
+    missingIds.length > 0 &&
+    !targetIdsMayBeInserted &&
+    command.type !== "select" &&
+    !isSectionRowCommand(command.type)
+  ) {
     return {
       ok: false,
       targetIds,
