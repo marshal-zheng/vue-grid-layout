@@ -43,6 +43,11 @@ const baseLayout = (): Layout => [
   { i: 'c', x: 4, y: 0, w: 2, h: 2, static: true }
 ]
 
+const layoutSnapshot = (layout: Layout): Layout =>
+  layout
+    .map(item => ({ i: item.i, x: item.x, y: item.y, w: item.w, h: item.h }))
+    .sort((a, b) => a.i.localeCompare(b.i))
+
 const keyboardEvent = (
   input: Partial<KeyboardEvent> & { key: string }
 ): KeyboardEvent => ({
@@ -309,6 +314,69 @@ async function testGroupMoveCommands() {
   assert.equal(single.diagnostics?.operationResult, undefined)
   assert.equal(absoluteSingleLayout.value.find(item => item.i === 'a')?.x, 5)
   assert.equal(absoluteSingleLayout.value.find(item => item.i === 'a')?.y, 4)
+
+  const singleEngineLayout = ref<Layout>([
+    { i: 'revenue', x: 4, y: 0, w: 4, h: 3 },
+    { i: 'pipeline', x: 4, y: 3, w: 4, h: 3 },
+    { i: 'health', x: 8, y: 0, w: 4, h: 3 },
+    { i: 'incidents', x: 0, y: 6, w: 5, h: 3 },
+    { i: 'region', x: 5, y: 6, w: 7, h: 3 }
+  ])
+  const singleEngine = createGridEditorController({
+    layout: singleEngineLayout,
+    defaultMode: 'edit',
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
+  })
+  const singleEngineBefore = layoutSnapshot(singleEngineLayout.value)
+  const singleEngineMove = await singleEngine.execute({
+    type: 'move',
+    targetIds: ['revenue'],
+    source: 'pointer',
+    payload: { dx: 1, dy: 0 }
+  })
+  assert.equal(singleEngineMove.status, 'changed')
+  assert.equal(singleEngineMove.diagnostics?.operationResult?.diagnostics?.operationType, 'groupMove')
+  assert.equal(singleEngineLayout.value.find(item => item.i === 'revenue')?.x, 5)
+  assert.equal(singleEngineLayout.value.find(item => item.i === 'health')?.y, 3)
+  const singleEngineUndo = await singleEngine.undo()
+  assert.equal(singleEngineUndo.status, 'changed')
+  assert.deepEqual(layoutSnapshot(singleEngineLayout.value), singleEngineBefore)
+
+  const staticObstacleLayout = ref<Layout>([
+    { i: 'revenue', x: 4, y: 0, w: 4, h: 3 },
+    { i: 'pipeline', x: 4, y: 3, w: 4, h: 3 },
+    { i: 'health', x: 8, y: 0, w: 4, h: 3, static: true },
+    { i: 'incidents', x: 0, y: 6, w: 5, h: 3 },
+    { i: 'region', x: 5, y: 6, w: 7, h: 3 }
+  ])
+  const staticObstacle = createGridEditorController({
+    layout: staticObstacleLayout,
+    defaultMode: 'edit',
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
+  })
+  const staticObstacleBefore = layoutSnapshot(staticObstacleLayout.value)
+  const staticBlocked = await staticObstacle.execute({
+    type: 'move',
+    targetIds: ['revenue'],
+    source: 'pointer',
+    payload: { dx: 1, dy: 0 }
+  })
+  assert.equal(staticBlocked.status, 'blocked')
+  assert.equal(staticBlocked.blocked?.reason, 'static-item')
+  assert.deepEqual(staticBlocked.blocked?.itemIds, ['health'])
+  assert.deepEqual(layoutSnapshot(staticObstacleLayout.value), staticObstacleBefore)
 
   const skipLayout = ref<Layout>([
     { i: 'a', x: 0, y: 0, w: 1, h: 1 },
@@ -749,6 +817,23 @@ async function testPlacementPolicies() {
   assert.ok(add.affectedIds.includes('locked'))
   assert.ok(add.layoutPatches.some(patch => patch.type === 'move' && patch.id === 'locked'))
   assert.deepEqual(add.diagnostics?.computed?.placement?.shiftedIds.sort(), ['a', 'locked'])
+
+  const targetedAdd = await editor.execute({
+    type: 'add',
+    targetIds: ['drop-target'],
+    source: 'drop',
+    payload: {
+      item: { i: 'drop-target', x: 4, y: 4, w: 1, h: 1 },
+      strategy: 'cursor',
+      cursor: { x: 4, y: 4 },
+      cols: 6,
+      maxRows: 8
+    }
+  })
+  assert.equal(targetedAdd.status, 'changed')
+  assert.deepEqual(targetedAdd.targetIds, ['drop-target'])
+  assert.ok(targetedAdd.affectedIds.includes('drop-target'))
+  assert.equal(Boolean(layout.value.find(item => item.i === 'drop-target')), true)
 
   const beforeBlocked = layout.value.map(item => ({ ...item }))
   const blocked = await editor.execute({

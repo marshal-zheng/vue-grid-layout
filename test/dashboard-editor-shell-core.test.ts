@@ -104,6 +104,44 @@ const createDemoLikeDocument = (): DashboardLayoutDocument =>
     now: () => fixedDate
   })
 
+const createStaticDemoLikeDocument = (): DashboardLayoutDocument =>
+  serializeDashboardLayoutDocument({
+    widgets: {
+      revenue: { col: 0, row: 0, sizeX: 4, sizeY: 3 },
+      pipeline: { col: 4, row: 0, sizeX: 4, sizeY: 3 },
+      health: {
+        col: 8,
+        row: 0,
+        sizeX: 4,
+        sizeY: 3,
+        static: true,
+        draggable: false,
+        resizable: false
+      },
+      incidents: { col: 0, row: 3, sizeX: 5, sizeY: 3 },
+      region: { col: 5, row: 3, sizeX: 7, sizeY: 3 }
+    },
+    gridSettings: {
+      columns: 12,
+      margin: [10, 10],
+      containerPadding: [10, 10],
+      rowHeight: 58,
+      viewFormat: 'grid',
+      renderPrecision: 'subpixel'
+    },
+    editor: {
+      version: 1,
+      editorMetaById: {
+        health: { label: 'Health monitor', locked: true }
+      }
+    }
+  }, {
+    key: 'dashboard:shell-static-demo-like',
+    sourceId: 'shell-static-demo-like-test',
+    revision: () => 'rev-shell-static-demo-like',
+    now: () => fixedDate
+  })
+
 const resolveRuntime = (
   document: DashboardLayoutDocument,
   options: { breakpoint?: string; targetView?: 'desktop' | 'mobile'; mode?: 'view' | 'edit' } = {}
@@ -872,6 +910,184 @@ async function testShellManagedSyntheticPointerCommitWritesDocumentAndEvent() {
   shell.stop()
 }
 
+async function testShellManagedPointerUndoRestoresCompactedLayoutSnapshot() {
+  const documentRef = ref(createDemoLikeDocument())
+  const runtime = ref(resolveRuntime(documentRef.value))
+  const layoutRef = ref<Layout>(runtime.value.layout.map(item => ({ ...item })))
+  const editor = createGridEditorController({
+    layout: layoutRef,
+    defaultMode: 'edit',
+    editorMetaById: ref(runtime.value.editorMetaById),
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
+  })
+  const shell = useDashboardEditorShell({
+    document: documentRef,
+    runtime,
+    editor,
+    gridElement: ref(createGridElement()),
+    mode: ref('edit'),
+    controlled: false,
+    documentWriteBack: 'shell',
+    createMissingProfileOnEdit: true,
+    onDocumentChange: event => {
+      documentRef.value = event.document
+      runtime.value = resolveRuntime(event.document)
+    }
+  })
+  await nextTick()
+
+  for (let i = 0; i < 4; i += 1) {
+    const moved = await editor.execute({
+      type: 'move',
+      targetIds: ['revenue'],
+      source: 'pointer',
+      payload: { dx: 1, dy: 0 }
+    })
+    assert.equal(moved.status, 'changed')
+    await flushShellCoordinator()
+  }
+  const beforeUndoLayout = layoutGeometry(layoutRef.value)
+  const beforeUndoDocument = ['revenue', 'pipeline', 'health', 'incidents', 'region']
+    .map(id => {
+      const widget = dashboardWidget(documentRef.value, id)
+      return {
+        i: id,
+        x: widget.col,
+        y: widget.row,
+        w: widget.sizeX,
+        h: widget.sizeY
+      }
+    })
+
+  const moved = await editor.execute({
+    type: 'move',
+    targetIds: ['revenue'],
+    source: 'pointer',
+    payload: { dx: 1, dy: 0 }
+  })
+  assert.equal(moved.status, 'changed')
+  assert.equal(moved.diagnostics?.operationResult?.diagnostics?.operationType, 'groupMove')
+  await flushShellCoordinator()
+  assert.equal(layoutRef.value.find(item => item.i === 'revenue')?.x, 5)
+
+  const undo = await shell.actions.undo({ source: 'keyboard' })
+  assert.equal(undo.ok, true)
+  assert.equal(undo.writeResult?.ok, true)
+  await flushShellCoordinator()
+  assert.deepEqual(layoutGeometry(layoutRef.value), beforeUndoLayout)
+  assert.deepEqual(
+    ['revenue', 'pipeline', 'health', 'incidents', 'region'].map(id => {
+      const widget = dashboardWidget(documentRef.value, id)
+      return {
+        i: id,
+        x: widget.col,
+        y: widget.row,
+        w: widget.sizeX,
+        h: widget.sizeY
+      }
+    }),
+    beforeUndoDocument
+  )
+  shell.stop()
+}
+
+async function testShellManagedPointerMoveReportsStaticObstacle() {
+  const documentRef = ref(createStaticDemoLikeDocument())
+  const runtime = ref(resolveRuntime(documentRef.value))
+  const layoutRef = ref<Layout>(runtime.value.layout.map(item => ({ ...item })))
+  const editor = createGridEditorController({
+    layout: layoutRef,
+    defaultMode: 'edit',
+    editorMetaById: ref(runtime.value.editorMetaById),
+    layoutEngineOptions: {
+      cols: 12,
+      maxRows: Infinity,
+      compactType: 'vertical',
+      allowOverlap: false,
+      preventCollision: false
+    }
+  })
+  const events: DashboardEditorShellEvent[] = []
+  const shell = useDashboardEditorShell({
+    document: documentRef,
+    runtime,
+    editor,
+    gridElement: ref(createGridElement()),
+    mode: ref('edit'),
+    controlled: false,
+    documentWriteBack: 'shell',
+    createMissingProfileOnEdit: true,
+    onDocumentChange: event => {
+      documentRef.value = event.document
+      runtime.value = resolveRuntime(event.document)
+    },
+    onEvent: event => events.push(event)
+  })
+  await nextTick()
+
+  for (let i = 0; i < 4; i += 1) {
+    const moved = await editor.execute({
+      type: 'move',
+      targetIds: ['revenue'],
+      source: 'pointer',
+      payload: { dx: 1, dy: 0 }
+    })
+    assert.equal(moved.status, 'changed')
+    await flushShellCoordinator()
+  }
+  const beforeBlockedLayout = layoutGeometry(layoutRef.value)
+  const beforeBlockedDocument = ['revenue', 'pipeline', 'health', 'incidents', 'region']
+    .map(id => {
+      const widget = dashboardWidget(documentRef.value, id)
+      return {
+        i: id,
+        x: widget.col,
+        y: widget.row,
+        w: widget.sizeX,
+        h: widget.sizeY
+      }
+    })
+  assert.equal(layoutRef.value.find(item => item.i === 'revenue')?.x, 4)
+  assert.equal(layoutRef.value.find(item => item.i === 'health')?.static, true)
+
+  const blocked = await editor.execute({
+    type: 'move',
+    targetIds: ['revenue'],
+    source: 'pointer',
+    payload: { dx: 1, dy: 0 }
+  })
+  assert.equal(blocked.status, 'blocked')
+  assert.equal(blocked.blocked?.reason, 'static-item')
+  assert.deepEqual(blocked.blocked?.itemIds, ['health'])
+  await flushShellCoordinator()
+
+  assert.deepEqual(layoutGeometry(layoutRef.value), beforeBlockedLayout)
+  assert.deepEqual(
+    ['revenue', 'pipeline', 'health', 'incidents', 'region'].map(id => {
+      const widget = dashboardWidget(documentRef.value, id)
+      return {
+        i: id,
+        x: widget.col,
+        y: widget.row,
+        w: widget.sizeX,
+        h: widget.sizeY
+      }
+    }),
+    beforeBlockedDocument
+  )
+  const lastResult = shellActionResults(events).at(-1)
+  assert.equal(lastResult?.status, 'blocked')
+  assert.equal(lastResult?.commandResult?.blocked?.reason, 'static-item')
+  assert.ok(lastResult?.diagnostics.some(diagnostic => diagnostic.code === 'shell-command-static-item'))
+  shell.stop()
+}
+
 async function testShellManagedResizeAndDropSyntheticWriteBackResults() {
   const documentRef = ref(createDocument())
   const runtime = ref(resolveRuntime(documentRef.value))
@@ -929,6 +1145,7 @@ async function testShellManagedResizeAndDropSyntheticWriteBackResults() {
 
   const dropped = await editor.execute({
     type: 'add',
+    targetIds: ['drop-direct'],
     source: 'drop',
     payload: {
       item: { i: 'drop-direct', x: 6, y: 0, w: 1, h: 1 },
@@ -1711,6 +1928,8 @@ async function main() {
   await testShellManagedUndoRedoWriteBackSidecarAndSelectionOnly()
   await testShellManagedUndoWriteBackFailureRestoresReplayAndRedoStack()
   await testShellManagedSyntheticPointerCommitWritesDocumentAndEvent()
+  await testShellManagedPointerUndoRestoresCompactedLayoutSnapshot()
+  await testShellManagedPointerMoveReportsStaticObstacle()
   await testShellManagedResizeAndDropSyntheticWriteBackResults()
   await testShellManagedSyntheticTerminalResultsAndCleanup()
   await testShellManagedWriteBackFailureRollsBackEditorAndHistory()
